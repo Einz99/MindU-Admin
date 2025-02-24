@@ -1,0 +1,60 @@
+/*for log-in*/
+
+.user-management-container {
+    display: flex;
+  }
+  
+  .drawer {
+    width: 240px;
+    flex-shrink: 0;
+  }
+  
+  .drawer-paper {
+    width: 240px;
+  }
+  
+  .content {
+    flex-grow: 1;
+    padding: 16px;
+    margin-left: 240px;
+  }
+  
+  .user-management-title {
+    margin: 16px 0;
+  }
+  
+  .user-management-card {
+    margin-top: 16px;
+  }
+  
+  .user-tabs {
+    margin-bottom: 16px;
+  }
+  
+  .user-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  
+  .search-bar {
+    width: 70%;
+  }
+  
+  .add-button {
+    background-color: #1976d2;
+    color: #fff;
+  }
+  
+  .table-container {
+    margin-top: 16px;
+  }
+  
+  .edit-button {
+    color: #0288d1;
+  }
+  
+  .delete-button {
+    color: #d32f2f;
+  }
+
