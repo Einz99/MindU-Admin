@@ -168,7 +168,7 @@ export default function DashboardLayout() {
         position: "",
         email: "",
         created: new Date().toLocaleDateString(),
-        modified: new Date().toLocale
+        
       });
     }
     setIsModalOpen(false);
