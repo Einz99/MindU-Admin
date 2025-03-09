@@ -148,16 +148,32 @@
   .database-actions {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding-top: 10px;
-  }
+}
+
+.database-actions > :first-child {
+    margin-right: auto;
+}
+
+.database-actions > :nth-child(2),
+.database-actions > :nth-child(3) {
+    margin-left: 10px;
+}
   
   .search-bar {
-    width: 70%;
+    width: 60%;
   }
   
   .add-button {
     border: radius 100px;;
       background: linear-gradient(45deg, #00a651 30%, #8dc63f 90%);
+      color: #fff;
+  }
+
+  .delete-button-large {
+    border: radius 100px;;
+    background: linear-gradient(45deg, #ff0000 30%, #ff6666 90%);
       color: #fff;
   }
   

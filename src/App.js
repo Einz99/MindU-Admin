@@ -1,8 +1,9 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Landingpage from "./components/Landingpage";
-import UserManagement from "./components/UserManagement";
-import ContentManagement from "./components/ContentManagement";
+import Landingpage from "./screens/Landingpage";
+import UserManagement from "./screens/UserManagement";
+import ContentManagement from "./screens/ContentManagement";
+
 
 function App() {
   return (

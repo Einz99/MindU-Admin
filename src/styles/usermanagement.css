@@ -151,8 +151,18 @@
   margin-bottom: 16px;
 }
 
+.user-actions > :first-child {
+  margin-right: auto;
+  width: 40%;
+}
+
+.user-actions > :nth-child(2),
+.user-actions > :nth-child(3),
+.user-actions > :nth-child(4) {
+  margin-left: 10px;
+}
 .search-bar {
-  width: 70%;
+  width: 50%;
 }
 
 .add-button {
