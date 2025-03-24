@@ -23,7 +23,7 @@ const styles = {
     }
 }
 
-const UserTable = ({
+export default function UserTable( {
   tab,
   students,
   staffs,
@@ -33,73 +33,73 @@ const UserTable = ({
   handleCheck,
   handleEditButtonClick,
   handleDeleteButtonClick,
-}) => {
+  }
+  ) {
   return (
-    <TableContainer className="table-container" sx={{ borderBottom: "2px solid #000" }}>
+    <TableContainer className="border border-black">
       <Table>
         <TableHead>
-          <TableRow>
-            <TableCell padding="checkbox" sx={{ borderTop: "2px solid #000", borderLeft: "1px solid #ddd" }}>
+          <TableRow className="bg-white border-b border-black">
+          <TableCell className="p-3 border-r font-bold w-[40px]">
               <Checkbox checked={allChecked} onChange={handleCheckAll} />
             </TableCell>
             {tab === 0 ? (
               <>
-                <TableCell sx={styles.boldBorder}>
+                <TableCell className="p-3 border-r font-bold text-center">
                   First Name
                 </TableCell>
-                <TableCell align="center" sx={styles.boldBorder}>
+                <TableCell className="p-3 border-r font-bold text-center">
                   Last Name
                 </TableCell>
-                <TableCell align="center" sx={styles.boldBorder}>
+                <TableCell className="p-3 border-r font-bold text-center">
                   Section
                 </TableCell>
-                <TableCell align="center" sx={styles.boldBorder}>
+                <TableCell className="p-3 border-r font-bold text-center">
                   Adviser
                 </TableCell>
-                <TableCell align="center" sx={styles.boldBorder}>
+                <TableCell className="p-3 border-r font-bold text-center">
                   Email
-                </TableCell>
-                <TableCell align="center" sx={styles.boldBorder}>
-                  Actions
                 </TableCell>
               </>
             ) : (
               <>
-                <TableCell sx={styles.boldBorder}>
+                <TableCell className="p-3 border-r font-bold text-center">
                   Name
                 </TableCell>
-                <TableCell align="center" sx={styles.boldBorder}>
+                <TableCell className="p-3 border-r font-bold text-center">
                   Position
                 </TableCell>
-                <TableCell align="center" sx={styles.boldBorder}>
+                <TableCell className="p-3 border-r font-bold text-center">
                   Email
-                </TableCell>
-                <TableCell align="center" sx={styles.boldBorder}>
-                  Actions
                 </TableCell>
               </>
             )}
+            <TableCell className="p-1 text-center w-[12.5%]">
+              <p className="m-auto text-center">Actions</p>
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {tab === 0
             ? students.map((student, index) => (
                 <TableRow key={student.id}>
-                  <TableCell padding="checkbox" sx={styles.bordering}>
+                  <TableCell className="p-3 border-r font-bold w-[40px]">
                     <Checkbox checked={checked.includes(index)} onChange={(event) => handleCheck(event, index)} />
                   </TableCell>
                   <TableCell sx={styles.bordering}>{student.firstName}</TableCell>
-                  <TableCell align="center" sx={styles.bordering}>{student.lastName}</TableCell>
-                  <TableCell align="center" sx={styles.bordering}>{student.section}</TableCell>
-                  <TableCell align="center" sx={styles.bordering}>{student.adviser}</TableCell>
-                  <TableCell align="center" sx={styles.bordering}>{student.email}</TableCell>
-                  <TableCell align="center" sx={styles.bordering}>
+                  <TableCell className="p-3 border-r text-center">{student.lastName}</TableCell>
+                  <TableCell className="p-3 border-r text-center">{student.section}</TableCell>
+                  <TableCell className="p-3 border-r text-center">{student.adviser}</TableCell>
+                  <TableCell className="p-3 border-r text-center">{student.email}</TableCell>
+                  <TableCell className="p-3 border-r text-center">
+                    <div className="flex justify-center">
                     <IconButton className="edit-button" onClick={() => handleEditButtonClick(index)}>
                       <Edit />
                     </IconButton>
                     <IconButton className="delete-button" onClick={() => handleDeleteButtonClick(index)}>
                       <Delete />
                     </IconButton>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -109,9 +109,9 @@ const UserTable = ({
                     <Checkbox checked={checked.includes(index)} onChange={(event) => handleCheck(event, index)} />
                   </TableCell>
                   <TableCell sx={styles.bordering}>{staff.name}</TableCell>
-                  <TableCell align="center" sx={styles.bordering}>{staff.position}</TableCell>
-                  <TableCell align="center" sx={styles.bordering}>{staff.email}</TableCell>
-                  <TableCell align="center" sx={styles.bordering}>
+                  <TableCell className="p-3 border-r text-center">{staff.position}</TableCell>
+                  <TableCell className="p-3 border-r text-center">{staff.email}</TableCell>
+                  <TableCell className="p-3 border-r text-center">
                     <IconButton className="edit-button" onClick={() => handleEditButtonClick(index)}>
                       <Edit />
                     </IconButton>
@@ -126,5 +126,3 @@ const UserTable = ({
     </TableContainer>
   );
 };
-
-export default UserTable;

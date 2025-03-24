@@ -1,5 +1,4 @@
 import { useState } from "react";
-import "../styles/usermanagement.css";
 import Navbar from "../components/navigationsComponents/TopNavBarComponent"
 import Sidebar from "../components/navigationsComponents/SidebarComponents";
 

@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import * as XLSX from "xlsx";
-import {
-  Typography,
-  Container,
-  Card,
-  CardContent,
-} from "@mui/material";
-import "../styles/usermanagement.css";
+import { Container, } from "@mui/material";
 import Navbar from "../components/navigationsComponents/TopNavBarComponent";
 import Sidebar from "../components/navigationsComponents/SidebarComponents";
 import { API } from "../api";
@@ -48,9 +41,9 @@ export default function DashboardLayout() {
   // Fetch data when component mounts or when tab changes
   useEffect(() => {
     if (tab === 0 && students.length === 0) {
-      axios.get(`${API}/api/students`).then((res) => setStudents(res.data));
+      axios.get(`${API}/students`).then((res) => setStudents(res.data));
     } else if (tab === 1 && staffs.length === 0) {
-      axios.get(`${API}/api/staffs`).then((res) => setStaffs(res.data));
+      axios.get(`${API}/staffs`).then((res) => setStaffs(res.data));
     }
   }, [staffs.length, students.length, tab]);
   
@@ -136,7 +129,7 @@ export default function DashboardLayout() {
   // Delete a record
   const handleDeleteButtonClick = (index) => {
     const id = tab === 0 ? students[index].id : staffs[index].id; // Ensure lowercase "id"
-    axios.delete(`${API}/api/${tab === 0 ? "students" : "staffs"}/${id}`)
+    axios.delete(`${API}/${tab === 0 ? "students" : "staffs"}/${id}`)
       .then(() => {
         tab === 0
           ? setStudents((prev) => prev.filter((_, i) => i !== index))
@@ -164,7 +157,7 @@ export default function DashboardLayout() {
     if (tab === 0) {
       if (isEditMode) {
         axios
-          .put(`${API}/api/students/${newStudent.id}`, newStudent)
+          .put(`${API}/students/${newStudent.id}`, newStudent)
           .then(() => {
             setStudents((prev) =>
               prev.map((student) =>
@@ -176,7 +169,7 @@ export default function DashboardLayout() {
           .catch((err) => console.error("Error updating student:", err));
       } else {
         axios
-          .post(`${API}/api/students`, newStudent)
+          .post(`${API}/students`, newStudent)
           .then((res) => {
             setStudents((prev) => [...prev, res.data.student]);
             setIsModalOpen(false);
@@ -186,7 +179,7 @@ export default function DashboardLayout() {
     } else {
       if (isEditMode) {
         axios
-          .put(`${API}/api/staffs/${newStaff.id}`, newStaff)
+          .put(`${API}/staffs/${newStaff.id}`, newStaff)
           .then(() => {
             setStaffs((prev) =>
               prev.map((staff, index) =>
@@ -198,7 +191,7 @@ export default function DashboardLayout() {
           .catch((err) => console.error("Error updating staff:", err));
       } else {
         axios
-          .post(`${API}/api/staffs`, newStaff)
+          .post(`${API}/staffs`, newStaff)
           .then((res) => {
             setStaffs((prev) => [...prev, res.data.staff]);
             setIsModalOpen(false);
@@ -216,7 +209,7 @@ export default function DashboardLayout() {
     );
   
     const deleteRequests = idsToDelete.map((id) =>
-      axios.delete(`${API}/api/${tab === 0 ? "students" : "staffs"}/${id}`)
+      axios.delete(`${API}/${tab === 0 ? "students" : "staffs"}/${id}`)
     );
   
     Promise.all(deleteRequests)
@@ -231,50 +224,60 @@ export default function DashboardLayout() {
       .catch((err) => console.error("Error during bulk delete:", err));
   };  
 
-  const handleBulkUpload = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(sheet);
-
-      // Determine API endpoint based on tab
-      const endpoint = tab === 0 ? `${API}/api/students/bulk` : `${API}/api/staffs/bulk`;
-
-      // Send data to API
-      axios.post(endpoint, jsonData)
-        .then(() => {
-          // Refresh data after bulk upload
-          if (tab === 0) {
-            axios.get(`${API}/api/students`).then((res) => setStudents(res.data));
-          } else {
-            axios.get(`${API}/api/staffs`).then((res) => setStaffs(res.data));
-          }
-        })
-        .catch((err) => console.error("Error uploading bulk data:", err));
-    };
-
-    reader.readAsArrayBuffer(file);
+  const handleBulkUpload = async (spreadsheetData) => {
+    try {
+      if (!Array.isArray(spreadsheetData) || spreadsheetData.length === 0) {
+        alert("No data to upload.");
+        return;
+      }
+  
+      // Convert spreadsheet data into JSON format
+      const formattedStudents = spreadsheetData.map(row => ({
+        firstName: row[0]?.trim() || "", 
+        lastName: row[1]?.trim() || "",  
+        section: row[2]?.trim() || "",   
+        adviser: row[3]?.trim() || "",   
+        email: row[4]?.trim() || ""      
+      })).filter(student => student.email); // Ensure email is present
+  
+      if (formattedStudents.length === 0) {
+        alert("No valid students to upload.");
+        return;
+      }
+  
+      const response = await fetch(`${API}/students/bulk-insert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ students: formattedStudents }),
+      });
+  
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert(`${result.insertedCount} students uploaded successfully. ${result.skipped ? result.skipped : ""}`);
+        
+        // ✅ Fetch updated data after bulk upload
+        const updatedStudents = await axios.get(`${API}/students`);
+        setStudents(updatedStudents.data); // Refresh student list
+      } else {
+        alert(`Error: ${result.message}`);
+      }
+    } catch (error) {
+      console.error("Bulk upload failed:", error);
+      alert("Server error occurred. Try again later.");
+    }
   };
-
+  
   return (
-    <div className="dashboard-container">
+    <div className="flex h-screen">
       <Navbar onMenuClick={handleDrawerToggle}/>
       <Sidebar open={open} onToggle={handleDrawerToggle}/>
 
       {/* Main Content */}
-      <div className={`main-content ${open ? "shifted" : "mini"}`}>
-        <Container className="user-management-container">
-          <Typography className="user-management-title" sx={{ fontWeight: "bold" }}>
-            USER MANAGEMENT
-          </Typography>
-          <Card className="user-management-card">
-            <CardContent>
+      <div className={`flex-grow p-4 bg-gray-200 transition-all ${open ? 'ml-60' : 'ml-16'}  mt-16`}>
+        <Container className="container mx-auto">
+        <h1 className="text-lg font-bold py-5">USER MANAGEMENT</h1>
+          <div className="bg-white shadow-md rounded-lg p-4">
               <UserTabs 
                 tab={tab} 
                 setTab={setTab} 
@@ -294,8 +297,7 @@ export default function DashboardLayout() {
                 handleEditButtonClick={handleEditButtonClick}
                 handleDeleteButtonClick={handleDeleteButtonClick}
               />
-            </CardContent>
-          </Card>
+          </div>
         </Container>
       </div>
       <UserDialog

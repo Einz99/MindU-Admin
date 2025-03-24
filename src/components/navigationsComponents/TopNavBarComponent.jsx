@@ -1,19 +1,18 @@
 import { AppBar, Toolbar, IconButton, Typography, Badge } from "@mui/material";
 import { Menu as MenuIcon, Notifications, CrisisAlert } from "@mui/icons-material";
 import PropTypes from "prop-types";
-import "../../styles/usermanagement.css";
 
 export default function Navbar({ onMenuClick }) {
   return (
-    <AppBar position="fixed" className="top-navbar" sx={{ backgroundColor: "#5bb780" }}>
-      <Toolbar className="toolbar">
-        <IconButton color="inherit" edge="start" onClick={onMenuClick} className="menu-button">
+    <AppBar position="fixed" sx={{ backgroundColor: "#5bb780", boxShadow: 1 }}>
+      <Toolbar className="flex justify-between items-center">
+        <IconButton color="inherit" edge="start" onClick={onMenuClick} className="mr-4">
           <MenuIcon />
         </IconButton>
-        <Typography variant="h6" className="title">
-          <span className="mind-u-text">MIND U</span>
+        <Typography variant="h6" className="font-bold text-xl">
+          <span className="ml-4">MIND U</span>
         </Typography>
-        <div className="icons-container">
+        <div className="flex gap-4">
           <IconButton color="inherit">
             <CrisisAlert />
           </IconButton>

@@ -1,11 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import {
-  Typography,
-  Container,
-  Card,
-  CardContent,
-} from "@mui/material";
 import Navbar from "../components/navigationsComponents/TopNavBarComponent";
 import Sidebar from "../components/navigationsComponents/SidebarComponents";
 import ContentTabs from "../components/contentManagementComponents/ContentTabs";
@@ -13,7 +7,6 @@ import ContentTable from "../components/contentManagementComponents/ContentTable
 import ContentDialog from "../components/contentManagementComponents/ContentDialog";
 import DeleteDialog from "../components/contentManagementComponents/DeleteDialog";
 import { API } from "../api";
-import "../styles/contentmanagement.css";
 
 export default function ContentManagement() {
   const [open, setOpen] = useState(false);
@@ -27,48 +20,34 @@ export default function ContentManagement() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [isVideo, setIsVideo] = useState(false);
+  const [videoDialog, setVideoDialog] = useState(false);
+  const [isArticle, setIsArticle] = useState(false);
 
   const fetchData = useCallback(async () => {
-    if (tab === 0) {
-      axios
-        .get(`${API}/api/resources/`)
-        .then((res) => {
-          setData(res.data);
-          console.log("Fetched resources:", res.data);
-        })
-        .catch((err) => console.error("Error fetching resources:", err));
-    } else if (tab === 1) {
-      axios
-        .get(`${API}/api/resources/wellness`)
-        .then((res) => {
-          setData(res.data);
-          console.log("Fetched resources:", res.data);
-        })
-        .catch((err) => console.error("Error fetching resources:", err));
-    }
-     else if (tab === 2) {
-      axios
-        .get(`${API}/api/announcements`)
-        .then((res) => {
-          setData(res.data);
-          console.log("Fetched announcements:", res.data);
-        })
-        .catch((err) => console.error("Error fetching announcements:", err));
+    try {
+      const endpoints = [
+        `${API}/resources/`,
+        `${API}/resources/wellness`,
+        `${API}/announcements`
+      ];
+      const response = await axios.get(endpoints[tab]);
+      setData(response.data);
+      console.log("Fetched data:", response.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
     }
   }, [tab]);
 
-  const handleDrawerToggle = () => {
-    setOpen(!open);
-  };
-
+  const handleDrawerToggle = () => setOpen((prev) => !prev);
   const handleDialogClose = () => {
     setIsDialogOpen(false);
-    setNewItem({});
     setFile(null);
     setEditMode(false);
     setEditId(null);
+    setIsArticle(false);
+    setVideoDialog(false);
   };
-  
 
   useEffect(() => {
     fetchData();
@@ -76,36 +55,21 @@ export default function ContentManagement() {
 
   const handleDeleteConfirm = async () => {
     try {
+      const deleteEndpoints = [
+        `${API}/resources/`,
+        `${API}/documents/`,
+        `${API}/announcements/`
+      ];
+      
       if (deleteTarget) {
-        // **Individual delete (Single Item)**
-        let endpoint = "";
-        if (tab === 0) {
-          endpoint = `${API}/api/resources/${deleteTarget}`;
-        } else if (tab === 1) {
-          endpoint = `${API}/api/documents/${deleteTarget}`;
-        } else if (tab === 2) {
-          endpoint = `${API}/api/announcements/${deleteTarget}`;
-        }
-  
-        await axios.delete(endpoint);
+        await axios.delete(`${deleteEndpoints[tab]}${deleteTarget}`);
         setData((prevData) => prevData.filter((item) => item.ID !== deleteTarget));
         setDeleteTarget(null);
       } else if (selectedItems.length > 0) {
-        // **Bulk delete (Multiple Items)**
-        let bulkEndpoint = "";
-        if (tab === 0) {
-          bulkEndpoint = `${API}/api/resources/delete-multiple`;
-        } else if (tab === 1) {
-          bulkEndpoint = `${API}/api/documents/delete-multiple`;
-        } else if (tab === 2) {
-          bulkEndpoint = `${API}/api/announcements/delete-multiple`;
-        }
-  
-        await axios.post(bulkEndpoint, { ids: selectedItems });
+        await axios.post(`${deleteEndpoints[tab]}delete-multiple`, { ids: selectedItems });
         setData((prevData) => prevData.filter((item) => !selectedItems.includes(item.ID)));
         setSelectedItems([]);
       }
-  
       setIsDeleteOpen(false);
     } catch (error) {
       console.error("Error deleting content:", error);
@@ -121,36 +85,45 @@ export default function ContentManagement() {
   };
   
   return (
-    <div className="content-container">
+    <div className="flex h-screen">
       <Navbar onMenuClick={handleDrawerToggle} />
       <Sidebar open={open} onToggle={handleDrawerToggle} />
-      <div className={`main-content ${open ? "shifted" : "mini"}`}>
-        <Container className="database-container">
-          <Typography className="database-title" fontWeight="bold">
-            CONTENT MANAGEMENT
-          </Typography>
-          <Card className="database-card">
-            <CardContent>
-              <ContentTabs tab={tab} setTab={setTab} setIsDialogOpen={setIsDialogOpen} 
-                handleDeleteOpen={handleDeleteOpen} 
-                selectedItems={selectedItems}/>
-              <ContentTable 
-                tab={tab} 
-                data={data} 
-                setSelectedItems={setSelectedItems} 
-                setDeleteTarget={setDeleteTarget} 
-                setIsDeleteOpen={setIsDeleteOpen} 
-                setNewItem={setNewItem}
-                setEditMode={setEditMode}
-                setEditId={setEditId}
-                setIsDialogOpen={setIsDialogOpen}/>
-            </CardContent>
-          </Card>
-        </Container>
+      <div className={`flex-grow p-4 bg-gray-200 transition-all ${open ? 'ml-60' : 'ml-16'}  mt-16`}>
+        <div className="container mx-auto">
+          <h1 className="text-lg font-bold py-5">CONTENT MANAGEMENT</h1>
+          <div className="bg-white shadow-md rounded-lg p-4">
+            <ContentTabs
+              tab={tab}
+              setTab={setTab}
+              setIsDialogOpen={setIsDialogOpen}
+              handleDeleteOpen={handleDeleteOpen}
+              selectedItems={selectedItems}
+              setIsVideo={setIsVideo}
+              setVideoDialog={setVideoDialog}
+              setIsArticle={setIsArticle}
+            />
+            <ContentTable
+              tab={tab}
+              data={data}
+              setSelectedItems={setSelectedItems}
+              setDeleteTarget={setDeleteTarget}
+              setIsDeleteOpen={setIsDeleteOpen}
+              setNewItem={setNewItem}
+              setEditMode={setEditMode}
+              setEditId={setEditId}
+              setIsDialogOpen={setIsDialogOpen}
+              // New props passed to enable proper dialog opening based on file type:
+              setIsArticle={setIsArticle}
+              setVideoDialog={setVideoDialog}
+              setIsVideo={setIsVideo}
+            />
+          </div>
+        </div>
       </div>
       <ContentDialog
         tab={tab}
         open={isDialogOpen}
+        setDialogOpen={setIsDialogOpen}
         handleClose={handleDialogClose}
         newItem={newItem}
         setNewItem={setNewItem}
@@ -160,13 +133,16 @@ export default function ContentManagement() {
         editMode={editMode}
         setEditMode={setEditMode}
         editId={editId}
+        isVideo={isVideo}
+        videoDialog={videoDialog}
+        isArticle={isArticle}
       />
-      <DeleteDialog 
-        open={isDeleteOpen} 
-        onClose={() => setIsDeleteOpen(false)} 
-        onConfirm={handleDeleteConfirm} 
-        deleteTarget={deleteTarget} 
-        selectedItems={selectedItems} 
+      <DeleteDialog
+        open={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        deleteTarget={deleteTarget}
+        selectedItems={selectedItems}
       />
     </div>
   );
