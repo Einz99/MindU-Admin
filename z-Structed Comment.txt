@@ -1,0 +1,76 @@
+/**
+ * ===========================================
+ * Screen: [Screen Name]
+ * Author: [Your Name]
+ * Created: [YYYY-MM-DD]
+ * Last Updated: [YYYY-MM-DD] (Optional: by [Name])
+ * 
+ * Description:
+ * - [Brief description of what this screen displays and does.]
+ * - [Mention navigation, routes, or major contexts if important.]
+ * 
+ * Purpose:
+ * - [List main goals of the screen.]
+ * 
+ * Navigation:
+ * - [List routes or other screens this screen links to or depends on.] (Optional, but nice)
+ * 
+ * State Variables:
+ * - [StateName] (type): [Short description]
+ * 
+ * Functions:
+ * - [FunctionName]: [Short description of what the function does]
+ * 
+ * API Calls:
+ * - [Endpoint] - [Purpose of the API call]
+ * 
+ * Error Handling:
+ * - [How errors are handled, especially if fetching or submitting data]
+ * 
+ * Notes:
+ * - [Anything extra devs or reviewers should know about this screen]
+ * ===========================================
+ */
+
+/**
+ * ===========================================
+ * Component: [Component Name]
+ * Author: [Your Name]
+ * Created: [YYYY-MM-DD]
+ * Last Updated: [YYYY-MM-DD] (Optional: by [Name])
+ * 
+ * Description:
+ * - [Brief description of what the component does.]
+ * - [If needed, mention any important libraries, APIs, or context it uses.]
+ * 
+ * Purpose:
+ * - [List main goals or functionality.]
+ * 
+ * Props:
+ * - [PropName] (type): [Short description] (optional section if your component uses props)
+ * 
+ * State Variables:
+ * - [StateName] (type): [Short description]
+ * 
+ * Functions:
+ * - [FunctionName]: [Short description of what the function does]
+ * - [FunctionName]: [Short description...]
+ * 
+ * API Calls:
+ * - [Endpoint] - [Purpose of the API call]
+ * 
+ * Error Handling:
+ * - [Brief description of how errors are managed]
+ * 
+ * Notes:
+ * - [Any important notes for future developers or groupmates]
+ * ===========================================
+ */
+
+Aayusin yung design again ng sa mga permanent at restore (SchedulerActionModals)
+Refractor the selecting of page per row and changing when to show it all of it.
+Code Documentations to Left Side of Scheduler.
+Fixing UserManagement by adding new
+and implementing the role-access leveling
+Fix the whole Content refractor and remove useless and compacting/perfecting the code
+implementing google auth

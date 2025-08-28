@@ -1,9 +1,25 @@
 /* eslint-disable */
 /* stylelint-disable */
 
+/* Importing of Tailwindcss */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+  font-family: 'Norwester';
+  src: url('../public/fonts/Norwester.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'DancingScript';
+  src: url('../public/fonts/DancingScript-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
 
 /* eslint-enable */
 /* stylelint-enable */

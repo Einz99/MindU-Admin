@@ -1,0 +1,248 @@
+import React, { useState } from "react";
+import { 
+    Table, 
+    TableBody, 
+    TableCell, 
+    TableContainer, 
+    TableHead, 
+    TableRow, 
+    IconButton, 
+    Select, 
+    MenuItem, 
+    Button,
+    Tooltip,
+  } from "@mui/material";
+import { CheckCircle, Cancel, Edit, Delete, Summarize, Restore } from "@mui/icons-material";
+import { format } from "date-fns";
+
+export default function SchedulerTable({ initial, handleOpen, SelectedDate, searchTerm, tab }) {
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [page, setPage] = useState(1);
+    const staff = JSON.parse(localStorage.getItem("staff"));
+    const staffPosition = staff.position;
+
+    const statusOrder = {
+      Scheduled: 0,
+      Completed: 1,
+      Cancelled: 2,
+      Trash: 3,
+    };
+
+    // Helper: safely get formatted date ("yyyy-MM-dd") from a date string
+    const getFormattedDate = (dateStr) => {
+        if (!dateStr) return "";
+        try {
+          const d = new Date(String(dateStr));
+          return format(d, "yyyy-MM-dd");
+        } catch (e) {
+          return "";
+        }
+      };
+
+      // Filtering: Compare the date portion only.
+      const filteredData = (initial || [])
+      .filter((data) => {
+        if (searchTerm && !data.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+        if (!data.sched_date || data.status === 'Pending') return false;
+        const rowDate = getFormattedDate(data.sched_date);
+        const selectedFormatted = getFormattedDate(SelectedDate || new Date());
+        
+        if (tab === 0 && data.student_id == null) return false;
+        if (tab === 1 && data.student_id != null) return false;
+
+        return rowDate === selectedFormatted;
+      })
+      .sort((a, b) => {
+        // First: group by whether student_id exists
+        const isAAppointment = a.student_id != null;
+        const isBAppointment = b.student_id != null;
+        if (isAAppointment !== isBAppointment) {
+          return isAAppointment ? 1 : -1; // Events (no student_id) come first
+        }
+      
+        // Second: sort by status
+        const statusA = statusOrder[a.status] ?? 999;
+        const statusB = statusOrder[b.status] ?? 999;
+        if (statusA !== statusB) return statusA - statusB;
+      
+        // Optional: finally sort alphabetically by name
+        return a.name.localeCompare(b.name);
+      });
+
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+
+    const handlePreviousPage = () => {
+      if (page > 1) setPage(page - 1);
+    };
+
+    const handleNextPage = () => {
+      if (page < totalPages) setPage(page + 1);
+    };
+
+    const handleRowsPerPageChange = (event) => {
+      setRowsPerPage(event.target.value);
+      setPage(1);
+    };
+
+    const getLabel = (action) => {
+      return {
+        view: "View Appointment Details",
+        cancel: "Cancel Appointment",
+        reschedule: "Reschedule Appointment",
+        complete: "Mark Appointment as Complete",
+        trash: "Move to Trash",
+        restore: "Restore to Cancelled",
+        delete: "Permanently Delete Appointment",
+      }[action];
+    };
+
+
+    return (
+      <div className="max-h-[calc(100vh-22rem)] overflow-y-auto">
+        <TableContainer className="border-b border-black">
+          <Table sx={{ borderCollapse: "collapse" }}>
+            <TableHead>
+              <TableRow className="bg-white border-y border-black">
+                <TableCell className="p-3 font-bold " sx={{ borderBottom: "none" }}>
+                  <p className="mx-auto text-center font-roboto font-bold">Names/Events</p>
+                </TableCell>
+                <TableCell className="p-3 font-bold" sx={{ borderBottom: "none" }}>
+                  <p className="mx-auto text-center font-roboto font-bold">Date & Time</p>
+                </TableCell>
+                <TableCell className="p-3 font-bold" sx={{ borderBottom: "none" }}>
+                  <p className="mx-auto text-center font-roboto font-bold">Status</p>
+                </TableCell>
+                <TableCell className="p-3 font-bold" sx={{ borderBottom: "none" }}>
+                  <p className="mx-auto text-center font-roboto font-bold">Actions</p>
+                </TableCell>
+              </TableRow>
+            </TableHead>
+
+            {/* Table Body: Map through filteredData and display each row */}
+            <TableBody>
+              {filteredData.length > 0 ? (
+                filteredData.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((data) => (
+                  <TableRow key={data.id} className="border-b border-white">
+                    <TableCell className="p-3 font-bold" sx={{ borderBottom: "none" }}>
+                      <p className="mx-auto text-center font-roboto">{data.name}</p>
+                    </TableCell>
+                    <TableCell className="p-3 font-bold" sx={{ borderBottom: "none" }}>
+                      <p className="mx-auto text-center font-roboto">{format(new Date(data.sched_date), "MMMM dd, yyyy hh:mm a")}</p>
+                    </TableCell>
+                    <TableCell className="p-3 font-bold" sx={{ borderBottom: "none" }}>
+                      <p className={`
+                        mx-auto 
+                        text-center
+                        rounded-full
+                        ${data.status === "Scheduled" && (!data.title === "Guidance Related Events" ? "bg-[#4f46e5]" : "bg-[#60a5fa]")}
+                        ${data.status === "Completed" && "bg-[#10b981]"}
+                        ${data.status === "Cancelled" && "bg-[#ef4444]"}
+                        ${data.status === "Missed" && "bg-[#ef4444]"}
+                        ${data.status === "Trash" && "bg-red-900"}
+                        `}>{data.status}</p>
+                    </TableCell>
+                    {staffPosition !== "Adviser" && (
+                      <TableCell className="p-3 font-bold" sx={{ borderBottom: "none" }}>
+                        {/* Action buttons based on status */}
+                        {data.status === "Scheduled" ? (
+                          <div className="flex gap-2 justify-center">
+                            <Tooltip title={getLabel("view")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full">
+                                <Summarize className="text-[#4F46E5] bg-white rounded-full" />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title={getLabel("cancel")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 0)} className="rounded-full">
+                                <Cancel className="text-red-400 bg-white rounded-full" />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title={getLabel("reschedule")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 1)} className="rounded-full">
+                                <Edit className="text-yellow-400 bg-white rounded-full" />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title={getLabel("complete")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 2)} className="rounded-full">
+                                <CheckCircle className="text-green-500 bg-white rounded-full" />
+                              </IconButton>
+                            </Tooltip>
+                          </div>
+                        ) : data.status === "Completed" ? (
+                          <div className="flex justify-center">
+                            <Tooltip title={getLabel("view")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full">
+                                <Summarize className="text-[#4F46E5] bg-white rounded-full" />
+                              </IconButton>
+                            </Tooltip>
+                          </div>
+                        ) : (data.status === "Cancelled" || data.status === "Missed") ? (
+                          <div className="flex justify-center">
+                            <Tooltip title={getLabel("view")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full">
+                                <Summarize className="text-[#4F46E5] bg-white rounded-full" />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title={getLabel("reschedule")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 1)} className="rounded-full">
+                                <Edit className="text-yellow-400 bg-white rounded-full" />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title={getLabel("trash")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 5)} className="rounded-full">
+                                <Delete className="text-red-400 bg-white rounded-full" />
+                              </IconButton>
+                            </Tooltip>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2 justify-center">
+                            <Tooltip title={getLabel("restore")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 6)} className="rounded-full">
+                                <Restore className="text-green-500 bg-white rounded-full" />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title={getLabel("delete")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 7)} className="rounded-full">
+                                <Delete className="text-red-500 bg-white rounded-full" />
+                              </IconButton>
+                            </Tooltip>
+                          </div>
+                        )
+                      }
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell sx={{alignItems: "center", textAlign: "center"}} colSpan={4} className="text-center p-3">No {tab === 0 ? "Appointments" : "Events"}</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {filteredData.length > 5 && (
+          <div className="flex items-center justify-end p-2">
+            <span className="pr-5">Show: </span>
+            <Select value={rowsPerPage} onChange={handleRowsPerPageChange} size="small">
+              {[5, 10, 15, 20, 25, 30].map((size) => (
+                <MenuItem key={size} value={size}>
+                  {size}
+                </MenuItem>
+              ))}
+            </Select>
+              <div className="flex justify-center items-center p-2">
+                <Button onClick={handlePreviousPage} disabled={page === 1}><p className={`${page === 1 ? "text-gray-500" : "text-black"} text-2xl font-extrabold`}>{"<"}</p></Button>
+                <span className="mx-2">Page {page} of {totalPages}</span>
+                <Button onClick={handleNextPage} disabled={page === totalPages}><p className={`${page === totalPages ? "text-gray-500" : "text-black"} text-2xl font-extrabold`}>{">"}</p></Button>
+              </div>
+          </div>
+        )}
+      </div>
+    );
+}

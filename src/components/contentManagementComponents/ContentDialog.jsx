@@ -1,8 +1,4 @@
-import { 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
+import {
   TextField, 
   Button, 
   FormControl, 
@@ -10,105 +6,124 @@ import {
   MenuItem, 
   Box, 
   Typography,
-  IconButton,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { API } from "../../api";
+import { API, RootAPI } from "../../api";
 import ReactPlayer from "react-player";
 import { CloudUpload, FileUpload } from "@mui/icons-material";
 import { useDropzone } from "react-dropzone";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Link from "@tiptap/extension-link";
-import TextAlign from "@tiptap/extension-text-align";
-import Image from "@tiptap/extension-image";
-import Highlight from "@tiptap/extension-highlight";
-import TextStyle from "@tiptap/extension-text-style";
-import Color from "@tiptap/extension-color";
-import ListItem from "@tiptap/extension-list-item";
-import BulletList from "@tiptap/extension-bullet-list";
-import OrderedList from "@tiptap/extension-ordered-list";
-import Superscript from "@tiptap/extension-superscript";
-import Subscript from "@tiptap/extension-subscript";
-import { FormatBold, FormatItalic, FormatUnderlined, FormatColorFill, SuperscriptOutlined, SubscriptOutlined, FormatAlignLeft, FormatAlignCenter, FormatAlignRight, FormatAlignJustify, InsertLink, Image as ImageIcon, FormatListBulleted, FormatListNumbered, FormatIndentIncrease, FormatIndentDecrease } from "@mui/icons-material";
+import RichTextEditor, { DialogWrapper } from "./contentDialogComponents";
 
 export default function ContentDialog({
   tab,
   open,
-  handleClose,
   newItem,
   setNewItem,
-  file,
-  setFile,
   setData,
   editMode,
   setEditMode,
   editId,
+  setEditID,
   isVideo,
   onImageSelect,
   videoDialog,
+  setIsVideo,
   setDialogOpen,
+  setVideoDialog,
   isArticle,
+  setIsArticle,
+  isAdd,
+  setIsAdd,
+  setViewMode,
+  viewMode,
+  updateContent,
+  setAlertMessage,
+  setIsSuccessful,
+  setOpenError,
 }) {
-  const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
   const [isRichText, setIsRichText] = useState(false);
   const [bannerFile, setBannerFile] = useState(null);
-  const [fontSize, setFontSize] = useState("16px");
-  // Initialize the editor when the component mounts or isRichText changes
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      Link,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Image,
-      Highlight,
-      TextStyle,
-      Color,
-      ListItem,
-      BulletList,
-      OrderedList,
-      Superscript,
-      Subscript,
-    ],
-    content,
-    onUpdate: ({ editor }) => {
-      setContent(editor.getHTML());
-    },
-  });
-
-  const addImage = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*"; // Restrict selection to images only
-    input.onchange = (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result;
-          editor.chain().focus().setImage({ src: base64 }).run();
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-    input.click();
-  };
+  const [articleFile, setArticleFile] = useState(null);
+  const shouldHandleSave = useRef(false);
+  const [videoPath, setVideoPath] = useState("");
+  const [blob, setBlob] = useState(null);
+  const [editorData, setEditorData] = useState(null);
+  const [isDraft, setIsDraft] = useState(false);
   
-  const saveToFile = () => {
-    const blob = new Blob([content], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "document.html";
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setEditMode(false);
+    setEditID(null);
+    setIsArticle(false);
+    setVideoDialog(false);
+    setIsVideo(false);
+    setPreview(null);
+    setVideoPreview(null);
+    setIsRichText(null);
+    setBannerFile(null);
+    setArticleFile(null);
+    setNewItem({});
+    setIsRichText(false);
   };
+
+  useEffect(() => {
+    if (shouldHandleSave.current && articleFile) {
+        handleSave(isDraft);
+        shouldHandleSave.current = false; // Reset flag
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articleFile, isDraft]);
+
+  
+
+  useEffect(() => {
+    if (tab === 2) return;
+    if ((editMode && editId) || (editId && isAdd === false)) {
+      setPreview(`${RootAPI}${newItem.banner}`);
+
+      if (newItem.filepath && isVideo === true) {
+        setVideoPreview(`${RootAPI}${newItem.filepath}`);
+        setVideoPath(
+          newItem.filepath.split("/").pop().replace(/^[^-]+-/, "").trim()
+        );
+      }
+
+      // Fetch and set the banner file using axios
+      axios
+        .get(`${RootAPI}${newItem.banner}`, { responseType: 'blob' })
+        .then(response => {
+          const blob = response.data;
+          const fileName = newItem.banner.replace(/\/resources\/[\d-]+/, '');
+          const file = new File([blob], fileName, { type: blob.type });
+          setBannerFile(file);
+        })
+        .catch(error =>
+          console.error("Error loading banner file:", error)
+        );
+
+      // Fetch and set the article file if not video
+      if (newItem.filepath && isVideo === false) {
+        const loadFileContent = async () => {
+          try {
+            const response = await axios.get(`${RootAPI}${newItem.filepath}`, {
+              responseType: 'text',
+            });
+            setEditorData(response.data);
+            console.log("File content loaded:", response.data);
+          } catch (error) {
+            console.error("Error loading file:", error);
+          }
+        };
+
+        loadFileContent();
+      }
+    }
+  }, [editId, editMode, newItem.banner, newItem.filepath, newItem.title, isVideo, isAdd, tab]);
+  
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -124,32 +139,36 @@ export default function ContentDialog({
   
     if (selectedFile && selectedFile.type.startsWith("video/")) {
       const videoURL = URL.createObjectURL(selectedFile);
-      setFile(selectedFile);
+      setDialogOpen(false);
+      setArticleFile(selectedFile);
       setVideoPreview(videoURL);
-
-      handleClose();  // Close the upload dialog
+      setVideoPath(selectedFile.name);
       setTimeout(() => {
         setDialogOpen(true); // Open the main dialog with video preview
       }, 100);
     } else {
-      alert("Please upload a valid video file.");
+      setAlertMessage("Please upload a valid video file.")
+      setIsSuccessful(false)
+      setOpenError(true)
     }
   };
 
   const { getRootProps, getInputProps } = useDropzone({
-    accept: "video/*",
+    accept: {
+      'video/*': []
+    },
     onDrop: (acceptedFiles) => {
       const videoFile = acceptedFiles[0];
       if (!videoFile) return;
-      
-      const videoURL = URL.createObjectURL(videoFile);
-      setFile(videoFile);
-      setVideoPreview(videoURL);
   
-      handleClose();  // Close the upload dialog
+      const videoURL = URL.createObjectURL(videoFile);
+      setArticleFile(videoFile);
+      setVideoPreview(videoURL);
+      setVideoDialog(false);
+  
       setTimeout(() => {
         setDialogOpen(true); // Open the main dialog with video preview
-      }, 100); // Small delay to ensure state updates properly
+      }, 100);
     },
   });
 
@@ -159,18 +178,31 @@ export default function ContentDialog({
     2: ["Important", "General", "Update", "Advisory"],
   }[tab] || [];
 
-  const handleSave = async () => {
+  function formatDateForMySQL(date) {
+    const pad = (n) => n.toString().padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+           `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  }
+
+  const handleSave = async (isDraft) => { 
     setLoading(true);
     try {
       let response;
+      let requestBody;
+      const staff = JSON.parse(localStorage.getItem("staff"));
+      const isUpdating = editMode; // true if updating, false if creating
+      const statusText = isDraft ? "Draft" : "Posted";
+    
       if (tab === 2) {
-        // Announcement saving remains unchanged
-        const requestBody = {
+        requestBody = {
           title: newItem.title || "",
           category: newItem.category || "",
-          announcementContent: newItem.content || "",
+          announcementContent: newItem.announcementContent || "",
+          end_date: newItem.end_date || "",
+          staff_name: staff.name || "",
+          staff_position: staff.position || "",
         };
-        response = editMode
+        response = isUpdating
           ? await axios.put(`${API}/announcements/${editId}`, requestBody, { headers: { "Content-Type": "application/json" } })
           : await axios.post(`${API}/announcements`, requestBody, { headers: { "Content-Type": "application/json" } });
       } else {
@@ -178,47 +210,55 @@ export default function ContentDialog({
         formData.append("title", newItem.title || "");
         formData.append("category", newItem.category || "");
         formData.append("isResource", tab === 0 ? 1 : 0);
-        
-        // Append the description field.
         formData.append("description", newItem.description || "");
-        
-        // Append article content if available, so backend can merge it with description.
-        if (newItem.article) {
-          formData.append("article", newItem.article);
-        }
-        
-        // Append file path if available.
-        formData.append("filepath", newItem.filePath || "");
-        
-        // Send resourceType if provided; otherwise, backend will detect based on file mime type.
+        formData.append("status", statusText);
+        formData.append("posted_at", isDraft ? null : formatDateForMySQL(new Date()));
+        formData.append("staff_name", staff?.name ?? "");
+        formData.append("staff_position", staff?.position ?? "");
+      
         if (tab === 0) {
           formData.append("resourceType", newItem.resourceType || "");
         }
-        
-        if (file) formData.append("file", file);
+      
+        if (articleFile) formData.append("file", articleFile);
         if (bannerFile) formData.append("banner", bannerFile);
-  
+      
         const endpoint = `${API}/resources`;
-        response = editMode
-          ? await axios.put(`${endpoint}/${editId}`, formData, { headers: { "Content-Type": "multipart/form-data" } })
-          : await axios.post(endpoint, formData, { headers: { "Content-Type": "multipart/form-data" } });
+        response = isUpdating
+          ? await axios.put(`${endpoint}/${editId}`, formData)
+          : await axios.post(endpoint, formData);
       }
-  
+    
       setData((prev) =>
-        editMode ? prev.map((item) => (item.ID === editId ? response.data : item)) : [...prev, response.data]
+        isUpdating ? prev.map((item) => (item.ID === editId ? response.data : item)) : [...prev, response.data]
       );
-      alert("Data saved successfully!");
-      handleClose();
-      setNewItem({});
-      setEditMode(false);
-      window.location.reload();
+    
+      // Show customized alert message
+      let alertMessage = "";
+      if (!isUpdating && isDraft) alertMessage = "Draft created successfully.";
+      else if (!isUpdating && !isDraft) alertMessage = "Post created successfully.";
+      else if (isUpdating && isDraft) alertMessage = "Draft updated successfully.";
+      else if (isUpdating && !isDraft) alertMessage = "Post updated successfully.";
+      
+      setAlertMessage(alertMessage)
+      setIsSuccessful(true)
+      setOpenError(true)
+    
+      setTimeout(() => {
+        handleDialogClose();
+        updateContent();
+      }, 2000);
+    
     } catch (error) {
       console.error("Error saving data:", error.response ? error.response.data : error);
-      alert("Failed to save data.");
+      setAlertMessage("Failed to save data.")
+      setIsSuccessful(false)
+      setOpenError(true)
     } finally {
       setLoading(false);
     }
   };
+
   
 
   const handleBannerChange = (event) => {
@@ -245,106 +285,282 @@ export default function ContentDialog({
     };
   }, [preview, videoPreview]);
 
+  const saveToFile = async () => {
+    if (!blob) {
+      setAlertMessage("Failed to save data.");
+      setIsSuccessful(false);
+      setOpenError(true);
+      return;
+    };
+    const file = new File([blob], `${newItem.title}.html`, { type: "text/html" });
+    setArticleFile(file);
+    shouldHandleSave.current = true;
+  };
+
+  useEffect(() => {
+    if(editMode === false) {
+      setNewItem({})
+      setBannerFile(null);
+      setPreview(null);
+      setArticleFile(null)
+    }
+  }, [editMode, setNewItem])
+
+  const isFormValid = () => {
+    // Announcement: title, category, and announcementContent required
+    if (tab === 2) {
+      return (
+        newItem.title?.trim() &&
+        newItem.category?.trim() &&
+        newItem.announcementContent?.trim() &&
+        newItem.end_date
+      );
+    }
+    // Video: title, description, category, banner file, and video file required
+    else if (isVideo) {
+      return (
+        newItem.title?.trim() &&
+        newItem.description?.trim() &&
+        newItem.category?.trim() &&
+        bannerFile &&
+        (videoPreview || videoPath)
+      );
+    }
+    // Article (non-video): title, category, and banner file required
+    else {
+      console.log(newItem, bannerFile)
+      return (
+        newItem.title?.trim() &&
+        newItem.category?.trim() &&
+        bannerFile
+      );
+    }
+  };
+
+  const handleDateChange = (e) => {
+    setNewItem({
+      ...newItem,
+      [e.target.name]: e.target.value,
+    });
+  };
   
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = tomorrow.toISOString().split('T')[0];
   return (
     <>
-      <Dialog open={isArticle} onClose={()=> handleClose()} maxWidth="md"
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: "#b7e3cc", 
-            color: "#000",
-            borderRadius: "24px",
-            width: "70%",
-            height: "50%",
-            overflowX: "hidden",
-            overflowY: "auto",
-            display: "flex",
-          },
+      <DialogWrapper
+        open={isArticle || open}
+        onClose={() => {
+          setIsAdd(true);
+          if(isRichText === true) {
+            setIsArticle(false);
+            setDialogOpen(false);
+            setEditorData(null);
+            setViewMode(false);
+            setIsVideo(false);
+          } 
+          else{
+            handleDialogClose()
+          }
         }}
-        >
-        <div className="w-[97.5%] h-full bg-white rounded-3xl mb-4">
-          <DialogTitle className="border-b-2 border-[#737373]"><p className="text-4xl text-[#737373]">{editMode ? "Edit " : "Add "} {tab === 0 ? "Resource" : tab === 1 ? "Wellness" : "Announcement"}</p></DialogTitle>
-          <DialogContent className="border-b-2 border-b-gray-500">
-            <h1 className="text-3xl text-[#737373] font-normal">Title</h1>
-            <TextField
-              name="title"
-              placeholder="Type here..."
-              fullWidth
-              variant="outlined"
-              value={newItem.title || ""}
-              onChange={handleInputChange}
-              margin="dense"
-              sx={{
-                borderWidth: "2px",
-                borderColor: "gray",
-                borderRadius: "12px",
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderWidth: "2px",
-                    borderColor: "gray",
-                    borderRadius: "12px",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "darkgray",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "black",
-                  },
-                },
+        title={`${editMode ? "Edit " : isAdd === false ? "View ": "Add "} ${
+          tab === 0 ? "Resource" : tab === 1 ? "Wellness" : "Announcement"
+        }`}
+        actionButtons={
+        <>
+        <Button onClick={() => {
+          setIsAdd(true);
+          if(isRichText === true) {
+            setIsArticle(false);
+            setDialogOpen(false);
+          } 
+          else{
+            handleDialogClose()
+          }
+        }}>
+          <p className="text-base font-roboto font-bold text-[#64748b] p-2">Back</p>
+        </Button>
+          {isArticle ? (
+            <Button
+              onClick={() => {
+                if (!isFormValid()) {
+                  setAlertMessage("Missing Field.\nPlease make sure all fields is filled");
+                  setIsSuccessful(false);
+                  setOpenError(true);
+                  return;
+                }
+                setIsRichText(true);
+                setIsArticle(false);
+                newItem.resourceType = "Document";
               }}
-            />
-            <div className="flex flex-row">
-              {tab !== 2 ? (
-                <div className="w-[50%] p-4 border-r-2">
-                  <h1 className="text-3xl text-[#737373] font-normal">Banner</h1>
-                  <h1 className="text-lg text-gray-400">Set a image that draws attention</h1>
-                  <Box
-                    sx={{
-                      width: "200px",
-                      height: "100px",
-                      border: "2px dashed gray",
+              disabled={loading}
+            >
+              <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
+                {loading ? "Loading..." : "Next"}
+              </p>
+            </Button>
+          ) : viewMode === false &&
+            (
+            <>
+              <Button
+                onClick={() => {
+                  if (!isFormValid()) {
+                    setAlertMessage("Missing Field.\nPlease make sure all fields is filled");
+                    setIsSuccessful(false);
+                    setOpenError(true);
+                    return;
+                  };
+                  handleSave(true);
+                  }}
+                  disabled={loading}
+              > 
+                <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
+                  {loading ? "Saving as Draft..." : "Save as Draft"}
+                </p>
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (!isFormValid()) {
+                    setAlertMessage("Missing Field.\nPlease make sure all fields is filled");
+                    setIsSuccessful(false);
+                    setOpenError(true);
+                    return;
+                  };
+                  handleSave(false);
+                }}
+                disabled={loading}
+              > 
+                <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
+                  {loading ? "Posting..." : "Post"}
+                </p>
+              </Button>
+            </>
+          ) 
+        }
+      </>
+      }
+      >
+        <div className="w-full">
+          {/* Title Field */}
+          <div className="flex flex-row">
+            <div className={`${isVideo === true ? 'w-[50%]' : 'w-full'}`}>
+              <h1 className="text-3xl text-[#737373] font-normal">Title</h1>
+              <TextField
+                name="title"
+                placeholder="Type here..."
+                fullWidth
+                variant="outlined"
+                value={newItem.title || ""}
+                onChange={handleInputChange}
+                margin="dense"
+                sx={{
+                  borderWidth: "2px",
+                  borderColor: "gray",
+                  borderRadius: "12px",
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": {
+                      borderWidth: "2px",
+                      borderColor: "gray",
                       borderRadius: "12px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexDirection: "row",
-                      cursor: "pointer",
-                      backgroundColor: "#f9f9f9",
-                      overflow: "hidden",
-                    }}
-                    onClick={() => document.getElementById("imageInput").click()}
-                  >
-                    {preview ? (
-                      <img
-                        src={preview}
-                        alt="Preview"
-                        style={{ width: "100%", height: "100%", objectFit: "cover"}}
-                      ></img>
-                    ) : (
-                      <>
-                        <CloudUpload
-                          sx={{ fontSize: 40, color: "#a3cbb8"}}
-                        ></CloudUpload>
-                        <Typography sx={{ fontSize: 14, color: "#737373"}}>
-                          Upload file here
-                        </Typography>
-                      </>
-                    )}
-                    <input
-                      type="file"
-                      id="imageInput"
-                      accept="image/*"
-                      style={{display: "none"}}
-                      onChange={handleBannerChange}
-                    ></input>
-                  </Box>
-                </div>
-              ) : null}
-              <div className={`p-4 ${tab !== 2 ? "w-[50%]" : "w-full"}`}>
-                <FormControl fullWidth margin="dense">
-                  <h1 className="text-3xl text-[#737373] font-normal">Category</h1>
-                  <h1 className="text-lg text-gray-400 mb-4">Select a category that the post's fall under</h1>
-                  <Select name="category" value={newItem.category || ""} onChange={handleCategoryChange}
+                    },
+                    "&:hover fieldset": { borderColor: "darkgray" },
+                    "&.Mui-focused fieldset": { borderColor: "black" },
+                  },
+                }}
+              />
+
+              {/* Conditionally show content for Announcement vs. Resource/Wellness */}
+              {tab === 2 ? (
+                <>
+                  {/* Category Field for Announcements - Moved above content */}
+                  <FormControl fullWidth margin="dense">
+                    <h1 className="text-3xl text-[#737373] font-normal">Category</h1>
+                    <h1 className="text-lg text-gray-400 mb-4">
+                      Select a category that the post falls under
+                    </h1>
+                    <Select
+                      name="category"
+                      value={newItem.category || ""}
+                      onChange={handleCategoryChange}
+                      displayEmpty
+                      sx={{
+                        borderWidth: "2px",
+                        borderColor: "gray",
+                        borderRadius: "12px",
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": {
+                            borderWidth: "2px",
+                            borderColor: "gray",
+                            borderRadius: "12px",
+                          },
+                          "&:hover fieldset": { borderColor: "darkgray" },
+                          "&.Mui-focused fieldset": { borderColor: "black" },
+                        },
+                      }}
+                    >
+                      <MenuItem value="" disabled>
+                        <p className="text-gray-400">Select Category</p>
+                      </MenuItem>
+                      {categoryOptions.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth margin="dense">
+                    <h1 className="text-3xl text-[#737373] font-normal">
+                      Duration of Announcement
+                    </h1>
+                    <h1 className="text-lg text-gray-400">
+                      Select the date when the announcement will expire
+                    </h1>
+
+                    <TextField
+                      type="date"
+                      name="end_date"
+                      value={
+                        newItem.end_date
+                          ? new Date(newItem.end_date).toISOString().split('T')[0]
+                          : ''
+                      }
+                      onChange={handleDateChange}
+                      fullWidth
+                      margin="normal"
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                      inputProps={{
+                        min: minDate, // disables today and earlier
+                      }}
+                      sx={{
+                        borderWidth: "2px",
+                        borderColor: "gray",
+                        borderRadius: "12px",
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": {
+                            borderWidth: "2px",
+                            borderColor: "gray",
+                            borderRadius: "12px",
+                          },
+                          "&:hover fieldset": { borderColor: "darkgray" },
+                          "&.Mui-focused fieldset": { borderColor: "black" },
+                        },
+                      }}
+                    />
+                  </FormControl>
+                  <h1 className="text-3xl text-[#737373] font-normal">Content</h1>
+                  <TextField
+                    name="announcementContent"
+                    placeholder="Type here..."
+                    fullWidth
+                    variant="outlined"
+                    multiline
+                    rows={5}
+                    value={newItem.announcementContent || ""}
+                    onChange={handleInputChange}
+                    margin="dense"
                     sx={{
                       borderWidth: "2px",
                       borderColor: "gray",
@@ -355,328 +571,252 @@ export default function ContentDialog({
                           borderColor: "gray",
                           borderRadius: "12px",
                         },
-                        "&:hover fieldset": {
-                          borderColor: "darkgray",
+                        "&:hover fieldset": { borderColor: "darkgray" },
+                        "&.Mui-focused fieldset": { borderColor: "black" },
+                      },
+                    }}
+                  />
+                </>
+              ) : ((tab === 0 || tab === 1) && isVideo === true) && (
+                <>
+                  <h1 className="text-3xl text-[#737373] font-normal">Description</h1>
+                  <TextField
+                    name="description"
+                    fullWidth
+                    variant="outlined"
+                    multiline
+                    rows={3}
+                    placeholder="Type here..."
+                    value={newItem.description || ""}
+                    onChange={handleInputChange}
+                    margin="dense"
+                    sx={{
+                      borderWidth: "2px",
+                      borderColor: "gray",
+                      borderRadius: "12px",
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderWidth: "2px",
+                          borderColor: "gray",
+                          borderRadius: "12px",
                         },
-                        "&.Mui-focused fieldset": {
-                          borderColor: "black",
+                        "&:hover fieldset": { borderColor: "darkgray" },
+                        "&.Mui-focused fieldset": { borderColor: "black" },
+                      },
+                    }}
+                  />
+                </>
+              )}
+            </div>
+            
+
+            {/* If it's a video resource, include the video upload preview */}
+            {isVideo && (
+              <div className="w-[50%] h-[18.4rem] px-5">
+                <div className="w-full h-[75%]">
+                  <ReactPlayer url={videoPreview} controls width="100%" height="100%" />
+                </div>
+                <div
+                  className="w-full h-[25%] bg-[#b7cde3] rounded-b-3xl px-4"
+                  {...getRootProps()}
+                >
+                  <input
+                    {...getInputProps()}
+                    onChange={handleVideoUpload}
+                    disabled={viewMode}
+                    onClick={() => (newItem.resourceType = "Video")}
+                  />
+                  <h1 className="text-sm text-gray-500">File Name:</h1>
+                  <p className="font-bold text-gray-800">{videoPath}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+      
+          {/* Render a flex container for banner/thumbnail and category */}
+          <div className="flex flex-row mt-4">
+            {tab !== 2 && (
+              <div className="w-[50%] p-4 border-r-2">
+                {/* For video, label it as Thumbnail; otherwise Banner */}
+                <h1 className="text-3xl text-[#737373] font-normal">
+                  {isVideo ? "Thumbnail" : "Banner"}
+                </h1>
+                <h1 className="text-lg text-gray-400">
+                  Set an image that draws attention
+                </h1>
+                <Box
+                  sx={{
+                    width: "200px",
+                    height: "100px",
+                    border: "2px dashed gray",
+                    borderRadius: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    backgroundColor: "#f9f9f9",
+                    overflow: "hidden",
+                  }}
+                  onClick={() => document.getElementById("imageInput").click()}
+                >
+                  {preview ? (
+                    <img
+                      src={preview}
+                      alt="Preview"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <>
+                      <CloudUpload sx={{ fontSize: 40, color: "#94a3b8" }} />
+                      <Typography sx={{ fontSize: 14, color: "#737373" }}>
+                        Upload file here
+                      </Typography>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    id="imageInput"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={handleBannerChange}
+                    disabled={viewMode}
+                  />
+                </Box>
+              </div>
+            )}
+
+            {/* Only show category section for non-announcement tabs since announcement's category is moved up */}
+            {tab !== 2 && (
+              <div className="w-[50%] p-4">
+                <FormControl fullWidth margin="dense">
+                  <h1 className="text-3xl text-[#737373] font-normal">Category</h1>
+                  <h1 className="text-lg text-gray-400 mb-4">
+                    Select a category that the post falls under
+                  </h1>
+                  <Select
+                    name="category"
+                    value={newItem.category || ""}
+                    onChange={handleCategoryChange}
+                    displayEmpty
+                    sx={{
+                      borderWidth: "2px",
+                      borderColor: "gray",
+                      borderRadius: "12px",
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderWidth: "2px",
+                          borderColor: "gray",
+                          borderRadius: "12px",
                         },
+                        "&:hover fieldset": { borderColor: "darkgray" },
+                        "&.Mui-focused fieldset": { borderColor: "black" },
                       },
                     }}
                   >
+                    <MenuItem value="" disabled>
+                      <p className="text-gray-400">Select Category</p>
+                    </MenuItem>
                     {categoryOptions.map((option) => (
-                      <MenuItem key={option} value={option}>{option}</MenuItem>
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               </div>
-            </div>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => {setIsRichText(true); handleClose(); newItem.resourceType = "Document"}} disabled={loading}><p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#5bb780]">Next</p></Button>
-          </DialogActions>
-        </div>
-      </Dialog>
-      <Dialog open={isRichText} onClose={() => setIsRichText(false)} maxWidth="md"
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: "#b7e3cc", 
-            color: "#000",
-            borderRadius: "24px",
-            width: "70%",
-            height: "70%",
-            overflowX: "hidden",
-            overflowY: "auto",
-            display: "flex",
-          },
-        }}
-      >
-        <div className="w-[97.5%] h-max bg-white rounded-3xl mb-4">
-          <DialogTitle className="border-b-2 border-[#737373]"><p className="text-4xl text-[#737373]">Create Document</p></DialogTitle>
-          <DialogContent>
-            {editor && (
-              <Box sx={{ display: "flex", gap: 1, marginBottom: 1, borderBottom: "1px solid gray", paddingBottom: 1, marginTop: 3}}>
-                <Select value={fontSize} onChange={(e) => setFontSize(e.target.value)}>
-                  <MenuItem value="12px">12px</MenuItem>
-                  <MenuItem value="14px">14px</MenuItem>
-                  <MenuItem value="16px">16px</MenuItem>
-                  <MenuItem value="18px">18px</MenuItem>
-                  <MenuItem value="20px">20px</MenuItem>
-                </Select>
-                <IconButton onClick={() => editor.chain().focus().toggleBold().run()}><FormatBold /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().toggleItalic().run()}><FormatItalic /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().toggleUnderline().run()}><FormatUnderlined /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().toggleHighlight().run()}><FormatColorFill /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().toggleSuperscript().run()}><SuperscriptOutlined /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().toggleSubscript().run()}><SubscriptOutlined /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().setTextAlign('left').run()}><FormatAlignLeft /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().setTextAlign('center').run()}><FormatAlignCenter /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().setTextAlign('right').run()}><FormatAlignRight /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().setTextAlign('justify').run()}><FormatAlignJustify /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().toggleLink({ href: prompt('Enter URL') }).run()}><InsertLink /></IconButton>
-                <IconButton onClick={addImage}><ImageIcon /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().toggleBulletList().run()}><FormatListBulleted /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().toggleOrderedList().run()}><FormatListNumbered /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().indent().run()}><FormatIndentIncrease /></IconButton>
-                <IconButton onClick={() => editor.chain().focus().outdent().run()}><FormatIndentDecrease /></IconButton>
-              </Box>
             )}
-            <EditorContent editor={editor} style={{ minHeight: "350px", padding: "10px", fontSize, width: "100%" }} />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => {saveToFile(); setIsRichText(false); handleSave()}} disabled={loading}><p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#5bb780]">{loading ? "Posting..." : "Post"}</p></Button>
-          </DialogActions>
+          </div>
         </div>
-      </Dialog>
-      <Dialog open={videoDialog} onClose={() => handleClose()} maxWidth="md"
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: "#b7e3cc", 
-            color: "#000",
-            borderRadius: "24px",
-            width: "70%",
-            height: "70%",
-            overflowX: "hidden",
-            overflowY: "auto",
-            display: "flex",
-          },
+      </DialogWrapper>
+      <DialogWrapper
+        open={isRichText}
+        onClose={() => {
+          setIsRichText(false);
+          handleDialogClose();
+          setEditorData(null);
+          setViewMode(false);
         }}
+        title={`${editMode ? "Edit " : viewMode ? "View ": "Add "} Content`}
+        actionButtons={
+          <>
+            <Button onClick={() => {
+              setIsRichText(false);
+              setDialogOpen(true);
+              setIsArticle(true);
+              setBlob(null);
+              setEditorData(null);
+            }}>
+              <p className="text-base font-roboto font-bold text-[#64748b] p-2">Back</p>
+            </Button>
+            {!viewMode && (
+              <>
+                <Button onClick={() => {
+                  if(!isFormValid()) {
+                    setAlertMessage("Missing Field.\nPlease make sure all fields is filled");
+                    setIsSuccessful(false);
+                    setOpenError(true);
+                    return;
+                  };
+                  setIsDraft(true);
+                  saveToFile();
+                  }} 
+                  disabled={loading}
+                > 
+                  <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
+                    {loading ? "Saving as Draft..." : "Save as Draft"}
+                  </p>
+                </Button>
+                <Button onClick={() => {
+                  setIsDraft(false);
+                  saveToFile();
+                  }} 
+                  disabled={loading}
+                >
+                  <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
+                    {loading ? "Posting..." : "Post"}
+                  </p>
+                </Button>
+              </>
+            )}
+          </>
+        }
+      >
+        <div>
+          <RichTextEditor setBlob={setBlob} editorData={editorData} />
+        </div>
+      </DialogWrapper>
+      <DialogWrapper
+        open={videoDialog}
+        onClose={() => setVideoDialog(false)}
+        title="Upload Files"
+        actionButtons={null} // You can add action buttons if needed
       >
         <div className="w-[97.5%] h-full bg-white rounded-3xl flex flex-col items-center justify-center mb-4">
-          <DialogTitle className="border-b-2 border-gray-500 text-center w-full">Upload Files</DialogTitle>
           <div
             {...getRootProps()}
             className="flex flex-col items-center justify-center text-center w-full h-full cursor-pointer"
           >
-            <input {...getInputProps()} onChange={handleVideoUpload} onClick={() => newItem.resourceType = "Video"}/>
+            <input {...getInputProps()} onChange={handleVideoUpload} onClick={() => (newItem.resourceType = "Video")} />
             <div className="flex flex-col items-center gap-7">
-              <FileUpload 
+              <FileUpload
                 sx={{
-                  bgcolor: "#b7e3cc",
-                  fontSize: "10rem",
+                  bgcolor: "#b7cde3",
+                  fontSize: "8rem",
                   color: "white",
                   borderRadius: "9999px",
                   padding: "1rem",
                   width: "12rem",
-                  height: "12rem"
-                }} 
+                  height: "12rem",
+                  marginTop: "2rem",
+                }}
               />
               <h1>Drag and drop video files to upload</h1>
               <Button>Select Files</Button>
             </div>
           </div>
         </div>
-      </Dialog>
-      {/*Announcement and Video Dialogs*/}
-      <Dialog open={open} onClose={handleClose} maxWidth="md"
-      sx={{
-        "& .MuiPaper-root": {
-          backgroundColor: "#b7e3cc", // Light blue for Restore, Light red for Delete
-          color: "#000", // Text color
-          borderRadius: "24px", // Optional: rounded corners
-          width: "70%",
-          height: "73.5%",
-          overflowX: "hidden",
-          overflowY: "auto"
-        },
-      }}
-      >
-        <div className="w-[97.5%] h-max mb-5 bg-white rounded-3xl">
-          <DialogTitle className="border-b-2 border-[#737373]"><p className="text-4xl text-[#737373]">{editMode ? "Edit " : "Add "} {tab === 0 ? "Resource" : tab === 1 ? "Wellness" : "Announcement"}</p></DialogTitle>
-          <DialogContent className="border-b-2 border-b-gray-500">
-            <div className={`p-4 ${isVideo === true ? "flex flex-row" : ""}`}>
-              <div className={`${isVideo === true ? "w-[50%]" : "w-full"}`}>
-                <h1 className="text-3xl text-[#737373] font-normal">Title</h1>
-                <TextField
-                  name="title"
-                  placeholder="Type here..."
-                  fullWidth
-                  variant="outlined"
-                  value={newItem.title || ""}
-                  onChange={handleInputChange}
-                  margin="dense"
-                  sx={{
-                    borderWidth: "2px",
-                    borderColor: "gray",
-                    borderRadius: "12px",
-                    "& .MuiOutlinedInput-root": {
-                      "& fieldset": {
-                        borderWidth: "2px",
-                        borderColor: "gray",
-                        borderRadius: "12px",
-                      },
-                      "&:hover fieldset": {
-                        borderColor: "darkgray",
-                      },
-                      "&.Mui-focused fieldset": {
-                        borderColor: "black",
-                      },
-                    },
-                  }}
-                />
-                {tab === 2 ? (
-                  <>
-                    <h1 className="text-3xl text-[#737373] font-normal">Content</h1>
-                    <TextField 
-                    name="content"
-                    placeholder="Type here..."
-                    fullWidth
-                    variant="outlined" 
-                    multiline 
-                    rows={5} 
-                    value={newItem.content || ""} 
-                    onChange={handleInputChange} 
-                    margin="dense"
-                    sx={{
-                      borderWidth: "2px",
-                      borderColor: "gray",
-                      borderRadius: "12px",
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderWidth: "2px",
-                          borderColor: "gray",
-                          borderRadius: "12px",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "darkgray",
-                        },
-                        "&.Mui-focused fieldset": {
-                          borderColor: "black",
-                        },
-                      },
-                    }}
-                     />
-                  </>
-                ) : 
-                (tab === 0 || tab === 1) && (
-                  <>
-                    <h1 className="text-3xl text-[#737373] font-normal">Description</h1>
-                    <TextField 
-                    name="description" 
-                    fullWidth 
-                    variant="outlined" 
-                    multiline
-                    rows={3}
-                    placeholder="Type here..."
-                    value={newItem.description || ""} 
-                    onChange={handleInputChange} 
-                    margin="dense"
-                    sx={{
-                      borderWidth: "2px",
-                      borderColor: "gray",
-                      borderRadius: "12px",
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderWidth: "2px",
-                          borderColor: "gray",
-                          borderRadius: "12px",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "darkgray",
-                        },
-                        "&.Mui-focused fieldset": {
-                          borderColor: "black",
-                        },
-                      },
-                    }}
-                     />
-                  </>
-                )
-              }
-              </div>
-              {isVideo === true ? 
-              <div className="w-[50%] h-[18.4rem] px-5">
-                <div className="w-full h-[75%]">
-                  <ReactPlayer url={videoPreview} controls width="100%" height="100%" />
-                </div>
-                <div className="w-full h-[25%] bg-[#b7e3cc] rounded-b-3xl"></div>
-              </div> : null}
-            </div>
-            <div className="flex flex-row">
-              {tab !== 2 ? (
-                <div className="w-[50%] p-4 border-r-2">
-                  <h1 className="text-3xl text-[#737373] font-normal">{isVideo === true ? "Thumbnail" : "Banner"}</h1>
-                  <h1 className="text-lg text-gray-400">Set a image that draws attention</h1>
-                  <Box
-                    sx={{
-                      width: "200px",
-                      height: "100px",
-                      border: "2px dashed gray",
-                      borderRadius: "12px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexDirection: "row",
-                      cursor: "pointer",
-                      backgroundColor: "#f9f9f9",
-                      overflow: "hidden",
-                    }}
-                    onClick={() => document.getElementById("imageInput").click()}
-                  >
-                    {preview ? (
-                      <img
-                        src={preview}
-                        alt="Preview"
-                        style={{ width: "100%", height: "100%", objectFit: "cover"}}
-                      ></img>
-                    ) : (
-                      <>
-                        <CloudUpload
-                          sx={{ fontSize: 40, color: "#a3cbb8"}}
-                        ></CloudUpload>
-                        <Typography sx={{ fontSize: 14, color: "#737373"}}>
-                          Upload file here
-                        </Typography>
-                      </>
-                    )}
-                    <input
-                      type="file"
-                      id="imageInput"
-                      accept="image/*"
-                      style={{display: "none"}}
-                      onChange={handleBannerChange}
-                    ></input>
-                  </Box>
-                </div>
-              ) : null}
-              <div className={`p-4 ${tab !== 2 ? "w-[50%]" : "w-full"}`}>
-                <FormControl fullWidth margin="dense">
-                  <h1 className="text-3xl text-[#737373] font-normal">Category</h1>
-                  <h1 className="text-lg text-gray-400 mb-4">Select a category that the post's fall under</h1>
-                  <Select name="category" value={newItem.category || ""} onChange={handleCategoryChange}
-                    sx={{
-                      borderWidth: "2px",
-                      borderColor: "gray",
-                      borderRadius: "12px",
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderWidth: "2px",
-                          borderColor: "gray",
-                          borderRadius: "12px",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "darkgray",
-                        },
-                        "&.Mui-focused fieldset": {
-                          borderColor: "black",
-                        },
-                      },
-                    }}
-                  >
-                    {categoryOptions.map((option) => (
-                      <MenuItem key={option} value={option}>{option}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </div>
-            </div>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => {handleSave();}} disabled={loading}><p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#5bb780]">{loading ? "Posting..." : "Post"}</p></Button>
-          </DialogActions>
-        </div>
-      </Dialog>
+      </DialogWrapper>
     </>
-    
   );
 }

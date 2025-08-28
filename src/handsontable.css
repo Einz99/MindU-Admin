@@ -1,0 +1,41 @@
+/* Apply this in your global styles or component-level CSS 
+   This is for design of handsontable 
+   Hands on Table is node module for sheets within the page */
+.custom-hot-table .htCore th,
+.custom-hot-table .htCore td.highlighted-cell,
+.custom-hot-table .ht_clone_left .htCore td {
+  background-color: #94a3b8 !important;
+  font-weight: bold !important;
+}
+
+/* Optional: style row header numbers */
+.custom-hot-table .ht_clone_left .htCore td {
+  font-weight: bold !important;
+  background-color: #94a3b8 !important;
+}
+
+.custom-hot-table .htCore td.headers {
+    min-height: 100px;
+    height: 100px;
+}
+
+.placeholder-row {
+  background-color: #f1f5f9; /* light gray-blue */
+  font-style: italic;
+  color: #94a3b8;
+}
+
+.htCore td, .htCore th {
+  vertical-align: middle;
+}
+
+.invalid-email-cell {
+  background-color: #fee2e2 !important; /* light red */
+  color: #991b1b !important; /* dark red */
+  font-weight: bold;
+}
+
+.incomplete-cell {
+  background-color: #fef9c3 !important; /* light yellow */
+  font-weight: bold;
+}

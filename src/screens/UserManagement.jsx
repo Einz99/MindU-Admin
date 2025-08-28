@@ -1,27 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import axios from "axios";
-import { Container, } from "@mui/material";
-import Navbar from "../components/navigationsComponents/TopNavBarComponent";
-import Sidebar from "../components/navigationsComponents/SidebarComponents";
+import { Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from "@mui/material";
+import Layout from "../components/Layout";
 import { API } from "../api";
 import UserTabs from "../components/userManagementComponents/UserTabs";
 import UserTable from "../components/userManagementComponents/UserTable";
 import UserDialog from "../components/userManagementComponents/UserDialog";
+import { data } from "react-router-dom";
+import { OpenContext } from '../contexts/OpenContext';
+import { Close } from "@mui/icons-material";
 
 export default function DashboardLayout() {
   // UI states
-  const [open, setOpen] = useState(false);
+  const { open, setOpen } = useContext(OpenContext);
   const [tab, setTab] = useState(0); // 0 = Students, 1 = Guidance Staffs
   const [checked, setChecked] = useState([]);
   const [allChecked, setAllChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editIndex, setEditIndex] = useState(null);
-
+  const [isViewMode, setIsViewMode] = useState(false);
+  const [, setEditIndex] = useState(null);
+  const [searchTerm, setSearchTerm] = useState(""); // <-- search state
   // Data states (fetched from API)
   const [students, setStudents] = useState([]);
   const [staffs, setStaffs] = useState([]);
-
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [OpenBulkDelete, setOpenBulkDelete] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
   // Form states
   const [newStudent, setNewStudent] = useState({
     firstName: "",
@@ -33,24 +39,65 @@ export default function DashboardLayout() {
   });
   const [newStaff, setNewStaff] = useState({
     name: "",
-    position: "",
+    position: "", // Default position
     email: "",
     password: "",
+    section: "",
+    status: "Active" // Add default status here
   });
+  const [reloadKey, setReloadKey] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [openError, setOpenError] = useState(false);
+  const [isSuccessful, setIsSuccessful] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   // Fetch data when component mounts or when tab changes
   useEffect(() => {
-    if (tab === 0 && students.length === 0) {
-      axios.get(`${API}/students`).then((res) => setStudents(res.data));
-    } else if (tab === 1 && staffs.length === 0) {
-      axios.get(`${API}/staffs`).then((res) => setStaffs(res.data));
+    if (students.length === 0) {
+      axios.get(`${API}/students`)
+        .then((res) => setStudents(res.data))
+        .catch((err) => console.error("Error fetching students:", err));
     }
-  }, [staffs.length, students.length, tab]);
   
+    if (staffs.length === 0) {
+      axios.get(`${API}/staffs`)
+        .then((res) => setStaffs(res.data))
+        .catch((err) => console.error("Error fetching staffs:", err));
+    }
+  }, [staffs.length, students.length, tab, reloadKey]);
+
+  useEffect(() => {
+    const fetchPeople = () => {
+      if (students.length === 0) {
+        axios.get(`${API}/students`).then((res) => setStudents(res.data));
+      } else if (staffs.length === 0) {
+        axios.get(`${API}/staffs`).then((res) => setStaffs(res.data));
+      }
+    };
+  
+    fetchPeople(); // initial fetch
+  
+    const interval = setInterval(() => {
+      fetchPeople(); // refresh every 60s
+    }, 60000); // 60,000 ms = 60 seconds
+  
+    return () => clearInterval(interval); // clean up on unmount
+  }, [students.length, staffs.length, tab, reloadKey]);
+  
+  const filteredStudents = students.filter((student) =>
+    `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.section.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.adviser.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredStaffs = staffs.filter((staff) => (
+    staff.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ));
 
   // Drawer toggle
   const handleDrawerToggle = () => {
-    setOpen(!open);
+    setOpen(prev => !prev);
   };
 
   // Checkbox handlers
@@ -78,6 +125,9 @@ export default function DashboardLayout() {
   // Open modal for adding a record
   const handleAddButtonClick = () => {
     setIsEditMode(false);
+    setIsViewMode(false);
+    setEditIndex(-1);
+    
     if (tab === 0) {
       setNewStudent({
         firstName: "",
@@ -85,62 +135,96 @@ export default function DashboardLayout() {
         section: "",
         adviser: "",
         email: "",
-        password: "",
+        password: ""
+      });
+    } else if (tab === 1) {
+      setNewStaff({
+        name: "",
+        position: "Adviser", // Default position
+        status: "Active", // Set default status explicitly
+        email: "",
+        password: ""
       });
     } else {
       setNewStaff({
         name: "",
-        position: "",
+        position: "Guidance Advocate", // Default position
+        status: "Active", // Set default status explicitly
         email: "",
-        password: "",
+        password: ""
       });
     }
+    
     setIsModalOpen(true);
   };
 
   // Open modal for editing a record (pre-fill the form)
-  const handleEditButtonClick = (index) => {
-    setIsEditMode(true);
-    setEditIndex(index);
+  const handleEditButtonClick = (id, edit) => {
+    setIsEditMode(edit);
+    setIsViewMode(!edit);
+    setIsModalOpen(true);
+  
     if (tab === 0) {
-      const selectedStudent = students[index];
+      const selectedStudent = students.find((student) => student.id === id);
+      if (!selectedStudent) return;
+  
       setNewStudent({
-        id: selectedStudent.id, // Ensure ID is included
+        id: selectedStudent.id,
         firstName: selectedStudent.firstName,
         lastName: selectedStudent.lastName,
         section: selectedStudent.section,
         adviser: selectedStudent.adviser,
-        username: selectedStudent.username,
-        password: "", // Keep password blank unless changing it
+        email: selectedStudent.email,
+        password: "", // Blank unless editing password
       });
     } else {
-      const selectedStaff = staffs[index];
+      const selectedStaff = staffs.find((staff) => staff.id === id);
+      if (!selectedStaff) return;
+  
       setNewStaff({
-        id: selectedStaff.id, // Ensure ID is included
+        id: selectedStaff.id,
         name: selectedStaff.name,
         position: selectedStaff.position,
+        section: selectedStaff.section,
         email: selectedStaff.email,
         password: "",
       });
     }
-    setIsModalOpen(true);
   };
 
   // Delete a record
-  const handleDeleteButtonClick = (index) => {
-    const id = tab === 0 ? students[index].id : staffs[index].id; // Ensure lowercase "id"
-    axios.delete(`${API}/${tab === 0 ? "students" : "staffs"}/${id}`)
-      .then(() => {
-        tab === 0
-          ? setStudents((prev) => prev.filter((_, i) => i !== index))
-          : setStaffs((prev) => prev.filter((_, i) => i !== index));
-      })
-      .catch((err) => console.error(`Error deleting ${tab === 0 ? "student" : "staff"}`, err));
- };
+  const handleDeleteButtonClick = (item) => {
+    setLoading(true);
+    const id = item.id;
+    const staff = JSON.parse(localStorage.getItem("staff"));
+    axios.delete(`${API}/${tab === 0 ? "students" : "staffs"}/${id}`, {
+      params: {
+        staffName: staff.name,
+        staffPosition: staff.position,
+      }
+    })
+    .then(() => {
+      if (tab === 0) {
+        setStudents((prev) => prev.filter((student) => student.id !== id));
+      } else {
+        setStaffs((prev) => prev.filter((staff) => staff.id !== id));
+      }
+      setLoading(false);
+      setAlertMessage(`Successfully Deleted ${tab === 0 ? "Student" : tab === 1 ? "Adviser" : "Guidance Staff"}`);
+      setIsSuccessful(false);
+      setOpenError(true);
+    })
+    .catch((err) => console.error(`Error deleting ${tab === 0 ? "student" : "staff"}`, err));
+    setChecked([])
+    setOpenBulkDelete(false);
+    setReloadKey(prev => prev + 1);
+  };
  
 
   const handleModalClose = () => {
     setIsModalOpen(false);
+    setIsEditMode(false);
+    setIsViewMode(false);
   };
 
   const handleInputChange = (e) => {
@@ -154,62 +238,122 @@ export default function DashboardLayout() {
 
   // Submit form for add or update
   const handleFormSubmit = () => {
+    setLoading(true);
     if (tab === 0) {
+      const staff = JSON.parse(localStorage.getItem("staff"));
+      // For students
+      const studentData = { 
+        ...newStudent,
+        adding_name : staff.name,
+        adding_position : staff.position,
+       };
+      if (!studentData.password) {
+        delete studentData.password;  // Don't send password if not changing it
+      }
+      const matchingAdviser = staffs.find(
+        (staff) => staff.position === "Adviser" && staff.section === newStudent.section
+      );
+    
+      if (matchingAdviser) {
+        studentData.adviser = matchingAdviser.name;
+      } else {
+        console.warn("No matching adviser found for section:", newStudent.section);
+        studentData.adviser = ""; // Or handle it differently if required
+      }
+
       if (isEditMode) {
         axios
-          .put(`${API}/students/${newStudent.id}`, newStudent)
+          .put(`${API}/students/${newStudent.id}`, studentData)
           .then(() => {
             setStudents((prev) =>
               prev.map((student) =>
-                student.id === newStudent.id ? { ...student, ...newStudent } : student
+                student.id === newStudent.id ? { ...student, ...newStudent, adviser: studentData.adviser } : student
               )
             );
             setIsModalOpen(false);
+            setLoading(false);
+            setAlertMessage("Successfully updated student data");
+            setIsSuccessful(true);
+            setOpenError(true);
           })
           .catch((err) => console.error("Error updating student:", err));
       } else {
         axios
-          .post(`${API}/students`, newStudent)
+          .post(`${API}/students`, studentData)
           .then((res) => {
             setStudents((prev) => [...prev, res.data.student]);
             setIsModalOpen(false);
+            setLoading(false);
+            setChecked([]);
+            setAlertMessage("Successfully added student data");
+            setIsSuccessful(true);
+            setOpenError(true);
           })
           .catch((err) => console.error("Error adding student:", err));
       }
     } else {
+      // For staff
+      const staff = JSON.parse(localStorage.getItem("staff"));
+      const staffData = { 
+        ...newStaff,
+        adding_name: staff?.name || "",
+        adding_position: staff?.position || ""
+      };
+      if (!staffData.password) {
+        delete staffData.password;  // Don't send password if not changing it
+      }
+  
       if (isEditMode) {
+        console.log(newStaff.id)
         axios
-          .put(`${API}/staffs/${newStaff.id}`, newStaff)
+          .put(`${API}/staffs/${newStaff.id}`, staffData)
           .then(() => {
             setStaffs((prev) =>
-              prev.map((staff, index) =>
-                index === editIndex ? { ...staff, ...newStaff } : staff
+              prev.map((staff) =>
+                staff.id === newStaff.id ? { ...staff, ...newStaff } : staff
               )
             );
             setIsModalOpen(false);
+            setChecked([]);
+            setLoading(false);
+            setAlertMessage(`Successfully updated ${tab === 1 ? "adviser" : "guidance staff"}`);
+            setIsSuccessful(true);
+            setOpenError(true);
           })
           .catch((err) => console.error("Error updating staff:", err));
       } else {
         axios
-          .post(`${API}/staffs`, newStaff)
+          .post(`${API}/staffs`, staffData)
           .then((res) => {
             setStaffs((prev) => [...prev, res.data.staff]);
             setIsModalOpen(false);
+            setLoading(false);
+            setAlertMessage(`Successfully added ${tab === 1 ? "adviser" : "guidance staff"}`);
+            setIsSuccessful(true);
+            setOpenError(true);
           })
           .catch((err) => console.error("Error adding staff:", err));
       }
     }
+    setReloadKey(prev => prev + 1);
   };
 
   const handleBulkDelete = () => {
     if (checked.length === 0) return;
-  
+    setLoading(true);
     const idsToDelete = checked.map((index) =>
       tab === 0 ? students[index].id : staffs[index].id
     );
+
+    const staff = JSON.parse(localStorage.getItem("staff"));
   
     const deleteRequests = idsToDelete.map((id) =>
-      axios.delete(`${API}/${tab === 0 ? "students" : "staffs"}/${id}`)
+      axios.delete(`${API}/${tab === 0 ? "students" : "staffs"}/${id}`, {
+        params: {
+          staffName: staff.name,
+          staffPosition: staff.position,
+        }
+      })
     );
   
     Promise.all(deleteRequests)
@@ -220,96 +364,235 @@ export default function DashboardLayout() {
           setStaffs((prev) => prev.filter((staff) => !idsToDelete.includes(staff.id)));
         }
         setChecked([]);
+        setOpenBulkDelete(false);
+        setAlertMessage(`Successfully Deleted ${tab === 0 ? "Students" : tab === 1 ? "Advisers" : "Guidance Staffs"}`);
+        setIsSuccessful(true);
+        setOpenError(true);
       })
+      .finally(() => (
+        setIsModalOpen(false)
+      ))
       .catch((err) => console.error("Error during bulk delete:", err));
+    setReloadKey(prev => prev + 1);
+    
   };  
 
-  const handleBulkUpload = async (spreadsheetData) => {
+  const handleBulkUpload = async (spreadsheetData, columnHeaders) => {
     try {
       if (!Array.isArray(spreadsheetData) || spreadsheetData.length === 0) {
-        alert("No data to upload.");
+        setAlertMessage('There is no data to be uploaded.');
+        setIsSuccessful(false);
+        setOpenError(true);
         return;
       }
-  
-      // Convert spreadsheet data into JSON format
-      const formattedStudents = spreadsheetData.map(row => ({
-        firstName: row[0]?.trim() || "", 
-        lastName: row[1]?.trim() || "",  
-        section: row[2]?.trim() || "",   
-        adviser: row[3]?.trim() || "",   
-        email: row[4]?.trim() || ""      
-      })).filter(student => student.email); // Ensure email is present
-  
-      if (formattedStudents.length === 0) {
-        alert("No valid students to upload.");
+      setLoading(true);
+      const dataToUpload = spreadsheetData.slice(1); // Skip guide row
+    
+      const keyMap = tab === 0 ? {
+        "Email": "email",
+        "First Name": "firstName",
+        "Last Name": "lastName",
+        "Section": "section",
+      } : {
+        "Email": "email",
+        "Name": "name",
+        "Section": "section",
+      };
+    
+      const formattedData = dataToUpload.map(row => {
+        const entry = {};
+        columnHeaders.forEach((header, i) => {
+          const key = keyMap[header];
+          if (key) {
+            entry[key] = row[i]?.trim() || "";
+          }
+        });
+        return entry;
+      }).filter(entry => entry.email);
+    
+      if (formattedData.length === 0) {
+        setAlertMessage('There is no data to be uploaded.');
+        setIsSuccessful(false);
+        setOpenError(true);
         return;
       }
-  
-      const response = await fetch(`${API}/students/bulk-insert`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ students: formattedStudents }),
+    
+      const endpoint = tab === 0 ? "/students/bulk-insert" : "/staffs/bulk-insert";
+    
+      const response = await axios.post(`${API}${endpoint}`, {
+        [tab === 0 ? "students" : "staffs"]: formattedData
+      }, {
+        headers: { "Content-Type": "application/json" }
       });
-  
-      const result = await response.json();
+    
+      const result = response.data;
+    
+      if (response.status === 200) {
+        setAlertMessage(`${tab === 0 ? "Students" : "Advisers"} uploaded successfully. ${result.skipped || ""}`);
+        setIsSuccessful(true);
+        setOpenError(true);
+        setAlertMessage(`Successfully Added ${tab === 0 ? "Students" : tab === 1 ? "Advisers" : "Guidance Staffs"}`);
+        setIsSuccessful(true);
+        setOpenError(true);
+        setLoading(false);
+        setReloadKey(prev => prev + 1);
+        if (tab === 0) {
+          const updatedStudents = await axios.get(`${API}/students`);
+          setStudents(updatedStudents.data);
+          setLoading(false);
+          setReloadKey(prev => prev + 1);
+        } else {
+          const updatedStaff = await axios.get(`${API}/staffs`);
+          setStaffs(updatedStaff.data);
+          setLoading(false);
+          setReloadKey(prev => prev + 1);
+        }
       
-      if (response.ok) {
-        alert(`${result.insertedCount} students uploaded successfully. ${result.skipped ? result.skipped : ""}`);
-        
-        // ✅ Fetch updated data after bulk upload
-        const updatedStudents = await axios.get(`${API}/students`);
-        setStudents(updatedStudents.data); // Refresh student list
+        setLoading(false);
+        setReloadKey(prev => prev + 1);
       } else {
-        alert(`Error: ${result.message}`);
+        setAlertMessage(`Error: ${result.message}`);
+        setIsSuccessful(false);
+        setOpenError(true);
+        setLoading(false);
+        setReloadKey(prev => prev + 1);
       }
     } catch (error) {
-      console.error("Bulk upload failed:", error);
-      alert("Server error occurred. Try again later.");
+      console.error("Bulk upload failed:", error.response?.data || error.message);
+      setAlertMessage("Server error occurred. Try again later.");
+      setIsSuccessful(false);
+      setOpenError(true);
+      setLoading(false);
+      setReloadKey(prev => prev + 1);
     }
+  };
+
+  // Handler to update search term from the search field in UserTabs
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
   };
   
   return (
-    <div className="flex h-screen">
-      <Navbar onMenuClick={handleDrawerToggle}/>
-      <Sidebar open={open} onToggle={handleDrawerToggle}/>
+    <div className="flex bg-[#f8fafc] flex-1 overflow-hidden">
+      {/* The Top and Left Bar */}
+      <Layout open={open} onMenuClick={handleDrawerToggle} />
 
       {/* Main Content */}
-      <div className={`flex-grow p-4 bg-gray-200 transition-all ${open ? 'ml-60' : 'ml-16'}  mt-16`}>
-        <Container className="container mx-auto">
-        <h1 className="text-lg font-bold py-5">USER MANAGEMENT</h1>
-          <div className="bg-white shadow-md rounded-lg p-4">
+      <main
+        className={`flex-1 bg-[#f8fafc] transition-all ${
+          open ? "ml-60" : "ml-16"
+        } mt-16`}
+        style={{ height: "calc(100vh - 64px)"}}
+      >
+        <div 
+          className="flex flex-col flex-grow gap-[clamp(0.75rem,1.5vw,2rem)] px-[clamp(1rem,2vw,4rem)] pt-4"
+          style={{ height: "100%"}}
+        >
+        <h1
+          className="text-[clamp(2rem,3vw,3.5rem)] font-roboto font-bold tracking-[1rem] text-[#1e3a8a] text-center"
+          style={{
+            textShadow: "4px 4px 0px rgba(0,0,0,0.5)"
+          }}
+        >
+          USER MANAGEMENT
+        </h1>
+          <div 
+            className="bg-[#64748b] w-full p-4 flex flex-col"
+            style={{height: '90%'}}
+          >
+            <div 
+              className="bg-[#f8fbfd] p-4 overflow-y-auto"
+            >
               <UserTabs 
                 tab={tab} 
                 setTab={setTab} 
                 handleAddButtonClick={handleAddButtonClick}
-                handleBulkDelete={handleBulkDelete}
+                setOpenBulkDelete={setOpenBulkDelete}
                 handleBulkUpload={handleBulkUpload} // Pass bulk upload handler
                 checked={checked} 
+                handleSearchChange={handleSearchChange}
+                bulkUploadOpen={bulkUploadOpen}
+                setBulkUploadOpen={setBulkUploadOpen}
+                staff={JSON.parse(localStorage.getItem("staff"))}
               />
               <UserTable
                 tab={tab}
-                students={students}
-                staffs={staffs}
+                // Pass filtered data instead of full arrays
+                students={filteredStudents}
+                staffs={filteredStaffs}
                 allChecked={allChecked}
                 checked={checked}
                 handleCheckAll={handleCheckAll}
                 handleCheck={handleCheck}
                 handleEditButtonClick={handleEditButtonClick}
                 handleDeleteButtonClick={handleDeleteButtonClick}
+                setSelectedStudent={setSelectedStudent}
+                setOpenDeleteModal={setOpenDeleteModal}
               />
+            </div>
           </div>
-        </Container>
-      </div>
+        </div>
+      </main>
       <UserDialog
         isModalOpen={isModalOpen}
         handleModalClose={handleModalClose}
         isEditMode={isEditMode}
         tab={tab}
         newStudent={newStudent}
+        students={students}
         newStaff={newStaff}
+        staffs={staffs}
         handleInputChange={handleInputChange}
         handleFormSubmit={handleFormSubmit}
+        bulkUploadOpen={bulkUploadOpen}
+        setBulkUploadOpen={setBulkUploadOpen}
+        data={data}
+        checked={checked}
+        handleBulkUpload={handleBulkUpload}
+        handleBulkDelete={handleBulkDelete}
+        OpenBulkDelete={OpenBulkDelete}
+        setOpenBulkDelete={setOpenBulkDelete}
+        selectedStudent={selectedStudent}
+        setSelectedStudent={setSelectedStudent}
+        openDeleteModal={openDeleteModal}
+        setOpenDeleteModal={setOpenDeleteModal}
+        handleDeleteButtonClick={handleDeleteButtonClick}
+        isViewMode={isViewMode}
+        setIsViewMode={setIsViewMode}
+        loading={loading}
       />
+
+
+      <Dialog
+        open={openError}
+        onClose={() => {setOpenError(false); setAlertMessage(''); setIsSuccessful(false)}}
+        fullWidth
+        sx={{
+          "& .MuiPaper-root": {
+            backgroundColor: "white",
+            color: "#000",
+            borderRadius: "25px",
+          },
+        }}
+      >
+        <DialogTitle className={`${isSuccessful ? "bg-[#b7e3cc]" : "bg-[#e3b7b7]"} relative`}>
+          {isSuccessful ? "Successful" : "Error"}
+          <DialogActions className="absolute -top-1 right-0">
+            <IconButton onClick={() => {setOpenError(false); setAlertMessage(''); setIsSuccessful(false);}} className="rounded-full">
+              <Close sx={{ fontSize: 40, color: "black" }} />
+            </IconButton>
+          </DialogActions>
+        </DialogTitle>
+        
+        <DialogContent>
+          {alertMessage}
+        </DialogContent>
+        <DialogActions>
+          <button onClick={() => {setOpenError(false); setAlertMessage(''); setIsSuccessful(false);}}>
+            <p className="text-base font-roboto font-bold text-[#64748b] p-2 px-6">OK</p>
+          </button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

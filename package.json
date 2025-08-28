@@ -3,31 +3,33 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@ckeditor/ckeditor5-react": "^9.5.0",
     "@date-io/date-fns": "^3.2.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@fontsource/roboto": "^5.2.5",
     "@handsontable/react": "^15.1.0",
     "@mui/icons-material": "^6.4.5",
     "@mui/material": "^6.4.8",
     "@mui/x-date-pickers": "^7.28.0",
+    "@react-native-async-storage/async-storage": "^2.1.2",
+    "@react-oauth/google": "^0.12.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
-    "@tiptap/extension-color": "^2.11.5",
-    "@tiptap/extension-highlight": "^2.11.5",
-    "@tiptap/extension-image": "^2.11.5",
-    "@tiptap/extension-link": "^2.11.5",
-    "@tiptap/extension-subscript": "^2.11.5",
-    "@tiptap/extension-superscript": "^2.11.5",
-    "@tiptap/extension-text-align": "^2.11.5",
-    "@tiptap/extension-underline": "^2.11.5",
-    "@tiptap/react": "^2.11.5",
-    "@tiptap/starter-kit": "^2.11.5",
     "axios": "^1.7.9",
     "date-fns": "^2.29.3",
+    "docx": "^9.3.0",
+    "draft-js": "^0.11.7",
+    "draft-js-export-html": "^1.4.1",
+    "file-saver": "^2.0.5",
     "guidance-management": "file:",
     "handsontable": "^15.1.0",
+    "jwt-decode": "^4.0.0",
+    "mammoth": "^1.9.0",
+    "papaparse": "^5.5.2",
+    "pdfjs-dist": "^5.2.133",
     "react": "^19.0.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
@@ -37,7 +39,9 @@
     "react-player": "^2.16.0",
     "react-router-dom": "^7.2.0",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "recharts": "^3.1.2",
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -62,5 +66,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "worker-loader": "^3.0.8"
   }
 }

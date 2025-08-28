@@ -1,22 +1,66 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Landingpage from "./screens/Landingpage";
 import UserManagement from "./screens/UserManagement";
 import ContentManagement from "./screens/ContentManagement";
 import Scheduler from "./screens/SchedulerScreen";
+import LoginScreen from "./screens/LoginPage";
+import ProtectedRoute from "./components/ProtectedRoutes";
+import UnauthorizedPage from "./components/UnauthorizedPage";
+import { OpenProvider } from "./contexts/OpenContext"; // ← import your context
 
-function App() {
+export default function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Landingpage />} />
-        <Route path="/content-management" element={<ContentManagement />} />
-        <Route path="/user-management" element={<UserManagement />} />
-        <Route path="/scheduler" element={<Scheduler />} />
-        {/* Add other routes as needed */}
-      </Routes>
-    </Router>
+    <OpenProvider> {/* ← Wrap everything inside the context provider */}
+      <Router>
+        <Routes>
+          {/* Public Route for the Login page */}
+          <Route path="/" element={<LoginScreen />} />
+
+          {/* Unauthorized access page */}
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
+          {/* Protected Routes with role-based access control */}
+          <Route 
+            path="/landing-page" 
+            element={
+              <ProtectedRoute>
+                <Landingpage />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/content-management" 
+            element={
+              <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Advocate", "Admin"]}>
+                <ContentManagement />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/user-management" 
+            element={
+              <ProtectedRoute allowedRoles={["Guidance Counselor", "Admin", "Adviser"]}>
+                <UserManagement />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/scheduler" 
+            element={
+              <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Advocate", "Admin"]}>
+                <Scheduler />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to="/landing-page" replace />} />
+        </Routes>
+      </Router>
+    </OpenProvider>
   );
 }
-
-export default App;
