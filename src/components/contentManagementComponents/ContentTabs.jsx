@@ -26,10 +26,9 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
           },
           "& .MuiTab-root": {
             justifyContent: 'center',
-            padding: "4px 8px",
+            padding: "4px 16px",
             fontSize: "clamp(0.7rem, 1.05vw, 1.225rem)",
             textTransform: "none",
-            fontWeight: "bold",
             fontFamily: "norwester",
             borderRadius: "9999px",
             color: "#000",

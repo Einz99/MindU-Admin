@@ -496,8 +496,8 @@ export default function DashboardLayout() {
         >
           USER MANAGEMENT
         </h1>
-          <div 
-            className="bg-[#64748b] w-full p-4 flex flex-col"
+          <div
+            className="bg-[#b7cde3] w-full p-4 flex flex-col"
             style={{height: '90%'}}
           >
             <div 

@@ -155,7 +155,7 @@ export default function ContentManagement() {
           CONTENT MANAGEMENT
         </h1>
           <div 
-            className="bg-[#64748b] w-full p-4 flex flex-col"
+            className="bg-[#b7cde3] w-full p-4 flex flex-col"
             style={{height: '90%'}}
           >
             <div 
