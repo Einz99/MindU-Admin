@@ -7,6 +7,8 @@ import { UsageUtilization, CompSchedules, LowerRight } from "./guidanceStaffDash
 
 export default function StaffDashboard() {
   const [backlog, setBacklogs] = useState([]);
+  const [topResources, setTopResources] = useState([]);
+  const [topWellness, setTopWellness] = useState([]);
 
   useEffect(() => {
       const fetchBacklogs = async () => {
@@ -22,6 +24,23 @@ export default function StaffDashboard() {
     }, []);
 
   const filterBacklog = backlog.filter((item) => (item.status === "Pending" && item.student_id));
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await axios.get(`${API}/resources/top`);
+        setTopResources(res.data.topResources);
+        setTopWellness(res.data.topWellness);
+      } catch (err) {
+        console.error("Error fetching top resources/wellness:", err);
+      }
+    };
+
+    fetchData(); // initial fetch
+    const interval = setInterval(fetchData, 10 * 60 * 1000); // repeat every 10 minutes
+
+    return () => clearInterval(interval); // cleanup
+  }, []);
 
   return (
       <div 
@@ -58,61 +77,19 @@ export default function StaffDashboard() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    <TableRow className="h-4">
-                      <TableCell className="py-0 px-2 text-sm w-[75%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none">4-7-8 Breathing Technique</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[15%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">Breathing</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[10%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">50</p>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="h-4">
-                      <TableCell className="py-0 px-2 text-sm w-[75%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none">Box Breathing Method</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[15%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">Breathing</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[10%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">112</p>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="h-4">
-                      <TableCell className="py-0 px-2 text-sm w-[75%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none">Exam Stress Meditation</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[15%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">Meditation</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[10%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">35</p>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="h-4">
-                      <TableCell className="py-0 px-2 text-sm w-[75%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none">Sleep Meditation</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[15%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">Meditation</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[10%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">138</p>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="h-4">
-                      <TableCell className="py-0 px-2 text-sm w-[75%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none">Nature Sounds Meditation</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[15%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">Meditation</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[10%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">85</p>
-                      </TableCell>
-                    </TableRow>
+                    {topResources.map((row) => (
+                      <TableRow key={row.id} className="h-4">
+                        <TableCell className="py-0 px-2 text-sm w-[65%]">
+                          <p className="leading-none">{row.title}</p>
+                        </TableCell>
+                        <TableCell className="py-0 px-2 text-sm w-[25%] text-center">
+                          <p className="text-center">{row.category}</p>
+                        </TableCell>
+                        <TableCell className="py-0 px-2 text-sm w-[10%] text-center">
+                          <p className="text-center">{row.views}</p>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -131,10 +108,10 @@ export default function StaffDashboard() {
                 <Table>
                   <TableHead>
                     <TableRow className="border-t-2 border-b-2 border-[#636363] h-8">
-                      <TableCell className="py-0.5 px-2 text-sm w-[75%]" sx={{paddingY: '8px'}}>
+                      <TableCell className="py-0.5 px-2 text-sm w-[65%]" sx={{paddingY: '8px'}}>
                         <p className="leading-none font-bold">Title</p>
                       </TableCell>
-                      <TableCell className="py-0.5 px-2 text-sm w-[15%] text-center" sx={{paddingY: '8px'}}>
+                      <TableCell className="py-0.5 px-2 text-sm w-[25%] text-center" sx={{paddingY: '8px'}}>
                         <p className="leading-none text-center font-bold">Category</p>
                       </TableCell>
                       <TableCell className="py-0.5 px-2 text-sm w-[10%] text-center" sx={{paddingY: '8px'}}>
@@ -143,61 +120,19 @@ export default function StaffDashboard() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    <TableRow className="h-4">
-                      <TableCell className="py-0 px-2 text-sm w-[75%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none">Dealing with Bullying</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[15%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">Social</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[10%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">50</p>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="h-4">
-                      <TableCell className="py-0 px-2 text-sm w-[75%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none">Smart Budgeting for Students</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[15%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">Financial</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[10%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">112</p>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="h-4">
-                      <TableCell className="py-0 px-2 text-sm w-[75%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none">Stretching and Desk Exercises</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[15%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">Physical</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[10%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">35</p>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="h-4">
-                      <TableCell className="py-0 px-2 text-sm w-[75%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none">Finding Meaning and Purpose</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[15%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">Spiritual</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[10%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">138</p>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="h-4">
-                      <TableCell className="py-0 px-2 text-sm w-[75%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none">Decluttering for Mental Clarity</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[15%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">Environmental</p>
-                      </TableCell>
-                      <TableCell className="py-0 px-2 text-sm w-[10%]" sx={{paddingY: '4px', border: 'none'}}>
-                        <p className="leading-none text-center">85</p>
-                      </TableCell>
-                    </TableRow>
+                    {topWellness.map((row) => (
+                      <TableRow key={row.id} className="h-4">
+                        <TableCell className="py-0 px-2 text-sm w-[75%]">
+                          <p className="leading-none">{row.title}</p>
+                        </TableCell>
+                        <TableCell className="py-0 px-2 text-sm w-[15%] text-center">
+                          <p className="text-center">{row.category}</p>
+                        </TableCell>
+                        <TableCell className="py-0 px-2 text-sm w-[10%] text-center">
+                          <p className="text-center">{row.views}</p>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -205,10 +140,8 @@ export default function StaffDashboard() {
           </div>
         </div>
         
-        <CompSchedules />
-        <LowerRight 
-          filterBacklog={filterBacklog}
-        />
+        <CompSchedules backlog={backlog} />
+        <LowerRight filterBacklog={filterBacklog} />
       </div>
     )
 }

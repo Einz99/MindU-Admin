@@ -28,7 +28,7 @@ export const DialogWrapper = ({ open, onClose, title, children, actionButtons, d
   </Dialog>
 );
 
-export default function RichTextEditor({ setBlob, editorData }) {
+export default function RichTextEditor({ setBlob, editorData, readOnly = false }) {
   const editorContainerRef = useRef(null);
 	const editorRef = useRef(null);
 	const editorWordCountRef = useRef(null);
@@ -245,6 +245,7 @@ export default function RichTextEditor({ setBlob, editorData }) {
 					]
 				},
 				initialData: editorData || '',
+				isReadOnly: readOnly, // <--- toggle here
 				licenseKey: LICENSE_KEY,
 				link: {
 					addTargetToExternalLinks: true,
@@ -272,7 +273,7 @@ export default function RichTextEditor({ setBlob, editorData }) {
 				}
 			}
 		};
-	}, [cloud.CKEditor, cloud.status, editorData, isLayoutReady]);
+	}, [cloud.CKEditor, cloud.status, editorData, isLayoutReady, readOnly]);
 
   const handleEditorChange = (event, editor) => {
 	  const htmlContent = editor.getData().trim();
@@ -282,8 +283,27 @@ export default function RichTextEditor({ setBlob, editorData }) {
 	    setBlob(null); // or skip setting at all
 	    return;
 	  }
-  
-	  const blob = new Blob([htmlContent], { type: "text/html" });
+
+	  // Wrap with full HTML structure + responsive meta + CSS
+  	const fullHtml = `
+		<!DOCTYPE html>
+		<html lang="en">
+		<head>
+		  <meta charset="UTF-8" />
+		  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+		  <style>
+		    body { font-size: 16px; padding: 10px; word-wrap: break-word; }
+		    img, video, iframe { max-width: 100%; height: auto; }
+		    table { width: 100%; border-collapse: collapse; }
+		  </style>
+		</head>
+		<body>
+		  ${htmlContent}
+		</body>
+		</html>
+		`;
+
+	  const blob = new Blob([fullHtml], { type: "text/html" });
 	  setBlob(blob);
 	};
 
@@ -294,13 +314,22 @@ export default function RichTextEditor({ setBlob, editorData }) {
 					<div ref={editorRef}>
 						{ClassicEditor && editorConfig && (
 							<CKEditor
-								onReady={editor => {
-									const wordCount = editor.plugins.get('WordCount');
-									editorWordCountRef.current.appendChild(wordCount.wordCountContainer);
-								}}
-								editor={ClassicEditor}
-								config={editorConfig}
-                				onChange={handleEditorChange}
+							  editor={ClassicEditor}
+							  config={editorConfig}
+							  onReady={editor => {
+							    // Save editor instance if you need to toggle read-only later
+							    editorRef.current = editor;
+							
+							    // Make read-only if no setBlob function is provided
+							    if (!setBlob) {
+							      editor.enableReadOnlyMode('noEditing');
+							    }
+							
+							    // Word count setup
+							    const wordCount = editor.plugins.get('WordCount');
+							    editorWordCountRef.current.appendChild(wordCount.wordCountContainer);
+							  }}
+							  onChange={setBlob ? handleEditorChange : undefined}
 							/>
 						)}
 					</div>

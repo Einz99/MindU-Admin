@@ -126,7 +126,7 @@ export default function SchedulerActionModals({
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blob])
+  }, [])
 
   const validateNewEvent = () => {
     if (!newName) return "Please enter a name.";
