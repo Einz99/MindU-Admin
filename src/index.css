@@ -36,3 +36,46 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Custom scrollbar for elements with a specific class */
+.scrollbar-custom::-webkit-scrollbar {
+  width: 8px; /* Adjust the width of the scrollbar */
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background-color: #b7cde3; /* Color for the scrollbar thumb */
+  border-radius: 10px; /* Make the thumb rounded */
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: #b7cde3; /* Color for the scrollbar track */
+  border-radius: 10px; /* Make the track rounded */
+  /* Prevent the scrollbar from affecting the container's rounded corners */
+  margin: 2px;
+}
+
+/* Hide the scrollbar buttons */
+.scrollbar-custom::-webkit-scrollbar-button {
+  display: none;
+}
+
+.scrollbar-custom1::-webkit-scrollbar {
+  width: 8px; /* Adjust the width of the scrollbar */
+}
+
+.scrollbar-custom1::-webkit-scrollbar-thumb {
+  background-color: #b7cde3; /* Color for the scrollbar thumb */
+  border-radius: 10px; /* Make the thumb rounded */
+}
+
+.scrollbar-custom1::-webkit-scrollbar-track {
+  background: #1e3a8a; /* Color for the scrollbar track */
+  border-radius: 10px; /* Make the track rounded */
+  /* Prevent the scrollbar from affecting the container's rounded corners */
+  margin: 2px;
+}
+
+/* Hide the scrollbar buttons */
+.scrollbar-custom1::-webkit-scrollbar-button {
+  display: none;
+}

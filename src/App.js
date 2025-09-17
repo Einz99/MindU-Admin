@@ -5,6 +5,7 @@ import UserManagement from "./screens/UserManagement";
 import ContentManagement from "./screens/ContentManagement";
 import Scheduler from "./screens/SchedulerScreen";
 import LoginScreen from "./screens/LoginPage";
+import LiveAgent from "./screens/LiveAgent";
 import ProtectedRoute from "./components/ProtectedRoutes";
 import UnauthorizedPage from "./components/UnauthorizedPage";
 import { OpenProvider } from "./contexts/OpenContext"; // ← import your context
@@ -53,6 +54,15 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Advocate", "Admin"]}>
                 <Scheduler />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/Chat" 
+            element={
+              <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Advocate", "Admin"]}>
+                <LiveAgent />
               </ProtectedRoute>
             } 
           />

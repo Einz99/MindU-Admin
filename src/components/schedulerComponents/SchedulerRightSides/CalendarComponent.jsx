@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format, startOfMonth, getDay, getDaysInMonth, add, sub, parseISO } from "date-fns";
+import { Add } from "@mui/icons-material";
 
 /**
  * ===========================================
@@ -39,7 +40,7 @@ import { format, startOfMonth, getDay, getDaysInMonth, add, sub, parseISO } from
  * - [Any important notes for future developers or groupmates]
  * ===========================================
  */
-export default function Calendar({ setSelectedDate, initial, selectedDate }) {
+export default function Calendar({ setSelectedDate, initial, selectedDate, setShowTimeAvailability }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [highlightedDates, setHighlightedDates] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -86,11 +87,16 @@ export default function Calendar({ setSelectedDate, initial, selectedDate }) {
   }, [selectedDate])
   
   return (
-    <div className="flex flex-col w-full bg-[#b7cde3] p-2 flex-1 flex-grow">
+    <div className="flex flex-col w-full bg-[#b7cde3] p-2 flex-1 flex-grow relative">
       {/* Year */}
       <div className="text-center font-norwester mb-2 text-lg md:text-xl lg:text-2xl">
         S.Y. {currentDate.getFullYear()}
       </div>
+
+      <Add 
+        className="absolute top-2 right-2 text-gray-700 cursor-pointer hover:text-gray-900" 
+        onClick={() => setShowTimeAvailability(true)}
+      />
 
       {/* Month Navigation */}
       <div className="flex justify-between items-center mb-1 text-base md:text-lg lg:text-xl font-norwester">

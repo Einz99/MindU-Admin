@@ -8,6 +8,7 @@ import axios from "axios";
 import { useContext } from 'react';
 import { OpenContext } from '../contexts/OpenContext';
 import { format, } from "date-fns";
+import { Add, ArrowForwardIos } from "@mui/icons-material";
 
 /**
  * ===========================================
@@ -48,12 +49,88 @@ import { format, } from "date-fns";
  * - [Anything extra devs or reviewers should know about this screen]
  * ===========================================
  */
+
+const availableTimes = [
+  {
+    date: "2025-09-15",
+    Time: {
+      Morning: [
+        { id: 1, time: "08:00 AM" },
+        { id: 2, time: "09:30 AM" },
+        { id: 3, time: "10:00 AM" }
+      ],
+      Afternoon: [
+        { id: 4, time: "01:00 PM" },
+        { id: 5, time: "02:30 PM" },
+        { id: 6, time: "04:00 PM" }
+      ]
+    }
+  },
+  {
+    date: "2025-09-16",
+    Time: {
+      Morning: [
+        { id: 7, time: "08:30 AM" },
+        { id: 8, time: "09:00 AM" }
+      ],
+      Afternoon: [
+        { id: 9, time: "01:00 PM" },
+        { id: 10, time: "03:00 PM" },
+        { id: 11, time: "05:00 PM" }
+      ]
+    }
+  },
+  {
+    date: "2025-09-17",
+    Time: {
+      Morning: [
+        { id: 12, time: "08:00 AM" },
+        { id: 13, time: "09:00 AM" },
+        { id: 14, time: "10:30 AM" }
+      ],
+      Afternoon: [
+        { id: 15, time: "01:30 PM" },
+        { id: 16, time: "03:30 PM" }
+      ]
+    }
+  },
+  {
+    date: "2025-09-18",
+    Time: {
+      Morning: [
+        { id: 17, time: "08:30 AM" },
+        { id: 18, time: "09:30 AM" },
+        { id: 19, time: "11:00 AM" }
+      ],
+      Afternoon: [
+        { id: 20, time: "02:00 PM" },
+        { id: 21, time: "04:00 PM" }
+      ]
+    }
+  },
+  {
+    date: "2025-09-19",
+    Time: {
+      Morning: [
+        { id: 22, time: "08:00 AM" },
+        { id: 23, time: "09:30 AM" }
+      ],
+      Afternoon: [
+        { id: 24, time: "01:30 PM" },
+        { id: 25, time: "02:30 PM" },
+        { id: 26, time: "04:00 PM" }
+      ]
+    }
+  }
+];
+
 export default function Scheduler() {
   const { open, setOpen } = useContext(OpenContext);
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [backlogs, setBacklogs] = useState([]);
   const [reloadKey, setReloadKey] = useState(0);
-
+  const [showTimeAvailability, setShowTimeAvailability] = useState(false);
+  // const [availableTimes, setAvailableTime] = useState([])
 
   /**
    * useEffect hook to fetch backlogs data from the database via backend API.
@@ -167,8 +244,97 @@ export default function Scheduler() {
            * 30% of the whole screen in the right side 
            */}
           <div className="flex flex-col gap-4 flex-[1] min-w-[30%]">
-            <Calendar setSelectedDate={setSelectedDate} initial={backlogs} selectedDate={selectedDate}/>
-            <Requests initial={backlogs} updateBacklogs={updateBacklogs} setSelectedDate={setSelectedDate}/>
+            <div className="flex flex-col w-full flex-1 flex-grow relative">
+              <Calendar
+                setSelectedDate={setSelectedDate}
+                initial={backlogs}
+                selectedDate={selectedDate}
+                setShowTimeAvailability={setShowTimeAvailability}
+              />
+              <div
+                className={`bg-[#1e3a8a] absolute w-[105%] h-full top-0 right-0 z-10 transition-all rounded-xl duration-1000 ease-in-out flex flex-row p-5 ${
+                  showTimeAvailability
+                    ? "opacity-100 pointer-events-auto transform translate-x-[8%]"
+                    : "opacity-0 pointer-events-none transform translate-x-[100%]"
+                }`}
+              >
+                <div className="h-full w-[5%]">
+                  <div
+                    className="h-full w-full flex items-center justify-center cursor-pointer"
+                    onClick={() => setShowTimeAvailability(false)}
+                  >
+                    <span className="material-symbols-outlined text-white text-3xl select-none">
+                      <ArrowForwardIos />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-white text-end w-full pr-[5%] flex flex-col justify-between">
+                  <p className="text-4xl font-bold">Time Availability</p>
+                  <p className="text-2xl">{format(new Date(selectedDate), "MMM dd, yyyy")}</p>
+                  <div className="border-b border-white w-full my-2 ml-2" />
+                  {/* Use flex to divide space evenly between Morning and Afternoon */}
+                  <div className="flex flex-col h-full justify-between">
+                    {/* Morning Section */}
+                    <div className="flex-grow">
+                      <p className="text-xl font-bold mb-5">Morning</p>
+                      <div
+                        className="h-[calc(100%-3rem)]"
+                        style={{ maxHeight: "50%" }}
+                      >
+                        {/* Horizontal Scroll for Morning Time Slots */}
+                        <div className="flex justify-self-end overflow-x-auto space-x-4 scrollbar-custom1">
+                          <div 
+                            className="text-black my-auto p-1 rounded-full text-center h-fit border border-black text-xs"
+                            style={{
+                              background: "linear-gradient(90deg, #60a5fa, #4f46e5)", // Gradient from #60a5fa to #4f46e5
+                            }}
+                          >
+                            <Add />
+                          </div>
+                          {availableTimes
+                            .find((item) => item.date === selectedDate)
+                            ?.Time.Morning.map((time, index) => (
+                              <div key={index} className="flex-shrink-0 bg-[#b7cde3] border border-black text-black px-6 py-2 rounded-lg text-center">
+                                {time.time} {/* Accessing the `time` property from the time object */}
+                              </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                          
+                    {/* Afternoon Section */}
+                    <div className="flex-grow">
+                      <p className="text-xl font-bold mb-5">Afternoon</p>
+                      <div className="h-[calc(100%-3rem)]" style={{ maxHeight: "50%" }}>
+                        {/* Horizontal Scroll for Afternoon Time Slots */}
+                        <div className="flex justify-self-end overflow-x-auto space-x-4 scrollbar-custom1">
+                          {/* Add Button */}
+                          <div
+                            className="flex my-auto items-center justify-center text-black p-1 rounded-full text-center h-fit border border-black text-xs cursor-pointer"
+                            style={{
+                              background: "linear-gradient(90deg, #60a5fa, #4f46e5)", // Gradient from #60a5fa to #4f46e5
+                            }}
+                          >
+                            <Add />
+                          </div>
+                          
+                          {/* Time slots for afternoon */}
+                          {availableTimes
+                            .find((item) => item.date === selectedDate)
+                            ?.Time.Afternoon.map((time, index) => (
+                              <div key={index} className="flex-shrink-0 bg-[#b7cde3] border border-black text-black px-6 py-2 rounded-lg text-center">
+                                {time.time} {/* Accessing the `time` property from the time object */}
+                              </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Requests initial={backlogs} updateBacklogs={updateBacklogs} setSelectedDate={setSelectedDate} />
           </div>
         </div>
       </main>

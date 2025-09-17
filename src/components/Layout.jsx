@@ -4,7 +4,7 @@ import {
   Toolbar, 
   IconButton, 
   Typography, 
-  // Badge, 
+  Badge, 
   Drawer, 
   List, 
   ListItem, 
@@ -19,8 +19,7 @@ import {
   Button,
 } from "@mui/material";
 import { 
-  // Notifications, 
-  // CrisisAlert, 
+  Notifications, 
   Menu as MenuIcon, 
   Home, 
   CalendarToday, 
@@ -31,7 +30,7 @@ import {
   Edit, 
   Logout,
   Close,
-  ArrowBack
+  ArrowBack,
 } from "@mui/icons-material";
 import { Link, useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
@@ -286,19 +285,29 @@ export default function Layout({ open, onMenuClick }) {
       {/* Topbar */}
       <AppBar position="fixed" sx={{ backgroundColor: "#1E3A8A", boxShadow: 1 }}>
         <Toolbar className="flex justify-between items-center">
-          <Typography variant="h6" className="font-bold text-xl">
-            <span className="ml-4">MIND U</span>
-          </Typography>
-          <div className="flex gap-4">
-            {/* <IconButton color="inherit">
-              <CrisisAlert />
-            </IconButton>
+          <div className="flex gap-2 align-middle">
+            <img src={"/MIND U WEB Icon.png"} alt="Logo" className="w-12 h-12"/>
+            <Typography
+              variant="h6"
+              className="flex items-center justify-center"
+            >
+              <span className="text-3xl font-norwester">MIND U</span>
+            </Typography>
+          </div>
+          <div className="flex gap-4 items-center">
+            <Link to="/Chat">
+              <IconButton color="inherit">
+                <Badge badgeContent={3} color="error">
+                  <img src={"/Robo.png"} alt="Chat" className="w-7 h-7"/>
+                </Badge>
+              </IconButton>
+            </Link>
             <IconButton color="inherit">
               <Badge badgeContent={0} color="secondary">
                 <Notifications />
               </Badge>
             </IconButton>
-            <div className="w-0.5 h-8 bg-white my-auto"></div> */}
+            <div className="w-0.5 h-8 bg-white my-auto"></div>
             <div className="flex items-end flex-col px-2">
               <p className="text-base font-bold">{staff.name}</p>
               <p className="text-base text-[#f8fafc] font-bold">{staff.position}{staff.section && ` - ${staff.section}`}</p>
@@ -331,7 +340,14 @@ export default function Layout({ open, onMenuClick }) {
         }}
       >
         <div className={`w-full absolute top-0 left-0 p-5 ${open ? "text-end" : "text-center"}`}>
-          {open ? (
+          {location.pathname === "/Chat" ? (
+            <Link to="/landing-page">
+              <IconButton color="inherit" edge="start">
+                <ArrowBack className="text-white"/>
+              </IconButton>
+            </Link>
+          ) : 
+          open ? (
             <IconButton color="inherit" edge="start" onClick={onMenuClick}>
               <ArrowBack className="text-white"/>
             </IconButton>

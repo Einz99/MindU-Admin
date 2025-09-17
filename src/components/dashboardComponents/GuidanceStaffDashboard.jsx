@@ -77,8 +77,8 @@ export default function StaffDashboard() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {topResources.map((row) => (
-                      <TableRow key={row.id} className="h-4">
+                    {topResources.map((row, index) => (
+                      <TableRow key={index} className="h-4">
                         <TableCell className="py-0 px-2 text-sm w-[65%]">
                           <p className="leading-none">{row.title}</p>
                         </TableCell>
@@ -120,8 +120,8 @@ export default function StaffDashboard() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {topWellness.map((row) => (
-                      <TableRow key={row.id} className="h-4">
+                    {topWellness.map((row, index) => (
+                      <TableRow key={index} className="h-4">
                         <TableCell className="py-0 px-2 text-sm w-[75%]">
                           <p className="leading-none">{row.title}</p>
                         </TableCell>
