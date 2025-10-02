@@ -87,6 +87,7 @@ export default function Layout({ open, onMenuClick }) {
   const [openLogoutDialog, setOpenLogoutDialog] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [robitBadge, setRobitBadge] = useState(0);
 
   useEffect(() => {
     const fetchStaffData = async () => {
@@ -109,8 +110,24 @@ export default function Layout({ open, onMenuClick }) {
         alert("Failed to fetch staff data. Please log in again.");
       }
     };
+    const fetchLength = async () => {
+      try {
+        const res = await axios.get(`${API}/students`);
+      
+        // Check if isAskingHelp is truthy (1) and chatStatus is 'Pending'
+        const filteredStudents = res.data.filter(student => student.isAskingHelp && student.chatStatus === 'Pending');
+      
+        // Get the length of filtered students
+        const length = filteredStudents.length;
+        
+        setRobitBadge(length);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    }
 
     fetchStaffData();
+    fetchLength();
   }, [staffData.id]);
         
   
@@ -297,7 +314,7 @@ export default function Layout({ open, onMenuClick }) {
           <div className="flex gap-4 items-center">
             <Link to="/Chat">
               <IconButton color="inherit">
-                <Badge badgeContent={3} color="error">
+                <Badge badgeContent={robitBadge} color="error">
                   <img src={"/Robo.png"} alt="Chat" className="w-7 h-7"/>
                 </Badge>
               </IconButton>
