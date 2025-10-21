@@ -7,17 +7,41 @@ import {
   add,
   sub,
 } from "date-fns";
+import axios from "axios";
+import { API } from "../../../api";
 
-export default function Calendar({ studentRequests, staffRequests }) {
+export default function AdviserCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null);
   const [appointmentsText, setAppointmentsText] = useState("");
+  const [studentRequests, setStudentRequests] = useState([]);
+  const [staffRequests, setStaffRequests] = useState([]);
+  const staff = JSON.parse(localStorage.getItem("staff"));
 
   // Auto-select today when component mounts
   useEffect(() => {
     const today = format(new Date(), "yyyy-MM-dd");
     setSelectedDay(today);
   }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res1 = await axios.get(`${API}/backlogs/student-requests/${staff.id}`);
+        setStudentRequests(res1.data);
+        const res2 = await axios.get(`${API}/backlogs/staff-requests/${staff.id}`);
+        setStaffRequests(res2.data);
+      } catch (err) {
+        console.error("Error fetching scheduled requests:", err);
+        setStudentRequests([]);
+        setStaffRequests([]);
+      }
+    };
+
+    if (staff.position === "Adviser" && staff.id) {
+      fetchData();
+    }
+  }, [staff.id, staff.position]);
 
   // Generate days grid
   const daysInMonth = getDaysInMonth(currentDate);
@@ -100,101 +124,103 @@ export default function Calendar({ studentRequests, staffRequests }) {
   }, [selectedDay, studentRequests, staffRequests]);
 
   return (
-    <div className="flex flex-col w-full bg-[#b7cde3] p-2 flex-1 h-[65%] overflow-y-auto">
+    <div className="flex flex-row w-full bg-[#b7cde3] p-2 flex-1 h-full overflow-y-auto">
       {/* Year */}
-      <div className="text-center font-norwester mb-2 text-lg md:text-xl lg:text-2xl">
-        S.Y. {currentDate.getFullYear()}
-      </div>
+      <div className="flex flex-col w-[60%] h-full pl-2">
+        <div className="text-center font-norwester mb-2 text-lg md:text-xl lg:text-2xl">
+          S.Y. {currentDate.getFullYear()}
+        </div>
 
-      {/* Month Navigation */}
-      <div className="flex justify-between items-center mb-1 text-base md:text-lg lg:text-xl font-norwester">
-        <button
-          onClick={() => setCurrentDate(sub(currentDate, { months: 1 }))}
-          className="text-gray-700 px-2"
-        >
-          &lt;
-        </button>
-        <span>{format(currentDate, "MMMM").toUpperCase()}</span>
-        <button
-          onClick={() => setCurrentDate(add(currentDate, { months: 1 }))}
-          className="text-gray-700 px-2"
-        >
-          &gt;
-        </button>
-      </div>
-
-      <div className="border-b-2 border-black mb-1"></div>
-
-      {/* Weekdays */}
-      <div className="grid grid-cols-7 text-center font-semibold text-sm">
-        {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day) => (
-          <div
-            key={day}
-            className={`${day === "SUN" ? "text-[#b91c1c]" : ""} py-1`}
+        {/* Month Navigation */}
+        <div className="flex justify-between items-center mb-1 text-base md:text-lg lg:text-xl font-norwester">
+          <button
+            onClick={() => setCurrentDate(sub(currentDate, { months: 1 }))}
+            className="text-gray-700 px-2"
           >
-            {day}
-          </div>
-        ))}
-      </div>
+            &lt;
+          </button>
+          <span>{format(currentDate, "MMMM").toUpperCase()}</span>
+          <button
+            onClick={() => setCurrentDate(add(currentDate, { months: 1 }))}
+            className="text-gray-700 px-2"
+          >
+            &gt;
+          </button>
+        </div>
 
-      {/* Days Grid */}
-      <div className="grid grid-cols-7 grid-rows-6 flex-1 gap-[4px]">
-        {daysArray.map((day, idx) => {
-          if (!day)
+        <div className="border-b-2 border-black mb-1"></div>
+
+        {/* Weekdays */}
+        <div className="grid grid-cols-7 text-center font-semibold text-sm">
+          {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day) => (
+            <div
+              key={day}
+              className={`${day === "SUN" ? "text-[#b91c1c]" : ""} py-1`}
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Days Grid */}
+        <div className="grid grid-cols-7 grid-rows-6 flex-1 gap-[4px]">
+          {daysArray.map((day, idx) => {
+            if (!day)
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center justify-center opacity-50"
+                />
+              );
+
+            const dateObj = new Date(
+              currentDate.getFullYear(),
+              currentDate.getMonth(),
+              day
+            );
+            const fullDate = format(dateObj, "yyyy-MM-dd");
+            const isSelected = selectedDay === fullDate;
+            const isSunday = dateObj.getDay() === 0;
+
+            const hasStudent = studentDates.has(fullDate);
+            const hasStaff = staffDates.has(fullDate);
+
             return (
               <div
                 key={idx}
-                className="flex items-center justify-center opacity-50"
-              />
-            );
-
-          const dateObj = new Date(
-            currentDate.getFullYear(),
-            currentDate.getMonth(),
-            day
-          );
-          const fullDate = format(dateObj, "yyyy-MM-dd");
-          const isSelected = selectedDay === fullDate;
-          const isSunday = dateObj.getDay() === 0;
-
-          const hasStudent = studentDates.has(fullDate);
-          const hasStaff = staffDates.has(fullDate);
-
-          return (
-            <div
-              key={idx}
-              onClick={() => handleDateClick(day)}
-              className={`relative flex flex-col items-center justify-center cursor-pointer transition-all
-                ${
-                  isSelected
-                    ? "bg-[#94a3b8] font-bold rounded-md"
-                    : "hover:bg-[#7b8797] rounded-md"
-                }
-                ${isSunday ? "text-[#b91c1c]" : ""}
-              `}
-            >
-              {/* Dot indicators */}
-              <div className="absolute top-1 flex space-x-1">
-                {hasStudent && (
-                  <span className="w-2 h-2 rounded-full bg-red-600"></span>
-                )}
-                {hasStaff && (
-                  <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-                )}
+                onClick={() => handleDateClick(day)}
+                className={`relative flex flex-col items-center justify-center cursor-pointer transition-all
+                  ${
+                    isSelected
+                      ? "bg-[#94a3b8] font-bold rounded-md"
+                      : "hover:bg-[#7b8797] rounded-md"
+                  }
+                  ${isSunday ? "text-[#b91c1c]" : ""}
+                `}
+              >
+                {/* Dot indicators */}
+                <div className="absolute top-1 flex space-x-1">
+                  {hasStudent && (
+                    <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                  )}
+                  {hasStaff && (
+                    <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                  )}
+                </div>
+                <span className="text-sm md:text-base lg:text-base">{day}</span>
               </div>
-              <span className="text-sm md:text-base lg:text-base">{day}</span>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Appointments box */}
-      <div className="mt-3">
+      <div className="mt-3 w-[40%] pl-2">
         <textarea
           value={appointmentsText}
           readOnly
           rows={4}
-          className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white focus:outline-none resize-y text-right overflow-y-auto"
+          className="w-full h-full px-3 py-2 border border-gray-400 rounded-md bg-white focus:outline-none resize-none text-right overflow-y-auto"
         />
       </div>
     </div>

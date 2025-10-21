@@ -92,7 +92,13 @@ export default function LiveAgent() {
         is_from_office: true, // Always true as it's from the office
       });
 
-      console.log("Message sent successfully:", response.data);
+      socket.emit('new-chat-message', {
+        student_id,
+        message,
+        is_from_office: true,
+      });
+
+      console.log("Message sent successfully:", response.data);// Clean up the socket connection on component unmount
     } catch (error) {
       console.error('Error sending office chat message:', error);
     }
@@ -109,8 +115,13 @@ export default function LiveAgent() {
   const handleAcceptChat = async () => {
     if (socket) {
       // Emit the event to accept the chat
-      socket.emit('accept-chat', student_id); // Emit event to accept the chat
+      socket.emit('join-chat', student_id); // Emit event to accept the chat
 
+      socket.emit('new-chat-message', {
+        student_id,
+        message: "Hello! You’ve reached the Guidance Office. How can I assist you today?",
+        is_from_office: true,
+      });
       // API call to update the student's chat status
       try {
         const response = await axios.put(`${API}/chatbot/updateStatus/${student_id}`);
@@ -184,8 +195,12 @@ export default function LiveAgent() {
   }, [socket, chatData]);
 
   useEffect(() => {
-    const newSocket = io(); // Connect to the server
+    const newSocket = io();
     setSocket(newSocket);
+
+    newSocket.on('connect', () => {
+      console.log('Reconnected to server');
+    });
 
     // Listen for the new chat message event from the server
     newSocket.on('new-chat-message', (data) => {
@@ -287,18 +302,6 @@ export default function LiveAgent() {
                   className="flex-grow overflow-y-auto mb-4 p-4 rounded-lg"
                   style={{ maxHeight: 'calc(100% - 80px)' }} // Leave space for input
                 > 
-                  {chatData[selected].status === 'pending' && (
-                    <div className="mb-2 flex justify-start flex-col w-fit">
-                      <div className="py-2 px-4 rounded-full max-w-xs bg-[#1e3a8a] text-white">
-                        <p className="text-sm">Incoming live agent request from {chatData[selected].name}</p>
-                      </div>
-                                      
-                      <button className="flex" onClick={handleAcceptChat}>
-                        <p className="w-fit ml-2 text-lg font-semibold text-[#10b981]">ACCEPT</p>
-                      </button>
-                    </div>
-                  )}
-                  
                   {chatData[selected].messages && chatData[selected].messages.length > 0 ? (
                     <>
                       {chatData[selected].messages.slice(1).map((msg, idx) => (
@@ -313,6 +316,17 @@ export default function LiveAgent() {
                     </>
                   ) : (
                     <p>No messages available.</p>
+                  )}
+                  {chatData[selected].status === 'pending' && (
+                    <div className="mb-2 flex justify-start flex-col w-fit">
+                      <div className="py-2 px-4 rounded-full max-w-xs bg-[#1e3a8a] text-white">
+                        <p className="text-sm">Incoming live agent request from {chatData[selected].name}</p>
+                      </div>
+                                      
+                      <button className="flex" onClick={handleAcceptChat}>
+                        <p className="w-fit ml-2 text-lg font-semibold text-[#10b981]">ACCEPT</p>
+                      </button>
+                    </div>
                   )}
                 </div>
 

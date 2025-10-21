@@ -128,6 +128,7 @@ export default function Requests({ initial, updateBacklogs, setSelectedDate }) {
       action: "Schedule",
       name: requestName,
       student_id: requestID,
+      message: selectedRequest.message,
       staff_position : staff.position,
       staff_name : staff.name,
       from_pending: true,
