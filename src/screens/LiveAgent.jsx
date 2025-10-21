@@ -4,8 +4,8 @@ import { useContext } from 'react';
 import { OpenContext } from '../contexts/OpenContext';
 import { Send } from "@mui/icons-material";
 import axios from "axios";
-import { API } from "../api";
-import io from "socket.io-client"
+import { API, RootAPI } from "../api";
+import io from "socket.io-client";
 
 export default function LiveAgent() {
   const { open, setOpen } = useContext(OpenContext);
@@ -14,7 +14,7 @@ export default function LiveAgent() {
   const [chatData, setChatData] = useState([]);
   const messagesEndRef = useRef(null); // Reference to scroll to the end
   const messagesContainerRef = useRef(null);
-  const [socket, setSocket] = useState(null);
+  const socketRef = useRef(null); // Using useRef to keep the socket connection persistent
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -32,13 +32,12 @@ export default function LiveAgent() {
         const response = await axios.get(`${API}/chatbot/students-asking-for-help`);
         if (response.data.studentHistory) {
           setChatData(response.data.studentHistory);
-          console.log(response.data.studentHistory);
         } else {
-          setChatData([]); // fallback if no data
+          setChatData([]);
         }
       } catch (error) {
         console.error('Error fetching chat history:', error);
-        setChatData([]); // Set empty array if there's an error fetching data
+        setChatData([]);
       }
     }
     getChatData();
@@ -50,7 +49,7 @@ export default function LiveAgent() {
     }, 100);
     return () => clearTimeout(timer);
   }, [chatData, selected]);
-  
+
   const handleDrawerToggle = () => {
     setOpen(prev => !prev);
   };
@@ -72,157 +71,200 @@ export default function LiveAgent() {
     updatedChatData[selected].lastMessage = newMessage;
 
     setChatData(updatedChatData);
-    
-    // Scroll to bottom after sending message
+
     setTimeout(() => {
       scrollToBottom();
     }, 50);
 
     e.target.reset();
 
-    // Send the message to the server with is_from_office set to true
     sendMessageToServer(newMessage);
   };
 
   const sendMessageToServer = async (message) => {
     try {
       const response = await axios.post(`${API}/chatbot/insert-chat-message`, {
-        student_id: student_id, // This comes from the selected student
+        student_id: student_id, 
         message: message,
-        is_from_office: true, // Always true as it's from the office
+        is_from_office: true, 
       });
-
-      socket.emit('new-chat-message', {
-        student_id,
-        message,
-        is_from_office: true,
-      });
-
-      console.log("Message sent successfully:", response.data);// Clean up the socket connection on component unmount
+      console.log("Message sent successfully:", response.data);
     } catch (error) {
       console.error('Error sending office chat message:', error);
     }
   };
 
   useEffect(() => {
-    const newSocket = io(); // Connect to the server
-    setSocket(newSocket);
+    if (!socketRef.current) {
+      // Initialize socket connection only once
+      const newSocket = io(RootAPI);
+      socketRef.current = newSocket;
 
-    // Clean up the socket connection on component unmount
-    return () => newSocket.close();
-  }, []);
+      newSocket.on('connect', () => {
+        console.log('✅ Agent connected to server:', newSocket.id);
+        newSocket.emit('join-agent');
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('❌ Agent disconnected from server');
+      });
+
+      newSocket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+      });
+    }
+
+    // Cleanup socket connection on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+    };
+  }, []); // Only initialize socket connection once
+
+  useEffect(() => {
+    if (socketRef.current && student_id) {
+      console.log('🔗 Agent joining room for student:', student_id);
+      socketRef.current.emit('join-room', student_id);
+    }
+  }, [student_id]);
+
+  useEffect(() => {
+    if (socketRef.current) {
+      socketRef.current.on('new-chat-message', (data) => {
+        const { student_id: msgStudentId, message, is_from_office } = data;
+
+        // Ensure the message only updates the chat for the selected student
+        if (msgStudentId === student_id) {
+          setChatData((prevChatData) => {
+            const updatedChatData = [...prevChatData];
+            const chatIndex = updatedChatData.findIndex(chat => chat.id === msgStudentId);
+
+            if (chatIndex >= 0) {
+              const newMessageObject = {
+                sender: is_from_office ? "agent" : "student",
+                text: message,
+                timestamp: new Date().toLocaleString()
+              };
+
+              updatedChatData[chatIndex].messages.push(newMessageObject);
+              updatedChatData[chatIndex].lastMessage = message;
+
+              // Scroll to the bottom if this is the active chat
+              if (selected === chatIndex) {
+                setTimeout(() => scrollToBottom(), 50);
+              }
+            }
+
+            return updatedChatData;
+          });
+        }
+      });
+
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.off('new-chat-message'); // Ensure this runs only when socket is initialized
+        }
+      };
+    }
+  }, [selected, student_id]); // Reattach listener when selected or student_id changes
 
   const handleAcceptChat = async () => {
-    if (socket) {
-      // Emit the event to accept the chat
-      socket.emit('join-chat', student_id); // Emit event to accept the chat
+    if (socketRef.current) {
+      console.log('Agent accepting chat for student:', student_id);
 
-      socket.emit('new-chat-message', {
-        student_id,
-        message: "Hello! You’ve reached the Guidance Office. How can I assist you today?",
-        is_from_office: true,
-      });
-      // API call to update the student's chat status
+      socketRef.current.emit('agent-available', { student_id });
+
       try {
         const response = await axios.put(`${API}/chatbot/updateStatus/${student_id}`);
-
-        // You can handle the response if necessary, e.g., showing a success message or updating UI
         console.log('Chat status updated successfully:', response.data);
 
-        // Update the chat state to reflect that the chat has been accepted
         const updatedChatData = [...chatData];
         const chatIndex = updatedChatData.findIndex(chat => chat.id === student_id);
         if (chatIndex >= 0) {
-          updatedChatData[chatIndex].status = 'On-going'; // Update status to 'On-going'
+          updatedChatData[chatIndex].status = 'On-going';
         }
 
         const newMessageObject = {
           sender: "agent",
-          text: "Hello! You’ve reached the Guidance Office. How can I assist you today?",
+          text: "Hello! You've reached the Guidance Office. How can I assist you today?",
           timestamp: new Date().toLocaleString()
         };
 
         updatedChatData[selected].messages.push(newMessageObject);
-        updatedChatData[selected].lastMessage = "Hello! You’ve reached the Guidance Office. How can I assist you today?";
+        updatedChatData[selected].lastMessage = "Hello! You've reached the Guidance Office. How can I assist you today?";
       
         setChatData(updatedChatData);
 
-        sendMessageToServer("Hello! You’ve reached the Guidance Office. How can I assist you today?");
+        sendMessageToServer("Hello! You've reached the Guidance Office. How can I assist you today?");
       } catch (error) {
         console.error('Error updating chat status:', error);
       }
     }
   };
 
-  // Listen for real-time updates for chat status change
-  useEffect(() => {
-    if (socket) {
-      socket.on('agent-available', () => {
+  const handleDisconnecting = async () => {
+    if (socketRef.current) {
+      console.log('Agent accepting chat for student:', student_id);
+
+      socketRef.current.emit('agent-disconnecting', { student_id });
+
+      try {
+        const response = await axios.put(`${API}/chatbot/deactivateStatus/${student_id}`);
+        console.log('Chat status updated successfully:', response.data);
+
         const updatedChatData = [...chatData];
-        updatedChatData[selected].status = 'ongoing'; // Set status to ongoing when agent is available
+        const chatIndex = updatedChatData.findIndex(chat => chat.id === student_id);
+        if (chatIndex >= 0) {
+          updatedChatData[chatIndex].status = 'Completed';
+        }
+        setSelected(null);
+        setStudentId(0);
+      
+        setChatData(updatedChatData);
+
+      } catch (error) {
+        console.error('Error updating chat status:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (socketRef.current) {
+      socketRef.current.on('agent-available', () => {
+        const updatedChatData = [...chatData];
+        updatedChatData[selected].status = 'ongoing'; 
         setChatData(updatedChatData);
       });
     }
 
     return () => {
-      if (socket) {
-        socket.off('agent-available');
+      if (socketRef.current) {
+        socketRef.current.off('agent-available');
       }
     };
-  }, [chatData, selected, socket]);
+  }, [chatData, selected]);
 
   useEffect(() => {
-    if (socket) {
-      // Listen for chat status updates
-      socket.on('student-chatStatus-updated', (data) => {
+    if (socketRef.current) {
+      socketRef.current.on('student-chatStatus-updated', (data) => {
         console.log('Chat status updated for user:', data.userId);
-        // Update your chat data or UI here
-        // Example: You can change the chat status to 'On-going' in the UI
         const updatedChatData = [...chatData];
         const chatIndex = updatedChatData.findIndex((chat) => chat.id === data.userId);
         if (chatIndex >= 0) {
-          updatedChatData[chatIndex].status = data.status; // Update status
-          setChatData(updatedChatData); // Update the state
+          updatedChatData[chatIndex].status = data.status;
+          setChatData(updatedChatData);
         }
       });
     }
 
     return () => {
-      if (socket) {
-        socket.off('student-chatStatus-updated');
+      if (socketRef.current) {
+        socketRef.current.off('student-chatStatus-updated');
       }
     };
-  }, [socket, chatData]);
-
-  useEffect(() => {
-    const newSocket = io();
-    setSocket(newSocket);
-
-    newSocket.on('connect', () => {
-      console.log('Reconnected to server');
-    });
-
-    // Listen for the new chat message event from the server
-    newSocket.on('new-chat-message', (data) => {
-      console.log('New chat message received:', data);
-      // Add the new message to the chat history
-      setChatData((prevMessages) => [
-        ...prevMessages,
-        {
-          sender: data.is_from_office ? 'agent' : 'student', // Determine sender based on is_from_office
-          text: data.message,
-          timestamp: new Date().toLocaleString(),
-        },
-      ]);
-      // Scroll to the newest message
-      scrollToBottom();
-    });
-
-    // Clean up the socket connection on component unmount
-    return () => {
-      newSocket.close();
-    };
-  }, []);
+  }, [socketRef, chatData]);
 
   const formatDate = (dateTime) => {
     const now = new Date();
@@ -323,6 +365,7 @@ export default function LiveAgent() {
                         <p className="text-sm">Incoming live agent request from {chatData[selected].name}</p>
                       </div>
                                       
+
                       <button className="flex" onClick={handleAcceptChat}>
                         <p className="w-fit ml-2 text-lg font-semibold text-[#10b981]">ACCEPT</p>
                       </button>
@@ -331,7 +374,13 @@ export default function LiveAgent() {
                 </div>
 
                 {/* Input Form - Fixed at bottom */}
-                <div className="mt-auto border-t pt-4">
+                <div className="mt-auto border-t pt-4 relative">
+                  <button 
+                    className="absolute right-[45%] left-[45%] -top-10 text-white text-lg font-bold bg-red-500 px-2 py-1 rounded-full"
+                    onClick={handleDisconnecting}
+                  >
+                    Disconnect
+                  </button>
                   <form className="flex gap-4 px-2" onSubmit={handleSendMessage}>
                     <input
                       type="text"
