@@ -16,7 +16,7 @@ import {
   LineChart,
 } from "recharts";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@mui/material";
+import { Badge, Button } from "@mui/material";
 import axios from "axios";
 import { API } from "../../../api";
 
@@ -251,13 +251,15 @@ export function CompSchedules({ backlog, isAdviser }) {
     <div className={`flex flex-col w-[${width}%] ${padding && "p-5"} h-full`}>
       <div className="flex flex-row justify-between">
         <p className="font-roboto font-bold text-[#f57c00] text-2xl">Pending Student Requests</p>
-        <NotificationsActive
-          sx={{
-            fontSize: 25,
-            justifyItems: "center",
-            color: "#f57c00",
-          }}
-        />
+        <Badge badgeContent={filterBacklog.length} color="error">
+          <NotificationsActive
+            sx={{
+              fontSize: 25,
+              justifyItems: "center",
+              color: "#f57c00",
+            }}
+          />
+        </Badge>
       </div>
       
       <div className="w-full h-[90%] border-4 border-[#f57c00] rounded-xl p-2 flex flex-col">

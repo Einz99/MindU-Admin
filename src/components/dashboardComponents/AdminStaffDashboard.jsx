@@ -45,10 +45,34 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
   return (
       <div 
         className="w-full h-full grid"  // 👈 ensures grid has a real height
-        style={{ gridTemplateColumns: '40% 60%', gridTemplateRows: '60% 40%' }}
-      >
-        
+        style={{ gridTemplateColumns: '40% 60%', gridTemplateRows: '60% 40% 50%' }}
+      > 
         <UsageUtilization />
+
+        <div className="w-full p-3">
+          <div className="flex w-full flex-row justify-between">
+            <p className="font-roboto font-bold text-[#bc3f8d] text-2xl">Pending Events Proposal</p>
+            <Edit sx={{
+              fontSize: 25,
+              justifyItems: 'center',
+              color: '#64748b',
+            }}/>
+          </div>
+          <div className="w-full h-[90%] border-4 border-[#bc3f8d] rounded-xl p-2 flex flex-col gap-3 overflow-y-auto">
+            {filterBacklogs.map((item) => (
+              <div key={item.id} className="flex flex-row justify-between border-b-2 border-[#94a3b8]">
+                <p>
+                  {item.name} Proposal
+                </p>
+                <button className="mr-5" onClick={() => handleViewingRequest(item)}><p className="bg-[#1e3a8a] text-white px-3 rounded-lg mb-0.5">View</p></button>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <CompSchedules backlog={backlog} />
+        <PendingStudentRequests filterBacklog={filterBacklog} padding={true}/>
+        <ActiveStudentsPieChart width={100} padding={10} marginTop={false}/>
 
         <div className="flex items-center justify-center p-5">
           <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col gap-20  overflow-y-auto">
@@ -137,31 +161,6 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
                 </Table>
               </TableContainer>
             </div>
-          </div>
-        </div>
-        
-        <CompSchedules backlog={backlog} />
-        <PendingStudentRequests filterBacklog={filterBacklog} padding={true}/>
-        <ActiveStudentsPieChart width={100} padding={10} marginTop={false}/>
-
-        <div className="w-full p-3">
-          <div className="flex w-full flex-row justify-between">
-            <p className="font-roboto font-bold text-[#bc3f8d] text-2xl">Pending Events Proposal</p>
-            <Edit sx={{
-              fontSize: 25,
-              justifyItems: 'center',
-              color: '#64748b',
-            }}/>
-          </div>
-          <div className="w-full h-[90%] border-4 border-[#bc3f8d] rounded-xl p-2 flex flex-col gap-3 overflow-y-auto">
-            {filterBacklogs.map((item) => (
-              <div key={item.id} className="flex flex-row justify-between border-b-2 border-[#94a3b8]">
-                <p>
-                  {item.name} Proposal
-                </p>
-                <button className="mr-5" onClick={() => handleViewingRequest(item)}><p className="bg-[#1e3a8a] text-white px-3 rounded-lg mb-0.5">View</p></button>
-              </div>
-            ))}
           </div>
         </div>
       </div>

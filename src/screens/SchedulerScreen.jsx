@@ -7,7 +7,7 @@ import { API } from "../api";
 import axios from "axios";
 import { useContext } from 'react';
 import { OpenContext } from '../contexts/OpenContext';
-import { format, } from "date-fns";
+import { FilterAlt, Sort } from "@mui/icons-material";
 
 /**
  * ===========================================
@@ -53,9 +53,12 @@ import { format, } from "date-fns";
 
 export default function Scheduler() {
   const { open, setOpen } = useContext(OpenContext);
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [backlogs, setBacklogs] = useState([]);
   const [reloadKey, setReloadKey] = useState(0);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [filterType, setFilterType] = useState(0);
+  const [sortType, setSortType] = useState(0);
   // const [availableTimes, setAvailableTime] = useState([])
 
   /**
@@ -108,8 +111,16 @@ export default function Scheduler() {
   const updateBacklogs = () => {
     setReloadKey((prev) => prev + 1);
   }
+  
+  const handleFilter = (type) => {
+    setFilterOpen(prev => !prev);
+    setFilterType(type);
+  }
 
-  const headerDate = format(new Date(selectedDate || new Date()), "EEEE, MMMM dd, yyyy").toUpperCase();
+  const handleSort = (type) => {
+    setSortOpen(prev => !prev);
+    setSortType(type);
+  }
 
   return (
     <div className="flex bg-[#f8fafc] flex-1 overflow-hidden">
@@ -141,8 +152,8 @@ export default function Scheduler() {
             >
               GUIDANCE SCHEDULER
             </h1>
-            <div className="bg-[#b7cde3] w-full p-4 flex flex-col flex-1 overflow-auto">
-              <div className="relative">
+            <div className="bg-[#b7cde3] w-full p-4 flex flex-col flex-1">
+              <div className="flex justify-between">
                 <div
                   className="font-norwester font-bold px-4 py-3 text-black -mb-3"
                   style={{
@@ -150,15 +161,58 @@ export default function Scheduler() {
                     fontSize: "clamp(1.4rem, 2.1vw, 2.45rem)", // ~70% of 2rem → 3.5rem
                   }}
                 >
-                  {headerDate}
+                  Appointments & Events List
+                </div>
+                <div className="flex items-center justify-center" style={{ height: '100%' }}>
+                  <div className="flex gap-4">
+                    <div className="relative">
+                      <FilterAlt 
+                        style={{ fontSize: '2rem' }}
+                        onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
+                      />
+                      {filterOpen && (
+                        <div className="z-50">
+                          <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
+                            <ul className="text-right">
+                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer rounded-tl-xl ${filterType === 0 && "bg-blue-300"}`} onClick={() => handleFilter(0)}>All</li>
+                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer ${filterType === 1 && "bg-blue-300"}`} onClick={() => handleFilter(1)}>Scheduled</li>
+                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer ${filterType === 2 && "bg-blue-300"}`} onClick={() => handleFilter(2)}>Cancelled</li>
+                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer rounded-bl-xl ${filterType === 3 && "bg-blue-300"}`} onClick={() => handleFilter(3)}>Completed</li>
+                            </ul>
+                          </div>
+                          <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
+                          <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-50" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Sort 
+                        style={{ fontSize: '2rem' }} 
+                        onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
+                      />
+                      {sortOpen && (
+                        <div className="z-50">
+                          <div className="absolute right-1 w-[5.903rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
+                            <ul className="text-right">
+                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer rounded-tl-xl ${sortType === 0 && "bg-blue-300"}`} onClick={() => handleSort(0)}>A - Z</li>
+                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer ${sortType === 1 && "bg-blue-300"}`} onClick={() => handleSort(1)}>Z - A</li>
+                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer rounded-bl-xl ${sortType === 2 && "bg-blue-300"}`} onClick={() => handleSort(2)}>By Date</li>
+                            </ul>
+                          </div>
+                          <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
+                          <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-50" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="bg-white p-4">
                   <SchedulerLeftSide 
                     initial={backlogs} 
                     updateBacklogs={updateBacklogs} 
-                    calendarDate={setSelectedDate}
-                    SelectedDate={selectedDate}
+                    filterType={filterType}
+                    sortType={sortType}
                   />
               </div>
             </div>
@@ -171,11 +225,9 @@ export default function Scheduler() {
            */}
           <div className="flex flex-col gap-4 flex-[1] min-w-[30%]">
               <Calendar
-                setSelectedDate={setSelectedDate}
                 initial={backlogs}
-                selectedDate={selectedDate}
               />
-            <Requests initial={backlogs} updateBacklogs={updateBacklogs} setSelectedDate={setSelectedDate} />
+            <Requests initial={backlogs} updateBacklogs={updateBacklogs} />
           </div>
         </div>
       </main>

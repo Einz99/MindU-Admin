@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Tabs, Tab, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, IconButton } from "@mui/material";
 import { Close } from '@mui/icons-material';
-import { addHours, format } from "date-fns";
+import { addHours } from "date-fns";
 import { API } from "../../../api";
 import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -41,7 +41,7 @@ import axios from "axios";
  * - [Any important notes for future developers or groupmates]
  * ===========================================
  */
-export default function Requests({ initial, updateBacklogs, setSelectedDate }) {
+export default function Requests({ initial, updateBacklogs }) {
   // State for schedule modal
   const [openScheduleModal, setOpenScheduleModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -142,13 +142,33 @@ export default function Requests({ initial, updateBacklogs, setSelectedDate }) {
       console.log("Schedule updated successfully:", response.data);
       setOpenScheduleModal(false);
       updateBacklogs();
-      const fullDate = format(new Date(newSchedDate), "yyyy-MM-dd");
-      setSelectedDate(fullDate);
       setLoading(false);
     } catch (error) {
       console.error("Error scheduling request:", error.response?.data || error.message);
     }
   };
+
+  const getInitialDateTime = () => {
+    const now = new Date();
+    const sevenAM = new Date();
+    sevenAM.setHours(7, 0, 0, 0); // Set 7:00 AM today
+
+    if (now.getHours() >= 18) {
+      // If it's already past 6 PM, set the initial date to tomorrow at 7 AM
+      const tomorrow = new Date();
+      tomorrow.setDate(now.getDate() + 1);
+      tomorrow.setHours(7, 0, 0, 0);
+      return tomorrow;
+    } else if (now.getHours() >= 7) {
+      // If it's between 7 AM and 6 PM, set the initial date to now
+      return now;
+    } else {
+      // If it's before 7 AM, set the initial date to 7 AM today
+      return sevenAM;
+    }
+  };
+
+  const initialSchedDate = getInitialDateTime();
 
   return (
     <div className="min-w-[100%] max-w-[100%]">
@@ -173,8 +193,8 @@ export default function Requests({ initial, updateBacklogs, setSelectedDate }) {
               className="relative bg-[#ff9059] rounded-2xl py-1 pl-3"
             >
               <div className="bg-white rounded-2xl h-44 py-2 pl-5">
-                <h1 className="text-3xl font-medium">Appointment Request</h1>
-                <h1 className="text-2xl font-medium">{item.name}</h1>
+                <h1 className="text-3xl font-roboto font-bold">REQUEST MEETING</h1>
+                <h1 className="text-2xl font-roboto font-bold italic">{item.name}</h1>
                 <p className="text-lg line-clamp-3 overflow-hidden text-ellipsis">
                   {item.message}
                 </p>
@@ -267,7 +287,7 @@ export default function Requests({ initial, updateBacklogs, setSelectedDate }) {
             <p className="mt-3 font-roboto font-bold">Schedule Date & Time</p>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <DateTimePicker
-              value={newSchedDate}
+              value={newSchedDate || initialSchedDate}
               onChange={handleDateChange}
               shouldDisableDate={(date) => {
                 const day = date.getDay();

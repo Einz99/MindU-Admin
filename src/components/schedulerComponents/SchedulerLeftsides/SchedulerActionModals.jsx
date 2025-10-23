@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { 
   Dialog,
@@ -16,6 +16,8 @@ import RichTextEditor from "../../contentManagementComponents/contentDialogCompo
 import * as mammoth from "mammoth/mammoth.browser";
 import * as pdfjsLib from "pdfjs-dist";
 import { getDocument } from "pdfjs-dist";
+import axios from "axios";
+import { API } from "../../../api";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
@@ -43,6 +45,20 @@ export default function SchedulerActionModals({
   setAlertMessage,
   setOpenError,
 }) {
+  const [students, setStudents] = useState({});
+
+  useEffect(() => {
+    async function getAllStudents() {
+      try {
+        const response = await axios.get(`${API}/students`);
+        setStudents(response.data);
+      } catch (error) {
+        console.error("Unable to get students");
+      }
+    }
+    getAllStudents();
+  }, [])
+
   const fileInputRef = useRef();
 
   const handleUploadButtonClick = () => {
@@ -139,13 +155,35 @@ export default function SchedulerActionModals({
     return null; // no error
   };
 
+  const getInitialDateTime = () => {
+    const now = new Date();
+    const sevenAM = new Date();
+    sevenAM.setHours(7, 0, 0, 0); // Set 7:00 AM today
+
+    if (now.getHours() >= 18) {
+      // If it's already past 6 PM, set the initial date to tomorrow at 7 AM
+      const tomorrow = new Date();
+      tomorrow.setDate(now.getDate() + 1);
+      tomorrow.setHours(7, 0, 0, 0);
+      return tomorrow;
+    } else if (now.getHours() >= 7) {
+      // If it's between 7 AM and 6 PM, set the initial date to now
+      return now;
+    } else {
+      // If it's before 7 AM, set the initial date to 7 AM today
+      return sevenAM;
+    }
+  };
+
+  const initialSchedDate = getInitialDateTime();
+
   return (
     <>
       {/* Modal for actions */}
       <Dialog 
         open={open} 
         onClose={() => setOpen(false)} 
-        maxWidth={`${actionState !== 4 ? "sm" : "md"}`} 
+        maxWidth={`${actionState !== 4 ? "sm" : isRequest ? "md" : "sm"}`} 
         fullWidth 
         sx={{
           "& .MuiPaper-root": {
@@ -168,23 +206,40 @@ export default function SchedulerActionModals({
             </DialogTitle>
             <DialogContent>
               <p className="mt-3 font-roboto font-bold">{isRequest ? "Event Name" : "Student Name"}</p>
-              <TextField
-                fullWidth
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    "& input": {
-                      color: "#000", 
-                      bgcolor: "#e8e9eb",
-                      borderRadius: "20px",
+              {isRequest ? (
+                <TextField
+                  fullWidth
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      "& input": {
+                        color: "#000", 
+                        bgcolor: "#e8e9eb",
+                        borderRadius: "20px",
+                      },
+                      "& fieldset": {
+                        borderRadius: "20px", 
+                      },
                     },
-                    "& fieldset": {
-                      borderRadius: "20px", 
-                    },
-                  },
-                }}
-              />
+                  }}
+                />
+              ) : (
+                <>
+                  <input
+                    list="students"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="w-full p-2 rounded-lg border-2 border-gray-300 bg-gray-200"
+                    placeholder="Student Name"
+                  />
+                  <datalist id="students">
+                    {students.map((student) => (
+                      <option key={student.id} value={`${student.firstName} ${student.lastName}`} />
+                    ))}
+                  </datalist>
+                </>
+              )}
               {isRequest ? (
                 <>
                   <p className="mt-3 font-roboto font-bold">Proposal or Insert Proposal</p>
@@ -220,7 +275,7 @@ export default function SchedulerActionModals({
               <p className="mt-3 font-roboto font-bold">{isRequest ? "Propose Date & Time" : "Walk In Date & Time"}</p>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DateTimePicker
-                  value={newSchedDate}
+                  value={newSchedDate || initialSchedDate}
                   onChange={handleDateChange}
                   shouldDisableDate={(date) => {
                     const day = date.getDay();
@@ -421,7 +476,7 @@ export default function SchedulerActionModals({
                   <LocalizationProvider dateAdapter={AdapterDateFns}>
                     <DateTimePicker
                       label="Select New Date & Time"
-                      value={selectedDate}
+                      value={selectedDate || initialSchedDate}
                       onChange={handleDateChange}
                       shouldDisableDate={(date) => {
                         const day = date.getDay();

@@ -284,7 +284,15 @@ export default function Layout({ open, onMenuClick }) {
         const formData = new FormData();
         formData.append("picture", selectedFile);
 
-        await axios.put(`${API}/staffs/picture/${staffData.id}`, formData, config);
+        const response = await axios.put(`${API}/staffs/picture/${staffData.id}`, formData, config);
+
+        // Assuming the backend returns the updated picture filename (relative path)
+        const updatedPicturePath = `${response.data.data.picturePath}`;  // Full URL/path to the new picture
+        // Update staff.picture directly
+        setStaff((prevStaff) => ({
+          ...prevStaff,
+          picture: updatedPicturePath,  // Set the new picture path
+        }));
 
         setOpenEditDialog(false);
         alert("Profile picture changed successfully!");

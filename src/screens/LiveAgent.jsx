@@ -15,6 +15,7 @@ export default function LiveAgent() {
   const messagesEndRef = useRef(null); // Reference to scroll to the end
   const messagesContainerRef = useRef(null);
   const socketRef = useRef(null); // Using useRef to keep the socket connection persistent
+  const [profilePath, setProfilePath] = useState('');
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -44,6 +45,27 @@ export default function LiveAgent() {
   }, []);
 
   useEffect(() => {
+    async function getProfile() {
+      try {
+        // Make an API call to fetch student details by student_id
+        const response = await axios.get(`${API}/students/${student_id}`);
+
+        // Check if the response contains the profile picture
+        if (response.data && response.data.profilePic) {
+          // Set the profile picture path by concatenating RootAPI and the profilePic from the response
+          setProfilePath(`${response.data.profilePic}`);
+        } else {
+          console.error("Profile picture not found in response");
+        }
+      } catch (error) {
+        console.error("Error fetching student profile:", error);
+      }
+    }
+
+    getProfile(); // Trigger the API call on component mount or when student_id changes
+  }, [student_id]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       scrollToBottom();
     }, 100);
@@ -59,18 +81,6 @@ export default function LiveAgent() {
     const newMessage = e.target.elements.message.value;
 
     if (newMessage.trim() === "") return;
-
-    const newMessageObject = {
-      sender: "agent",
-      text: newMessage,
-      timestamp: new Date().toLocaleString()
-    };
-
-    const updatedChatData = [...chatData];
-    updatedChatData[selected].messages.push(newMessageObject);
-    updatedChatData[selected].lastMessage = newMessage;
-
-    setChatData(updatedChatData);
 
     setTimeout(() => {
       scrollToBottom();
@@ -313,7 +323,7 @@ export default function LiveAgent() {
                 onClick={() => { setSelected(index); setStudentId(chat.id); }}
               >
                 <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-4">
-                  <img src={"/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
+                  <img src={profilePath ? `${RootAPI}/${profilePath}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
                 </div>
                 <div className="flex flex-col justify-between w-full relative">
                   <h3 className="text-lg font-semibold">{chat.name}</h3>

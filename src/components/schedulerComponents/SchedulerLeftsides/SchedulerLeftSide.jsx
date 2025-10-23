@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { addHours, format } from "date-fns";
+import { addHours } from "date-fns";
 import { API } from "../../../api";
 import SchedulerTab from "./SchedulerTab";
 import SchedulerTable from "./SchedulerTable";
@@ -42,7 +42,7 @@ import { Close } from "@mui/icons-material";
  * - [Any important notes for future developers or groupmates]
  * ===========================================
  */
-export default function SchedulerLeftSide({ SelectedDate, initial = [], updateBacklogs, calendarDate }) {
+export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortType, filterType }) {
   const [open, setOpen] = useState(false);
   /**
    * actionState Dictionary
@@ -205,10 +205,6 @@ export default function SchedulerLeftSide({ SelectedDate, initial = [], updateBa
 
       updateBacklogs();
       setLoading(false);
-      if (actionState === 1 && selectedDate) {
-        const fullDate = format(new Date(newSchedDate), "yyyy-MM-dd");
-        calendarDate(fullDate);
-      }
     } catch (error) {
       console.error("Error updating event:", error.response?.data || error.message);
     }
@@ -238,7 +234,6 @@ export default function SchedulerLeftSide({ SelectedDate, initial = [], updateBa
       setOpen(true);
     }
     setSelectedData(data);
-    setSelectedDate(null);
   };
 
   // Handle submission for Add Event modal
@@ -263,8 +258,6 @@ export default function SchedulerLeftSide({ SelectedDate, initial = [], updateBa
 
         if (response.data.success) {
           updateBacklogs();
-          const fullDate = format(new Date(UTC8), "yyyy-MM-dd");
-          calendarDate(fullDate);
           setOpen(false);
           setSelectedDate(null);
           setLoading(true);
@@ -286,8 +279,6 @@ export default function SchedulerLeftSide({ SelectedDate, initial = [], updateBa
 
         if (response.data.success) {
           updateBacklogs();
-          const fullDate = format(new Date(UTC8), "yyyy-MM-dd");
-          calendarDate(fullDate);
           setOpen(false);
           setSelectedDate(null);
           setLoading(false);
@@ -320,9 +311,10 @@ export default function SchedulerLeftSide({ SelectedDate, initial = [], updateBa
       <SchedulerTable
         initial={initial} 
         handleOpen={handleOpen} 
-        SelectedDate={SelectedDate}
         searchTerm={searchTerm}
         tab={tab}
+        filterType={filterType}
+        sortType={sortType}
       />
       
       {/* Modals of all actions in table */}

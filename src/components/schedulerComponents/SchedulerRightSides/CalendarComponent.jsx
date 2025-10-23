@@ -39,11 +39,11 @@ import { format, startOfMonth, getDay, getDaysInMonth, add, sub, parseISO } from
  * - [Any important notes for future developers or groupmates]
  * ===========================================
  */
-export default function Calendar({ setSelectedDate, initial, selectedDate }) {
+export default function Calendar({ initial }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [highlightedDates, setHighlightedDates] = useState([]);
+  const [dateFlags, setDateFlags] = useState({});
   const [selectedDay, setSelectedDay] = useState(null);
-
+  const [filterBacklogs, setFilterBacklogs] = useState({});
   /**
    * This variables and functions is to initialized the calendar and for formatting the table
    */
@@ -51,6 +51,11 @@ export default function Calendar({ setSelectedDate, initial, selectedDate }) {
   const startDate = startOfMonth(currentDate);
   const startWeekday = getDay(startDate);
 
+  useEffect(() => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    setSelectedDay(today);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Generate all days, including previous & next month's placeholders
   const daysArray = [];
   for (let i = 0; i < startWeekday; i++) daysArray.push(null);
@@ -65,25 +70,43 @@ export default function Calendar({ setSelectedDate, initial, selectedDate }) {
 
   // Extract highlighted dates from `initial` prop
   useEffect(() => {
-    if (!initial || initial.length === 0) return;
-    
-    const formattedDates = initial
-      .filter((entry) => entry.status === "Scheduled") // Only Scheduled events
-      .map((entry) => format(parseISO(entry.sched_date), "yyyy-MM-dd")); // Format to "YYYY-MM-DD"
+    if (!initial?.length) return;
 
-    setHighlightedDates(formattedDates);
-  }, [initial]);
+    const filteredEvents = initial.filter((e) => {
+      try {
+        // Ensure sched_date is a valid ISO string
+        const eventDate = parseISO(e.sched_date);
+        if (isNaN(eventDate)) {
+          return false; // Skip invalid dates
+        }
+        const formattedEventDate = format(eventDate, "yyyy-MM-dd");
+        return formattedEventDate === selectedDay && e.status === "Scheduled";
+      } catch (err) {
+        console.error("Error parsing date:", e.sched_date, err);
+        return false; // Skip invalid date
+      }
+    });
+
+    setFilterBacklogs(filteredEvents);
+
+    const map = {};
+    initial
+      .filter(e => e.status === "Scheduled" && e.sched_date)
+      .forEach(entry => {
+        const d = format(parseISO(String(entry.sched_date)), "yyyy-MM-dd");
+        if (!map[d]) map[d] = { hasStudent: false, hasGeneral: false };
+        if (entry.student_id != null) map[d].hasStudent = true;
+        else map[d].hasGeneral = true;
+      });
+
+    setDateFlags(map);
+  }, [initial, selectedDay, setDateFlags]);
 
   const handleDateClick = (day) => {
     if (!day) return;
     const fullDate = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), day), "yyyy-MM-dd");
-    setSelectedDate(fullDate);
     setSelectedDay(fullDate);
   };
-
-  useEffect(() => {
-    setSelectedDay(selectedDate)
-  }, [selectedDate])
   
   return (
     <div className="flex flex-col w-full bg-[#b7cde3] p-2 flex-1 flex-grow relative">
@@ -104,39 +127,71 @@ export default function Calendar({ setSelectedDate, initial, selectedDate }) {
       {/* Weekdays */}
       <div className="grid grid-cols-7 text-center font-semibold text-sm">
         {["SUN","MON","TUE","WED","THU","FRI","SAT"].map(day => (
-          <div key={day} className={`${day === "SUN" ? "text-[#b91c1c]" : ""} py-1`}>
-            {day}
-          </div>
+          <div key={day} className={`${day === "SUN" ? "text-[#b91c1c]" : ""} py-1`}>{day}</div>
         ))}
       </div>
-      
+
       {/* Days Grid */}
       <div className="grid grid-cols-7 grid-rows-6 flex-1 gap-[4px]">
         {daysArray.map((day, idx) => {
           if (!day) return <div key={idx} className="flex items-center justify-center opacity-50"></div>;
-        
+
           const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
           const fullDate = format(dateObj, "yyyy-MM-dd");
-          const isHighlighted = highlightedDates.includes(fullDate);
+          const flags = dateFlags[fullDate];
           const isSelected = selectedDay === fullDate;
           const isSunday = dateObj.getDay() === 0;
-        
+
+          // Decide which dots to show
+          const dots = [];
+          if (flags?.hasStudent) dots.push("#ff9059"); // has student_id
+          if (flags?.hasGeneral) dots.push("#60a5fa"); // no student_id
+
           return (
             <div
               key={idx}
               onClick={() => handleDateClick(day)}
               className={`relative flex items-center justify-center cursor-pointer transition-all
                 ${isSelected ? "bg-[#94a3b8] font-bold rounded-md" : "hover:bg-[#7b8797] rounded-md"}
-                ${isSunday ? "text-[#b91c1c]" : ""}
-              `}
+                ${isSunday ? "text-[#b91c1c]" : ""}`}
             >
               <span className="text-sm md:text-base lg:text-base">{day}</span>
-              {isHighlighted && (
-                <span className="absolute -top-1 w-4 h-4 md:w-2 md:h-2 bg-red-500 rounded-full"></span>
+
+              {/* Dot(s) — one or two */}
+              {dots.length > 0 && (
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 flex gap-1">
+                  {dots.map((c, i) => (
+                    <span
+                      key={i}
+                      className="w-2 h-2 md:w-2 md:h-2 rounded-full"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           );
         })}
+      </div>
+      <div className="w-[95%] bg-white h-[25%] rounded-xl mx-[2.5%] -mt-5 mb-3 px-4 overflow-auto">
+        {selectedDay && filterBacklogs.length > 0 ? (
+          filterBacklogs.map((event, index) => (
+            <div key={index} className="my-2">
+              <p
+                className="font-roboto font-bold italic text-xl"
+                style={{ color: event.student_id ? "#ff9059" : "#60a5fa" }}
+              >
+                {event.name}
+              </p>
+              <p className="font-roboto italic text-sm">{format(parseISO(event.sched_date), "hh:mm a")}</p>
+            </div>
+          ))
+        ) : (
+          <div className="font-roboto font-bold italic text-xl my-2">
+            <p>There is no scheduled event for</p>
+            <p>{format(new Date(selectedDay), 'EEEE - MMMM dd, yyyy')}</p>
+          </div>
+        )}
       </div>
     </div>
   );

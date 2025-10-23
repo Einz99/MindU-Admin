@@ -15,7 +15,7 @@ import {
 import { CheckCircle, Cancel, Edit, Delete, Summarize, Restore } from "@mui/icons-material";
 import { format } from "date-fns";
 
-export default function SchedulerTable({ initial, handleOpen, SelectedDate, searchTerm, tab }) {
+export default function SchedulerTable({ initial, handleOpen, searchTerm, tab, filterType, sortType }) {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [page, setPage] = useState(1);
     const staff = JSON.parse(localStorage.getItem("staff"));
@@ -28,29 +28,18 @@ export default function SchedulerTable({ initial, handleOpen, SelectedDate, sear
       Trash: 3,
     };
 
-    // Helper: safely get formatted date ("yyyy-MM-dd") from a date string
-    const getFormattedDate = (dateStr) => {
-        if (!dateStr) return "";
-        try {
-          const d = new Date(String(dateStr));
-          return format(d, "yyyy-MM-dd");
-        } catch (e) {
-          return "";
-        }
-      };
-
-      // Filtering: Compare the date portion only.
-      const filteredData = (initial || [])
+    // Filtering: Compare the date portion only.
+    const filteredData = (initial || [])
       .filter((data) => {
         if (searchTerm && !data.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-        if (!data.sched_date || data.status === 'Pending') return false;
-        const rowDate = getFormattedDate(data.sched_date);
-        const selectedFormatted = getFormattedDate(SelectedDate || new Date());
-        
+        if (!data.sched_date || data.status === "Pending") return false;
+
         if (tab === 0 && data.student_id == null) return false;
         if (tab === 1 && data.student_id != null) return false;
-
-        return rowDate === selectedFormatted;
+        if (filterType === 1 && data.status !== "Scheduled") return false;
+        if (filterType === 2 && data.status !== "Cancelled") return false;
+        if (filterType === 3 && data.status !== "Completed") return false;
+        return true;
       })
       .sort((a, b) => {
         // First: group by whether student_id exists
@@ -59,16 +48,32 @@ export default function SchedulerTable({ initial, handleOpen, SelectedDate, sear
         if (isAAppointment !== isBAppointment) {
           return isAAppointment ? 1 : -1; // Events (no student_id) come first
         }
-      
+
         // Second: sort by status
         const statusA = statusOrder[a.status] ?? 999;
         const statusB = statusOrder[b.status] ?? 999;
         if (statusA !== statusB) return statusA - statusB;
+
+        // Sorting based on `sortType` value
+        if (sortType === 0) {
+          // Sort by name A-Z
+          return a.name.localeCompare(b.name);
+        }
+        if (sortType === 1) {
+          // Sort by name Z-A
+          return b.name.localeCompare(a.name);
+        }
+        if (sortType === 2) {
+          // Sort by scheduled date
+          const dateA = new Date(a.sched_date);
+          const dateB = new Date(b.sched_date);
+          return dateA - dateB;
+        }
       
-        // Optional: finally sort alphabetically by name
+        // Default: Sort alphabetically by name (this is for the case if `sortType` isn't set)
         return a.name.localeCompare(b.name);
       });
-
+    
     const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
     const handlePreviousPage = () => {
@@ -142,30 +147,30 @@ export default function SchedulerTable({ initial, handleOpen, SelectedDate, sear
                         `}>{data.status}</p>
                     </TableCell>
                     {staffPosition !== "Adviser" && (
-                      <TableCell className="p-3 font-bold" sx={{ borderBottom: "none" }}>
+                      <TableCell className="p-3 font-bold z-0" sx={{ borderBottom: "none" }}>
                         {/* Action buttons based on status */}
                         {data.status === "Scheduled" ? (
                           <div className="flex gap-2 justify-center">
                             <Tooltip title={getLabel("view")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full">
+                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full z-0">
                                 <Summarize className="text-[#4F46E5] bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
                             <Tooltip title={getLabel("cancel")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 0)} className="rounded-full">
+                              <IconButton onClick={() => handleOpen(data, 0)} className="rounded-full z-0">
                                 <Cancel className="text-red-400 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
                             <Tooltip title={getLabel("reschedule")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 1)} className="rounded-full">
+                              <IconButton onClick={() => handleOpen(data, 1)} className="rounded-full z-0">
                                 <Edit className="text-yellow-400 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
                             <Tooltip title={getLabel("complete")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 2)} className="rounded-full">
+                              <IconButton onClick={() => handleOpen(data, 2)} className="rounded-full z-0">
                                 <CheckCircle className="text-green-500 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
@@ -173,7 +178,7 @@ export default function SchedulerTable({ initial, handleOpen, SelectedDate, sear
                         ) : data.status === "Completed" ? (
                           <div className="flex justify-center">
                             <Tooltip title={getLabel("view")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full">
+                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full z-0">
                                 <Summarize className="text-[#4F46E5] bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
@@ -181,19 +186,19 @@ export default function SchedulerTable({ initial, handleOpen, SelectedDate, sear
                         ) : (data.status === "Cancelled" || data.status === "Missed") ? (
                           <div className="flex justify-center">
                             <Tooltip title={getLabel("view")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full">
+                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full z-0">
                                 <Summarize className="text-[#4F46E5] bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
                             <Tooltip title={getLabel("reschedule")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 1)} className="rounded-full">
+                              <IconButton onClick={() => handleOpen(data, 1)} className="rounded-full z-0">
                                 <Edit className="text-yellow-400 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
                             <Tooltip title={getLabel("trash")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 5)} className="rounded-full">
+                              <IconButton onClick={() => handleOpen(data, 5)} className="rounded-full z-0">
                                 <Delete className="text-red-400 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
@@ -201,13 +206,13 @@ export default function SchedulerTable({ initial, handleOpen, SelectedDate, sear
                         ) : (
                           <div className="flex gap-2 justify-center">
                             <Tooltip title={getLabel("restore")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 6)} className="rounded-full">
+                              <IconButton onClick={() => handleOpen(data, 6)} className="rounded-full z-0">
                                 <Restore className="text-green-500 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
                             <Tooltip title={getLabel("delete")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 7)} className="rounded-full">
+                              <IconButton onClick={() => handleOpen(data, 7)} className="rounded-full z-0">
                                 <Delete className="text-red-500 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
