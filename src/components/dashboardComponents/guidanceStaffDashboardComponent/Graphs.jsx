@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge, Button } from "@mui/material";
 import axios from "axios";
 import { API } from "../../../api";
+import * as XLSX from 'xlsx';
 
 export function UsageUtilization() {
   const [usageDate, setUsageDate] = useState('Today');
@@ -108,6 +109,21 @@ export function UsageUtilization() {
     setDateUsageValue(isoDate); // set input value to today
   }, []);
 
+  const handleExportToExcel = () => {
+    const formattedData = chartData.map((data) => ({
+      Module: data.label,
+      Visits: data.value,
+    }));
+
+    // Create worksheet and workbook
+    const ws = XLSX.utils.json_to_sheet(formattedData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Usage Data");
+
+    // Export file
+    XLSX.writeFile(wb, "usage_data.xlsx");
+  };
+
   return (
     <div className="flex flex-col p-5">
       <div className="flex w-full flex-row justify-between">
@@ -118,6 +134,7 @@ export function UsageUtilization() {
             justifyItems: 'center',
             color: '#64748b',
           }}
+          onClick={handleExportToExcel} // Export when clicked
         />
       </div>
 
@@ -210,6 +227,21 @@ export function CompSchedules({ backlog, isAdviser }) {
     return result.reverse();
   }, [backlog]);
 
+  const handleExportToExcel = () => {
+    const formattedData = Scheduledata.map((data) => ({
+      WeekEnding: data.date,
+      CompletedBacklogs: data.value,
+    }));
+
+    // Create worksheet and workbook
+    const ws = XLSX.utils.json_to_sheet(formattedData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Schedule Data");
+
+    // Export file
+    XLSX.writeFile(wb, "schedule_data.xlsx");
+  };
+
   return (
     <div className="flex flex-col p-5">
       <div className="flex w-full flex-row justify-between">
@@ -222,6 +254,7 @@ export function CompSchedules({ backlog, isAdviser }) {
             justifyItems: "center",
             color: "#64748b",
           }}
+          onClick={handleExportToExcel}
         />
       </div>
       

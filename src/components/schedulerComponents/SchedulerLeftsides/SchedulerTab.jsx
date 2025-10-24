@@ -27,7 +27,7 @@ export default function SchedulerTab({ handleOpenAddEvent, handleSearchChange, s
             padding: "4px 16px",
             fontSize: "clamp(0.7rem, 1.05vw, 1.225rem)",
             textTransform: "none",
-            fontFamily: "norwester",
+            fontFamily: "roboto",
             borderRadius: "9999px",
             color: "#000",
             transition: "all 0.2s ease-in-out",
@@ -40,6 +40,7 @@ export default function SchedulerTab({ handleOpenAddEvent, handleSearchChange, s
             "&.Mui-selected": {
               backgroundColor: "#b7cde3",
               color: "#000",
+              fontWeight: 'bold',
               "&:hover": {
                 backgroundColor: "#b7cde3",
                 color: "#000",
@@ -56,7 +57,7 @@ export default function SchedulerTab({ handleOpenAddEvent, handleSearchChange, s
     {/* Right side: Search + Buttons */}
     <div className="flex items-center gap-2 flex-shrink-0 h-full">
       <div
-        className="flex-shrink-0 flex items-center h-full"
+        className="flex-shrink-0 flex items-center h-full mr-2"
         style={{ width: "clamp(150px, 15vw, 250px)" }}
       >
         <TextField

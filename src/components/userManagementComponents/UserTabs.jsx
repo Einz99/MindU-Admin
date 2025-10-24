@@ -44,7 +44,7 @@ export default function UserTabs({
             padding: "4px 16px",
             fontSize: "clamp(0.7rem, 1.05vw, 1.225rem)",
             textTransform: "none",
-            fontFamily: "norwester",
+            fontFamily: "roboto",
             borderRadius: "9999px",
             color: "#000",
             transition: "all 0.2s ease-in-out",
@@ -57,6 +57,7 @@ export default function UserTabs({
             "&.Mui-selected": {
               backgroundColor: "#b7cde3",
               color: "#000",
+              fontWeight: "bold",
               "&:hover": {
                 backgroundColor: "#b7cde3",
                 color: "#000",
@@ -78,10 +79,10 @@ export default function UserTabs({
           variant="outlined"
           size="small"
           InputProps={{ endAdornment: <Search className="text-gray-500" /> }}
-          sx={{ maxWidth: "30%", minWidth: "30%" }}
+          sx={{ maxWidth: "30%", minWidth: "30%"}}
           onChange={handleSearchChange}
         />
-        <div className="flex gap-5">
+        <div className="ml-4 flex gap-5">
           <button 
           className="text-white flex items-center bg-gradient-to-r from-[#EF4444] to-[#B91C1C] rounded-3xl px-7 py-1 my-2 border border-black text-nowrap" 
           onClick={() => {
@@ -113,7 +114,7 @@ export default function UserTabs({
             </>
           )}
           <button className="text-white flex items-center bg-gradient-to-r from-[#60a5fa] to-[#4f46e5] rounded-3xl px-7 py-1 my-2 border border-black text-nowrap" variant="contained" onClick={handleAddButtonClick}>
-            {`Add ${tab === 0 ? "Student" : tab === 1 ? "Adviser" : "Guidance Staff"}`}
+            {`Add`}
             <Add sx={{
               fontSize: 15,
               color: '#4f46e5',

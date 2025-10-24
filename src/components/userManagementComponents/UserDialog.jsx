@@ -253,27 +253,37 @@ const UserDialog = ({
 
   const filteredAdvisers = staffs.filter((staff) => staff.position === "Adviser");
 
-  function exportHotTableToExcelWithHeaders(hotInstance, columnHeaders, filename = tab === 0 ? "Mind-U Bulk Creation Students Draft.xlsx" : "Mind-U Bulk Creation Advisers Draft.xlsx") {
-    // Get full table data
+  function exportHotTableToExcelWithHeaders(
+    hotInstance,
+    columnHeaders,
+    filename = tab === 0
+      ? "Mind-U Bulk Creation Students Draft.xlsx"
+      : "Mind-U Bulk Creation Advisers Draft.xlsx"
+  ) {
+    // Get all table data
     const allData = hotInstance.getData();
   
-    // Skip first row (your placeholder row)
+    // Skip first row (placeholder row)
     const dataRows = allData.slice(1).filter(row =>
       row.some(cell => cell && cell.toString().trim() !== "")
     );
   
-    if (dataRows.length === 0) {
-      alert("No data to export.");
-      return;
-    }
-  
-    // Add headers as the first row
-    const exportData = [columnHeaders, ...dataRows];
-  
+    // ✅ Always allow export — even with no data
+    // If there’s no data, just include headers + one empty example row
+    const exportData =
+      dataRows.length > 0
+        ? [columnHeaders, ...dataRows]
+        : [
+            columnHeaders,
+            tab === 0
+              ? ["example@student.com", "John", "Doe", "Section A"]
+              : ["example@adviser.com", "Jane Doe", "Section A"]
+          ];
+        
     const worksheet = XLSX.utils.aoa_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-  
+        
     XLSX.writeFile(workbook, filename);
   }
 

@@ -139,7 +139,7 @@ export default function ContentManagement() {
       <main
         className={`flex-1 bg-[#f8fafc] transition-all ${
           open ? "ml-60" : "ml-16"
-        } mt-16`}
+        } mt-20`}
         style={{ height: "calc(100vh - 64px)"}}
       >
         <div 

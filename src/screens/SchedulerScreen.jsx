@@ -131,8 +131,8 @@ export default function Scheduler() {
       <main
         className={`flex-1 bg-[#f8fafc] transition-all ${
           open ? "ml-60" : "ml-16"
-        } mt-16`}
-        style={{ height: "calc(100vh - 64px)"}}
+        } mt-20`}
+        style={{ height: "calc(100vh - 80px)"}}
       >
         <div 
           className="flex flex-row flex-grow gap-[clamp(0.75rem,1.5vw,2rem)] px-[clamp(1rem,2vw,4rem)] pt-4"
@@ -174,10 +174,10 @@ export default function Scheduler() {
                         <div className="z-50">
                           <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
                             <ul className="text-right">
-                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer rounded-tl-xl ${filterType === 0 && "bg-blue-300"}`} onClick={() => handleFilter(0)}>All</li>
-                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer ${filterType === 1 && "bg-blue-300"}`} onClick={() => handleFilter(1)}>Scheduled</li>
-                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer ${filterType === 2 && "bg-blue-300"}`} onClick={() => handleFilter(2)}>Cancelled</li>
-                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer rounded-bl-xl ${filterType === 3 && "bg-blue-300"}`} onClick={() => handleFilter(3)}>Completed</li>
+                              <li className={`px-4 py-2 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-tl-xl ${filterType === 0 && "text-black"}`} onClick={() => handleFilter(0)}>All</li>
+                              <li className={`px-4 py-2 text-[#64748b] hover:text-[#334155] cursor-pointer ${filterType === 1 && "text-black"}`} onClick={() => handleFilter(1)}>Scheduled</li>
+                              <li className={`px-4 py-2 text-[#64748b] hover:text-[#334155] cursor-pointer ${filterType === 2 && "text-black"}`} onClick={() => handleFilter(2)}>Cancelled</li>
+                              <li className={`px-4 py-2 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-bl-xl ${filterType === 3 && "text-black"}`} onClick={() => handleFilter(3)}>Completed</li>
                             </ul>
                           </div>
                           <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
@@ -194,9 +194,9 @@ export default function Scheduler() {
                         <div className="z-50">
                           <div className="absolute right-1 w-[5.903rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
                             <ul className="text-right">
-                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer rounded-tl-xl ${sortType === 0 && "bg-blue-300"}`} onClick={() => handleSort(0)}>A - Z</li>
-                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer ${sortType === 1 && "bg-blue-300"}`} onClick={() => handleSort(1)}>Z - A</li>
-                              <li className={`px-4 py-2 hover:bg-blue-300 cursor-pointer rounded-bl-xl ${sortType === 2 && "bg-blue-300"}`} onClick={() => handleSort(2)}>By Date</li>
+                              <li className={`px-4 py-2  text-[#64748b] hover:text-[#334155] cursor-pointer rounded-tl-xl ${sortType === 0 && "text-black"}`} onClick={() => handleSort(0)}>A - Z</li>
+                              <li className={`px-4 py-2  text-[#64748b] hover:text-[#334155] cursor-pointer ${sortType === 1 && "text-black"}`} onClick={() => handleSort(1)}>Z - A</li>
+                              <li className={`px-4 py-2  text-[#64748b] hover:text-[#334155] cursor-pointer rounded-bl-xl ${sortType === 2 && "text-black"}`} onClick={() => handleSort(2)}>By Date</li>
                             </ul>
                           </div>
                           <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />

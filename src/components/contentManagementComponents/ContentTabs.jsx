@@ -29,7 +29,7 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
             padding: "4px 16px",
             fontSize: "clamp(0.7rem, 1.05vw, 1.225rem)",
             textTransform: "none",
-            fontFamily: "norwester",
+            fontFamily: "roboto",
             borderRadius: "9999px",
             color: "#000",
             transition: "all 0.2s ease-in-out",
@@ -42,6 +42,7 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
             "&.Mui-selected": {
               backgroundColor: "#b7cde3",
               color: "#000",
+              fontWeight: "bold",
               "&:hover": {
                 backgroundColor: "#b7cde3",
                 color: "#000",
@@ -69,12 +70,12 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
         />
 
         {/* Right-aligned Buttons */}
-        <div className="flex gap-5">
+        <div className="ml-4 flex gap-5">
           <button
             onClick={handleDeleteOpen}
             className="text-white flex items-center bg-gradient-to-r from-[#EF4444] to-[#B91C1C] rounded-3xl px-7 py-1 my-2 border border-black"
           >
-            {`Delete ${tab === 0 ? "Resources" : tab === 1 ? "Wellness" : "Announcements"}`}
+            {`Delete`}
             <Delete sx={{
                   fontSize: 17,
                   color: 'White',
@@ -87,7 +88,7 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
             <div className="relative text-white flex items-center bg-gradient-to-r from-[#60a5fa] to-[#4f46e5] rounded-3xl px-9 py-1 my-2 border border-black z-20"
                 onMouseEnter={() => setIsDropdownOpen(true)}
                 onMouseLeave={() => setIsDropdownOpen(false)}>
-                Create New
+                Create
                 <Add sx={{
                   fontSize: 15,
                   color: '#4f46e5',

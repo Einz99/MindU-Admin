@@ -196,17 +196,6 @@ export default function LiveAgent() {
           updatedChatData[chatIndex].status = 'On-going';
         }
 
-        const newMessageObject = {
-          sender: "agent",
-          text: "Hello! You've reached the Guidance Office. How can I assist you today?",
-          timestamp: new Date().toLocaleString()
-        };
-
-        updatedChatData[selected].messages.push(newMessageObject);
-        updatedChatData[selected].lastMessage = "Hello! You've reached the Guidance Office. How can I assist you today?";
-      
-        setChatData(updatedChatData);
-
         sendMessageToServer("Hello! You've reached the Guidance Office. How can I assist you today?");
       } catch (error) {
         console.error('Error updating chat status:', error);
@@ -386,7 +375,7 @@ export default function LiveAgent() {
                 {/* Input Form - Fixed at bottom */}
                 <div className="mt-auto border-t pt-4 relative">
                   <button 
-                    className="absolute right-[45%] left-[45%] -top-10 text-white text-lg font-bold bg-red-500 px-2 py-1 rounded-full"
+                    className="absolute right-[45%] left-[45%] -top-10 text-lg font-bold text-red-500 px-2 py-1 rounded-full"
                     onClick={handleDisconnecting}
                   >
                     Disconnect

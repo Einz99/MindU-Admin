@@ -4,6 +4,8 @@ import { TableContainer, Table, TableHead, TableRow, TableCell, TableBody } from
 import axios from 'axios';
 import { API } from '../../api';
 import { UsageUtilization, CompSchedules, PendingStudentRequests, ActiveStudentsPieChart } from "./guidanceStaffDashboardComponent/Graphs";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 export default function AdminStaffDashboard({filterBacklogs, handleViewingRequest}) {
   const [backlog, setBacklogs] = useState([]);
@@ -42,6 +44,47 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
     return () => clearInterval(interval); // cleanup
   }, []);
 
+  const exportResourcesToExcel = () => {
+    if (!topResources.length) return alert("No Resource Library data to export.");
+    
+    const worksheet = XLSX.utils.json_to_sheet(
+      topResources.map(row => ({
+        Title: row.title,
+        Category: row.category,
+        Views: row.views,
+      }))
+    );
+  
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Resource Library");
+  
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+  
+    saveAs(blob, `Resource_Library_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+  
+  // 🔹 Export Wellness Tools table
+  const exportWellnessToExcel = () => {
+    if (!topWellness.length) return alert("No Wellness Tools data to export.");
+  
+    const worksheet = XLSX.utils.json_to_sheet(
+      topWellness.map(row => ({
+        Title: row.title,
+        Category: row.category,
+        Views: row.views,
+      }))
+    );
+  
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Wellness Tools");
+  
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+  
+    saveAs(blob, `Wellness_Tools_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
   return (
       <div 
         className="w-full h-full grid"  // 👈 ensures grid has a real height
@@ -79,11 +122,14 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
             <div>
               <div className="flex w-full flex-row justify-between p-4">
                 <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">Resource Library</p>
-                <FileDownload sx={{
-                  fontSize: 25,
-                  justifyItems: 'center',
-                  color: '#64748b',
-                }}/>
+                <FileDownload 
+                  sx={{
+                    fontSize: 25,
+                    justifyItems: 'center',
+                    color: '#64748b',
+                  }}
+                  onClick={exportResourcesToExcel}
+                />
               </div>
               <TableContainer>
                 <Table>
@@ -122,11 +168,14 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
             <div>
               <div className="flex w-full flex-row justify-between p-4">
                 <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">Wellness Tools</p>
-                <FileDownload sx={{
-                  fontSize: 25,
-                  justifyItems: 'center',
-                  color: '#64748b',
-                }}/>
+                <FileDownload 
+                  sx={{
+                    fontSize: 25,
+                    justifyItems: 'center',
+                    color: '#64748b',
+                  }}
+                  onClick={exportWellnessToExcel}
+                />
               </div>
               <TableContainer>
                 <Table>

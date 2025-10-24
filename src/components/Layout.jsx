@@ -19,7 +19,6 @@ import {
   Button,
 } from "@mui/material";
 import { 
-  Notifications, 
   Menu as MenuIcon, 
   Home, 
   CalendarToday, 
@@ -309,7 +308,7 @@ export default function Layout({ open, onMenuClick }) {
     <div>
       {/* Topbar */}
       <AppBar position="fixed" sx={{ backgroundColor: "#1E3A8A", boxShadow: 1 }}>
-        <Toolbar className="flex justify-between items-center">
+        <Toolbar className="h-20 flex justify-between items-center">
           <div className="flex gap-2 align-middle">
             <img src={"/MIND U WEB Icon.png"} alt="Logo" className="w-12 h-12"/>
             <Typography
@@ -327,11 +326,6 @@ export default function Layout({ open, onMenuClick }) {
                 </Badge>
               </IconButton>
             </Link>
-            <IconButton color="inherit">
-              <Badge badgeContent={0} color="secondary">
-                <Notifications />
-              </Badge>
-            </IconButton>
             <div className="w-0.5 h-8 bg-white my-auto"></div>
             <div className="flex items-end flex-col px-2">
               <p className="text-base font-bold">{staff.name}</p>
