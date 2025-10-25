@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Layout from "../components/Layout";
 import { useContext } from 'react';
 import { OpenContext } from '../contexts/OpenContext';
-import { Send } from "@mui/icons-material";
+import { Send, Visibility } from "@mui/icons-material";
 import axios from "axios";
 import { API, RootAPI } from "../api";
 import io from "socket.io-client";
@@ -12,11 +12,16 @@ export default function LiveAgent() {
   const [selected, setSelected] = useState(null);
   const [student_id, setStudentId] = useState(0);
   const [chatData, setChatData] = useState([]);
-  const messagesEndRef = useRef(null); // Reference to scroll to the end
+  const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
-  const socketRef = useRef(null); // Using useRef to keep the socket connection persistent
-  const [profilePath, setProfilePath] = useState('');
+  const socketRef = useRef(null);
+  const [profilePath, setProfilePath] = useState();
+  const [studentName, setStudentName] = useState('');
+  const [alerts, setAlerts] = useState([]);
+  const [isViewOnly, setIsViewOnly] = useState(false); // 🆕 Track if viewing only
 
+  const staffData = JSON.parse(localStorage.getItem("staff"));
+  
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ 
@@ -27,43 +32,62 @@ export default function LiveAgent() {
     }
   };
 
-  useEffect(() => {
-    async function getChatData() {
-      try {
-        const response = await axios.get(`${API}/chatbot/students-asking-for-help`);
-        if (response.data.studentHistory) {
-          setChatData(response.data.studentHistory);
-        } else {
-          setChatData([]);
-        }
-      } catch (error) {
-        console.error('Error fetching chat history:', error);
+  const fetchChatData = async () => {
+    try {
+      const response = await axios.get(`${API}/chatbot/students-asking-for-help`);
+      if (response.data.studentHistory) {
+        setChatData(response.data.studentHistory);
+      } else {
         setChatData([]);
       }
+    } catch (error) {
+      console.error('Error fetching chat history:', error);
+      setChatData([]);
     }
-    getChatData();
+  };
+
+  useEffect(() => {
+    fetchChatData();
   }, []);
 
   useEffect(() => {
     async function getProfile() {
       try {
-        // Make an API call to fetch student details by student_id
         const response = await axios.get(`${API}/students/${student_id}`);
-
-        // Check if the response contains the profile picture
+        setStudentName(`${response.data.firstName} ${response.data.lastName}`);
+        
         if (response.data && response.data.profilePic) {
-          // Set the profile picture path by concatenating RootAPI and the profilePic from the response
           setProfilePath(`${response.data.profilePic}`);
         } else {
           console.error("Profile picture not found in response");
+        }
+        
+        const alertResponse = await axios.get(`${API}/chatbot/alerts`)
+        if (alertResponse.data) {
+          setAlerts(alertResponse);
+        } else {
+          setAlerts([]);
         }
       } catch (error) {
         console.error("Error fetching student profile:", error);
       }
     }
 
-    getProfile(); // Trigger the API call on component mount or when student_id changes
+    if (student_id) {
+      getProfile();
+    }
   }, [student_id]);
+
+  // 🆕 Check if current chat is view-only when selection changes
+  useEffect(() => {
+    if (selected !== null && chatData[selected]) {
+      const currentChat = chatData[selected];
+      // If status is 'on-going', it means another agent already accepted
+      setIsViewOnly(currentChat.status === 'on-going');
+    } else {
+      setIsViewOnly(false);
+    }
+  }, [selected, chatData]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -78,6 +102,13 @@ export default function LiveAgent() {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
+    
+    // 🆕 Prevent sending if view-only
+    if (isViewOnly) {
+      alert("This chat is being handled by another agent. You can only view.");
+      return;
+    }
+
     const newMessage = e.target.elements.message.value;
 
     if (newMessage.trim() === "") return;
@@ -87,7 +118,6 @@ export default function LiveAgent() {
     }, 50);
 
     e.target.reset();
-
     sendMessageToServer(newMessage);
   };
 
@@ -106,7 +136,6 @@ export default function LiveAgent() {
 
   useEffect(() => {
     if (!socketRef.current) {
-      // Initialize socket connection only once
       const newSocket = io(RootAPI);
       socketRef.current = newSocket;
 
@@ -122,16 +151,58 @@ export default function LiveAgent() {
       newSocket.on('connect_error', (error) => {
         console.error('Connection error:', error);
       });
+
+      // Listen for new help requests
+      newSocket.on('new-help-request', async (data) => {
+        console.log('🆕 New help request received:', data);
+        await fetchChatData();
+      });
+
+      // Listen for completed help requests
+      newSocket.on('help-request-completed', async (data) => {
+        console.log('✅ Help request completed:', data);
+        await fetchChatData();
+        
+        if (student_id === data.userId) {
+          setSelected(null);
+          setStudentId(0);
+          setIsViewOnly(false);
+        }
+      });
+
+      // 🆕 Listen for chat accepted by another agent
+      newSocket.on('chat-accepted-by-another-agent', (data) => {
+        console.log('👁️ Chat accepted by another agent:', data);
+        
+        // Update the chat status in real-time
+        setChatData((prevChatData) => {
+          const updatedChatData = [...prevChatData];
+          const chatIndex = updatedChatData.findIndex(chat => chat.id === data.student_id);
+          
+          if (chatIndex >= 0) {
+            updatedChatData[chatIndex].status = 'on-going';
+            
+            // If this is the currently selected chat, set to view-only
+            if (selected === chatIndex) {
+              setIsViewOnly(true);
+            }
+          }
+          
+          return updatedChatData;
+        });
+      });
     }
 
-    // Cleanup socket connection on unmount
     return () => {
       if (socketRef.current) {
+        socketRef.current.off('new-help-request');
+        socketRef.current.off('help-request-completed');
+        socketRef.current.off('chat-accepted-by-another-agent');
         socketRef.current.close();
         socketRef.current = null;
       }
     };
-  }, []); // Only initialize socket connection once
+  }, [selected, student_id]);
 
   useEffect(() => {
     if (socketRef.current && student_id) {
@@ -145,7 +216,6 @@ export default function LiveAgent() {
       socketRef.current.on('new-chat-message', (data) => {
         const { student_id: msgStudentId, message, is_from_office } = data;
 
-        // Ensure the message only updates the chat for the selected student
         if (msgStudentId === student_id) {
           setChatData((prevChatData) => {
             const updatedChatData = [...prevChatData];
@@ -161,7 +231,6 @@ export default function LiveAgent() {
               updatedChatData[chatIndex].messages.push(newMessageObject);
               updatedChatData[chatIndex].lastMessage = message;
 
-              // Scroll to the bottom if this is the active chat
               if (selected === chatIndex) {
                 setTimeout(() => scrollToBottom(), 50);
               }
@@ -174,29 +243,64 @@ export default function LiveAgent() {
 
       return () => {
         if (socketRef.current) {
-          socketRef.current.off('new-chat-message'); // Ensure this runs only when socket is initialized
+          socketRef.current.off('new-chat-message');
         }
       };
     }
-  }, [selected, student_id]); // Reattach listener when selected or student_id changes
+  }, [selected, student_id]);
+
+  // Add this useEffect after your existing useEffects
+  useEffect(() => {
+    const selectedStudentId = localStorage.getItem('selectedStudentId');
+    
+    if (selectedStudentId && chatData.length > 0) {
+      const studentIdNum = parseInt(selectedStudentId);
+      const chatIndex = chatData.findIndex(chat => chat.id === studentIdNum);
+      
+      if (chatIndex >= 0) {
+        setSelected(chatIndex);
+        setStudentId(studentIdNum);
+        
+        // Clear the stored ID after selecting
+        localStorage.removeItem('selectedStudentId');
+        
+        console.log('Auto-selected student from alert:', studentIdNum);
+      }
+    }
+  }, [chatData]); // Trigger when chatData is loaded
 
   const handleAcceptChat = async () => {
     if (socketRef.current) {
       console.log('Agent accepting chat for student:', student_id);
-
-      socketRef.current.emit('agent-available', { student_id });
-
+    
+      socketRef.current.emit('agent-accept-chat', { student_id });
+    
       try {
         const response = await axios.put(`${API}/chatbot/updateStatus/${student_id}`);
         console.log('Chat status updated successfully:', response.data);
-
+      
         const updatedChatData = [...chatData];
         const chatIndex = updatedChatData.findIndex(chat => chat.id === student_id);
         if (chatIndex >= 0) {
-          updatedChatData[chatIndex].status = 'On-going';
+          updatedChatData[chatIndex].status = 'on-going';
+          setChatData(updatedChatData);
         }
 
-        sendMessageToServer("Hello! You've reached the Guidance Office. How can I assist you today?");
+        // 🆕 Set this agent as the handler (not view-only)
+        setIsViewOnly(false);
+      
+        const isInAlerts = alerts.data?.some(alert => alert.student_id === student_id && alert.is_resolved === false);
+      
+        let message;
+        if (isInAlerts) {
+          message = `Hello, this is ${staffData.name} from the Guidance Office.\n\nI just received your message from Calmi, and I want you to know that I'm here for you.\n\nYou're not alone — we can talk about whatever's been bothering you at your own pace.\n\nHow are you feeling right now?`;
+        } else {
+          const firstName = studentName.split(' ')[0];
+          message = `Hi there, ${firstName}!`;
+        }
+      
+        sendMessageToServer(message);
+        
       } catch (error) {
         console.error('Error updating chat status:', error);
       }
@@ -204,25 +308,32 @@ export default function LiveAgent() {
   };
 
   const handleDisconnecting = async () => {
-    if (socketRef.current) {
-      console.log('Agent accepting chat for student:', student_id);
+    // 🆕 Only allow disconnect if not view-only
+    if (isViewOnly) {
+      alert("You cannot disconnect a chat handled by another agent.");
+      return;
+    }
 
+    if (socketRef.current) {
+      console.log('Agent disconnecting chat for student:', student_id);
+      sendMessageToServer("Your session has expired.")
       socketRef.current.emit('agent-disconnecting', { student_id });
 
       try {
+        const isInAlerts = alerts.data?.some(alert => alert.student_id === student_id && alert.is_resolved === false);
+
+        if (isInAlerts) {
+          await axios.put(`${API}/chatbot/resolve/${student_id}`)
+        }
+        
         const response = await axios.put(`${API}/chatbot/deactivateStatus/${student_id}`);
         console.log('Chat status updated successfully:', response.data);
-
-        const updatedChatData = [...chatData];
-        const chatIndex = updatedChatData.findIndex(chat => chat.id === student_id);
-        if (chatIndex >= 0) {
-          updatedChatData[chatIndex].status = 'Completed';
-        }
+        
+        await fetchChatData();
+        
         setSelected(null);
         setStudentId(0);
-      
-        setChatData(updatedChatData);
-
+        setIsViewOnly(false);
       } catch (error) {
         console.error('Error updating chat status:', error);
       }
@@ -233,8 +344,10 @@ export default function LiveAgent() {
     if (socketRef.current) {
       socketRef.current.on('agent-available', () => {
         const updatedChatData = [...chatData];
-        updatedChatData[selected].status = 'ongoing'; 
-        setChatData(updatedChatData);
+        if (selected !== null && updatedChatData[selected]) {
+          updatedChatData[selected].status = 'ongoing'; 
+          setChatData(updatedChatData);
+        }
       });
     }
 
@@ -274,24 +387,25 @@ export default function LiveAgent() {
     const diffInHours = Math.floor(diffInMilliseconds / 3600000);
     const diffInDays = Math.floor(diffInMilliseconds / 86400000);
 
-    // If the date is today (within the last 24 hours)
     if (diffInDays === 0) {
       if (diffInHours > 12) {
-        // Show the time of the day if it's more than 12 hours ago
-        return `Today ${chatDate.getHours()}:${chatDate.getMinutes()}`;
+        return `Today ${chatDate.getHours()}:${chatDate.getMinutes().toString().padStart(2, '0')}`;
       }
       if (diffInHours > 0) {
-        // Show the number of hours ago
         return `${diffInHours}h`;
       }
-      // Show minutes ago if less than an hour
       return `${diffInMinutes}m`;
     }
 
-    // If it's more than 1 day ago
     if (diffInDays > 0) {
       return `${diffInDays}d`;
     }
+  };
+
+  const ifNotif = (text) => {
+    return (text.toLowerCase().trim().includes(('You’ve been disconnected from the guidance office.').toLowerCase()) ||
+    text.toLowerCase().trim().includes(('Someone responded from the guidance office.').toLowerCase()) ||
+    text.toLowerCase().trim().includes(('Your session has expired.').toLowerCase()));
   };
 
   return (
@@ -299,32 +413,44 @@ export default function LiveAgent() {
       <Layout open={open} onMenuClick={handleDrawerToggle} />
 
       <main
-        className={`flex-1 bg-[#1E3A8A] transition-all ${open ? "ml-60" : "ml-16"} mt-16`}
-        style={{ height: "calc(100vh - 64px)" }}
+        className={`flex-1 bg-[#1E3A8A] transition-all ${
+          open ? "ml-60" : "ml-16"
+        } mt-20`}
+        style={{ height: "calc(100vh - 80px)"}}
       >
-        <div className="flex flex-row flex-grow gap-[clamp(0.75rem,1.5vw,2rem)] px-[clamp(1rem,2vw,4rem)] pt-4" style={{ height: "100%" }}>
+        <div className="flex flex-row flex-grow gap-[clamp(0.75rem,1.5vw,2rem)] px-[clamp(1rem,2vw,4rem)] pt-4" style={{ height: "98%" }}>
           
           {/* Left Panel - Chat List */}
           <div className="flex min-w-[35%] max-w-[35%] bg-[#b7cde3] rounded-xl p-4 overflow-y-auto flex-col scrollbar-custom" style={{ height: "100%" }}>
-            {chatData.map((chat, index) => (
-              <div key={chat.id}
-                className={`flex flex-row p-4 mb-4 rounded-lg cursor-pointer ${selected === index && 'bg-[#94a3b8]'} hover:bg-[#94a3b8]`}
-                onClick={() => { setSelected(index); setStudentId(chat.id); }}
-              >
-                <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-4">
-                  <img src={profilePath ? `${RootAPI}/${profilePath}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
-                </div>
-                <div className="flex flex-col justify-between w-full relative">
-                  <h3 className="text-lg font-semibold">{chat.name}</h3>
-                  <p className="text-sm text-gray-600">
-                    {chat.lastMessage.length > 30 ? `${chat.lastMessage.slice(0, 40)}...` : chat.lastMessage} - {formatDate(chat.dateTime)}
-                  </p>
-                  {chat.status === "pending" && (
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
-                  )}
-                </div>
+            {chatData.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-600 text-lg">No pending chats</p>
               </div>
-            ))}
+            ) : (
+              chatData.map((chat, index) => (
+                <div key={chat.id}
+                  className={`flex flex-row p-4 mb-4 rounded-lg cursor-pointer ${selected === index && 'bg-[#94a3b8]'} hover:bg-[#94a3b8]`}
+                  onClick={() => { setSelected(index); setStudentId(chat.id); }}
+                >
+                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-4">
+                    <img src={chat.id === student_id && profilePath ? `${RootAPI}/${profilePath}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
+                  </div>
+                  <div className="flex flex-col justify-between w-full relative">
+                    <h3 className="text-lg font-semibold">{chat.name}</h3>
+                    <p className="text-sm text-gray-600">
+                      {chat.lastMessage.length > 30 ? `${chat.lastMessage.slice(0, 40)}...` : chat.lastMessage} - {formatDate(chat.dateTime)}
+                    </p>
+                    {chat.status === "pending" && (
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
+                    )}
+                    {/* 🆕 Show eye icon for ongoing chats */}
+                    {chat.status === "on-going" && (
+                      <Visibility className="absolute bottom-0 right-0 text-blue-500" sx={{ fontSize: 16 }} />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Right Panel - Chat Messages */}
@@ -337,22 +463,52 @@ export default function LiveAgent() {
             ) : (
               <div className="flex flex-col h-full w-full">
                 
-                {/* Messages Container - This is the scrollable area */}
+                {/* 🆕 View-Only Banner */}
+                {isViewOnly && (
+                  <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg mb-2 flex items-center gap-2">
+                    <Visibility />
+                    <p className="font-semibold">View Only - This chat is being handled by another agent</p>
+                  </div>
+                )}
+
+                {/* Messages Container */}
                 <div 
                   ref={messagesContainerRef}
                   className="flex-grow overflow-y-auto mb-4 p-4 rounded-lg"
-                  style={{ maxHeight: 'calc(100% - 80px)' }} // Leave space for input
+                  style={{ maxHeight: 'calc(100% - 80px)' }}
                 > 
                   {chatData[selected].messages && chatData[selected].messages.length > 0 ? (
                     <>
                       {chatData[selected].messages.slice(1).map((msg, idx) => (
-                        <div key={idx} className={`mb-2 flex ${msg.sender === 'agent' ? 'justify-end' : 'justify-start flex-col w-fit'}`}>
-                          <div className={`py-2 px-4 rounded-full max-w-xs ${msg.sender === 'agent' ? 'bg-[#506e9a] text-white' : 'bg-[#1e3a8a] text-white'}`}>
-                            <p className="text-sm">{msg.text}</p>
+                        <div 
+                          key={idx} 
+                          className={`mb-2 flex ${
+                            ifNotif(msg.text) 
+                              ? 'justify-center' 
+                              : msg.sender === 'agent' 
+                                ? 'justify-end' 
+                                : 'justify-start flex-row w-fit'
+                          }`}
+                        >
+                          {msg.sender !== 'agent' && !ifNotif(msg.text) && (
+                            <img src={profilePath ? `${RootAPI}/${profilePath}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
+                          )}
+                          <div className={`${msg.sender !== 'agent' && !ifNotif(msg.text) && "ml-3"}`}>
+                            {msg.sender !== 'agent' && !ifNotif(msg.text) && (
+                              <p className="text-sm ml-1">{studentName}</p>
+                            )}
+                            <div className={`py-2 px-4 rounded-lg max-w-xs ${
+                              ifNotif(msg.text) 
+                                ? 'font-roboto italic text-gray-500' 
+                                : msg.sender === 'agent' 
+                                  ? 'bg-[#506e9a] text-white' 
+                                  : 'bg-[#1e3a8a] text-white'
+                            }`}>
+                              <p className="text-sm">{msg.text}</p>
+                            </div>
                           </div>
                         </div>
                       ))}
-                      {/* Invisible div to scroll to */}
                       <div ref={messagesEndRef} />
                     </>
                   ) : (
@@ -363,7 +519,6 @@ export default function LiveAgent() {
                       <div className="py-2 px-4 rounded-full max-w-xs bg-[#1e3a8a] text-white">
                         <p className="text-sm">Incoming live agent request from {chatData[selected].name}</p>
                       </div>
-                                      
 
                       <button className="flex" onClick={handleAcceptChat}>
                         <p className="w-fit ml-2 text-lg font-semibold text-[#10b981]">ACCEPT</p>
@@ -374,21 +529,32 @@ export default function LiveAgent() {
 
                 {/* Input Form - Fixed at bottom */}
                 <div className="mt-auto border-t pt-4 relative">
-                  <button 
-                    className="absolute right-[45%] left-[45%] -top-10 text-lg font-bold text-red-500 px-2 py-1 rounded-full"
-                    onClick={handleDisconnecting}
-                  >
-                    Disconnect
-                  </button>
+                  {chatData[selected].status === 'on-going' && !isViewOnly && (
+                    <button 
+                      className="absolute right-[45%] left-[45%] -top-10 text-lg font-bold text-red-500 px-2 py-1 rounded-full hover:underline"
+                      onClick={handleDisconnecting}
+                    >
+                      Disconnect
+                    </button>
+                  )}
                   <form className="flex gap-4 px-2" onSubmit={handleSendMessage}>
                     <input
                       type="text"
                       name="message"
-                      className="flex-grow rounded-full bg-[#1e3a8a] px-4 py-2 text-white placeholder-gray-300"
-                      placeholder="Type your message..."
+                      className={`flex-grow rounded-full bg-[#1e3a8a] px-4 py-2 text-white placeholder-gray-300 ${
+                        isViewOnly ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      placeholder={isViewOnly ? "View only mode - Cannot send messages" : "Type your message..."}
                       autoComplete="off"
+                      disabled={isViewOnly}
                     />
-                    <button type="submit" className="hover:scale-110 transition-transform">
+                    <button 
+                      type="submit" 
+                      className={`hover:scale-110 transition-transform ${
+                        isViewOnly ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      disabled={isViewOnly}
+                    >
                       <Send className="text-[#2d8bba]" />
                     </button>
                   </form>

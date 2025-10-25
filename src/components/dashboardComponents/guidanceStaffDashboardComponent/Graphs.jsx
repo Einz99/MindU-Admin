@@ -185,6 +185,82 @@ export function UsageUtilization() {
   );
 }
 
+export function AlertsOvertime({ alerts }) {
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay(); // Sunday=0, Monday=1...
+    const diff = (day === 0 ? -6 : 1 - day); // Monday as start
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const AlertData = useMemo(() => {
+    const today = new Date();
+    const result = [];
+
+    // Loop to get the past 4 weeks
+    for (let i = 0; i < 4; i++) {
+      const currentMonday = getStartOfWeek(
+        new Date(today.getFullYear(), today.getMonth(), today.getDate() - i * 7)
+      );
+      
+      // Set the end of the week (Friday)
+      const weekEnd = new Date(currentMonday);
+      weekEnd.setDate(weekEnd.getDate() + 4); // Friday
+      weekEnd.setHours(23, 59, 59, 999);
+
+      // Count all alerts within the week range (resolved or not)
+      const count = alerts.filter(
+        (alert) =>
+          alert.date &&
+          new Date(alert.date) >= currentMonday &&
+          new Date(alert.date) <= weekEnd
+      ).length;
+
+      // Push data with formatted week ending date and count
+      result.push({
+        date: weekEnd.toLocaleDateString(), // format to get the date of the Friday
+        value: count || 0 // Ensure value is 0 if no alerts
+      });
+    }
+
+    return result.reverse();
+  }, [alerts]);
+
+  return (
+    <div className="flex flex-col p-5">
+      <div className="flex w-full flex-row justify-between">
+        <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">
+          Alerts Recorded Overtime
+        </p>
+      </div>
+      
+      <div className="w-full h-[100%] px-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={AlertData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis 
+              dataKey="date" 
+              domain={['auto', 'auto']}
+              padding={{ left: 20, right: 20 }}
+            />
+            <YAxis domain={['auto', 'auto']} />
+            <Tooltip />
+            <Line 
+              type="monotone" 
+              dataKey="value" 
+              stroke="#2d8bba" 
+              strokeWidth={3} 
+              dot={true} 
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 export function CompSchedules({ backlog, isAdviser }) {
   const getStartOfWeek = (date) => {
     const d = new Date(date);
@@ -227,35 +303,12 @@ export function CompSchedules({ backlog, isAdviser }) {
     return result.reverse();
   }, [backlog]);
 
-  const handleExportToExcel = () => {
-    const formattedData = Scheduledata.map((data) => ({
-      WeekEnding: data.date,
-      CompletedBacklogs: data.value,
-    }));
-
-    // Create worksheet and workbook
-    const ws = XLSX.utils.json_to_sheet(formattedData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Schedule Data");
-
-    // Export file
-    XLSX.writeFile(wb, "schedule_data.xlsx");
-  };
-
   return (
     <div className="flex flex-col p-5">
       <div className="flex w-full flex-row justify-between">
-        <p className="font-roboto font-bold text-black text-2xl">
+        <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">
           Schedules Completed Overtime
         </p>
-        <FileDownload
-          sx={{
-            fontSize: 25,
-            justifyItems: "center",
-            color: "#64748b",
-          }}
-          onClick={handleExportToExcel}
-        />
       </div>
       
       <div className="w-full h-[100%] px-2">
@@ -277,7 +330,7 @@ export function CompSchedules({ backlog, isAdviser }) {
   );
 }
 
- export function PendingStudentRequests({ filterBacklog, width, padding }){
+export function PendingStudentRequests({ filterBacklog, width, padding }){
   const navigation = useNavigate();
 
   return (
@@ -297,7 +350,7 @@ export function CompSchedules({ backlog, isAdviser }) {
       
       <div className="w-full h-[90%] border-4 border-[#f57c00] rounded-xl p-2 flex flex-col">
         <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-          {filterBacklog.slice(-5).map((item, index) => (
+          {filterBacklog.slice(-6).map((item, index) => (
             <div
               key={index}
               className="w-full flex flex-row items-center justify-between border-b-2 border-[#94a3b8]"
@@ -312,13 +365,86 @@ export function CompSchedules({ backlog, isAdviser }) {
         
         <div className="mt-2 flex justify-end">
           <Button onClick={() => navigation("/scheduler")}>
-            <p className="bg-[#1e3a8a] py-1 px-3 text-white rounded-lg">View Request</p>
+            <p className="bg-[#1e3a8a] py-1 px-3 text-white text-lg rounded-lg">View Request</p>
           </Button>
         </div>
       </div>
     </div>
   );
 };
+
+export function CalmiTriggerAlert({ alerts, padding }) {
+  const navigation = useNavigate();
+
+  const handleViewAlert = (studentId) => {
+    // Store the student ID in localStorage so LiveAgent can auto-select it
+    localStorage.setItem('selectedStudentId', studentId);
+    
+    // Navigate to the chat page
+    navigation("/Chat");
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  return (
+    <div className={`flex flex-col w-[100%] ${padding && "p-5"} h-full`}>
+      <div className="flex flex-row justify-between">
+        <p className="font-roboto font-bold text-[#b91c1c] text-3xl mb-1">Calmi Trigger Alert</p>
+        <Badge badgeContent={alerts.length} color="error">
+          <NotificationsActive
+            sx={{
+              fontSize: 25,
+              justifyItems: "center",
+              color: "#b91c1c",
+            }}
+          />
+        </Badge>
+      </div>
+      
+      <div className="w-full h-[90%] border-4 border-[#b91c1c] rounded-xl p-2 flex flex-col">
+        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+          {alerts.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-500 text-3xl">No Alerts Reported Today From Calmi</p>
+            </div>
+          ) : (
+            alerts.slice().reverse().map((item, index) => (
+              <div
+                key={index}
+                className="w-full flex flex-row items-center justify-between border-b-2 border-[#94a3b8]"
+              >
+                <div className="flex flex-col items-start justify-between">
+                  <p className="font-roboto text-lg whitespace-nowrap overflow-hidden text-ellipsis">
+                    A trigger was detected from {item.firstName} {item.lastName}
+                  </p>
+                  <p className="font-roboto text-lg whitespace-nowrap italic text-gray-500">
+                    {formatDate(item.date)}
+                  </p>
+                </div>
+                <button 
+                  className="bg-[#1e3a8a] text-lg text-white py-1 px-5 rounded-lg hover:bg-[#2563eb] transition-colors"
+                  onClick={() => handleViewAlert(item.student_id)}
+                >
+                  View
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ActiveStudentsPieChart({width, padding, marginTop}) {
   const [studentActiveDate, setStudentActiveDate] = useState('');

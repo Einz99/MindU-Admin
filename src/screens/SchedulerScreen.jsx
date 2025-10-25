@@ -155,7 +155,7 @@ export default function Scheduler() {
             <div className="bg-[#b7cde3] w-full p-4 flex flex-col flex-1">
               <div className="flex justify-between">
                 <div
-                  className="font-norwester font-bold px-4 py-3 text-black -mb-3"
+                  className="font-norwester font-bold px-4 py-3 text-black -my-3"
                   style={{
                     left: 0,
                     fontSize: "clamp(1.4rem, 2.1vw, 2.45rem)", // ~70% of 2rem → 3.5rem

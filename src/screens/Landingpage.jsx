@@ -246,9 +246,9 @@ export default function Landingpage() {
       {/* Main Content */}
       <main
         className={`flex-1 bg-[#f8fafc] transition-all ${
-          open ? "ml-60" : "ml-16"
+          open ? "ml-60" : "ml-20"
         } mt-20`}
-        style={{ height: "calc(100vh - 64px)"}}
+        style={{ height: "calc(100vh - 80px)"}}
       >
         <div 
           className="flex flex-col flex-grow gap-[clamp(0.75rem,1.5vw,2rem)] px-[clamp(1rem,2vw,4rem)] pt-4"

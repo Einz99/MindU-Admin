@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { 
   AppBar, 
   Toolbar, 
@@ -35,6 +35,7 @@ import { Link, useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
 import { API, RootAPI } from "../api"; // Import the API URL from the api.js file
 import axios from "axios";
+import io from "socket.io-client";
 
 // Sidebar menu items
 const menuItems = [
@@ -87,6 +88,45 @@ export default function Layout({ open, onMenuClick }) {
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [robitBadge, setRobitBadge] = useState(0);
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    // Initialize socket connection
+    if (!socketRef.current) {
+      const newSocket = io(RootAPI);
+      socketRef.current = newSocket;
+
+      newSocket.on('connect', () => {
+        console.log('✅ Layout connected to server:', newSocket.id);
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('❌ Layout disconnected from server');
+      });
+
+      // Listen for new help requests
+      newSocket.on('new-help-request', () => {
+        console.log('🆕 New help request received');
+        setRobitBadge(prev => prev + 1);
+      });
+
+      // Listen for completed help requests
+      newSocket.on('help-request-completed', () => {
+        console.log('✅ Help request completed');
+        setRobitBadge(prev => Math.max(0, prev - 1));
+      });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('new-help-request');
+        socketRef.current.off('help-request-completed');
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const fetchStaffData = async () => {
@@ -376,7 +416,7 @@ export default function Layout({ open, onMenuClick }) {
             </IconButton>
           )}
         </div>
-        <Box className="flex flex-col items-center w-full gap-4">
+        <Box className="flex flex-col w-full gap-4">
           <List className="w-full flex flex-col gap-4">
             {menuItems.map((item, index) => ((
               (index === 0) ||   
