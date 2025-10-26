@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import Layout from "../components/Layout";
 import { useContext } from 'react';
 import { OpenContext } from '../contexts/OpenContext';
-import { Send, Visibility } from "@mui/icons-material";
+import { Send, Visibility, Close } from "@mui/icons-material";
 import axios from "axios";
 import { API, RootAPI } from "../api";
 import io from "socket.io-client";
+import { Dialog, DialogTitle, DialogActions, Button, IconButton, Typography } from "@mui/material";
 
 export default function LiveAgent() {
   const { open, setOpen } = useContext(OpenContext);
@@ -18,7 +19,9 @@ export default function LiveAgent() {
   const [profilePath, setProfilePath] = useState();
   const [studentName, setStudentName] = useState('');
   const [alerts, setAlerts] = useState([]);
-  const [isViewOnly, setIsViewOnly] = useState(false); // 🆕 Track if viewing only
+  const [isViewOnly, setIsViewOnly] = useState(false);
+  const [openDisconnectModal, setOpenDisconnectModal] = useState(false);
+  const [agentInRoom, setAgentInRoom] = useState({}); // Track agents per room
 
   const staffData = JSON.parse(localStorage.getItem("staff"));
   
@@ -78,12 +81,18 @@ export default function LiveAgent() {
     }
   }, [student_id]);
 
-  // 🆕 Check if current chat is view-only when selection changes
+  // Check if there's an agent in the room via socket
+  const checkAgentInRoom = (studentId) => {
+    if (socketRef.current && studentId) {
+      socketRef.current.emit('check-agent-in-room', studentId);
+    }
+  };
+
+  // Update view-only status when selection changes
   useEffect(() => {
     if (selected !== null && chatData[selected]) {
-      const currentChat = chatData[selected];
-      // If status is 'on-going', it means another agent already accepted
-      setIsViewOnly(currentChat.status === 'on-going');
+      const studentId = chatData[selected].id;
+      checkAgentInRoom(studentId);
     } else {
       setIsViewOnly(false);
     }
@@ -103,7 +112,6 @@ export default function LiveAgent() {
   const handleSendMessage = (e) => {
     e.preventDefault();
     
-    // 🆕 Prevent sending if view-only
     if (isViewOnly) {
       alert("This chat is being handled by another agent. You can only view.");
       return;
@@ -152,6 +160,22 @@ export default function LiveAgent() {
         console.error('Connection error:', error);
       });
 
+      // Listen for agent room status
+      newSocket.on('agent-room-status', (data) => {
+        const { student_id, hasActiveAgent, agentCount } = data;
+        console.log(`Agent room status for ${student_id}: ${agentCount} agents`);
+        
+        setAgentInRoom(prev => ({
+          ...prev,
+          [student_id]: hasActiveAgent && agentCount > 1 // View-only if more than 1 agent
+        }));
+
+        // Update view-only status if this is the selected chat
+        if (selected !== null && chatData[selected]?.id === student_id) {
+          setIsViewOnly(hasActiveAgent && agentCount > 1);
+        }
+      });
+
       // Listen for new help requests
       newSocket.on('new-help-request', async (data) => {
         console.log('🆕 New help request received:', data);
@@ -170,11 +194,10 @@ export default function LiveAgent() {
         }
       });
 
-      // 🆕 Listen for chat accepted by another agent
+      // Listen for chat accepted by another agent
       newSocket.on('chat-accepted-by-another-agent', (data) => {
         console.log('👁️ Chat accepted by another agent:', data);
         
-        // Update the chat status in real-time
         setChatData((prevChatData) => {
           const updatedChatData = [...prevChatData];
           const chatIndex = updatedChatData.findIndex(chat => chat.id === data.student_id);
@@ -182,9 +205,13 @@ export default function LiveAgent() {
           if (chatIndex >= 0) {
             updatedChatData[chatIndex].status = 'on-going';
             
-            // If this is the currently selected chat, set to view-only
+            // Set to view-only if this is the currently selected chat
             if (selected === chatIndex) {
               setIsViewOnly(true);
+              setAgentInRoom(prev => ({
+                ...prev,
+                [data.student_id]: true
+              }));
             }
           }
           
@@ -198,16 +225,20 @@ export default function LiveAgent() {
         socketRef.current.off('new-help-request');
         socketRef.current.off('help-request-completed');
         socketRef.current.off('chat-accepted-by-another-agent');
+        socketRef.current.off('agent-room-status');
         socketRef.current.close();
         socketRef.current = null;
       }
     };
-  }, [selected, student_id]);
+  }, [selected, student_id, chatData]);
 
   useEffect(() => {
     if (socketRef.current && student_id) {
       console.log('🔗 Agent joining room for student:', student_id);
       socketRef.current.emit('join-room', student_id);
+      
+      // Check if agent already in room
+      checkAgentInRoom(student_id);
     }
   }, [student_id]);
 
@@ -249,7 +280,6 @@ export default function LiveAgent() {
     }
   }, [selected, student_id]);
 
-  // Add this useEffect after your existing useEffects
   useEffect(() => {
     const selectedStudentId = localStorage.getItem('selectedStudentId');
     
@@ -260,14 +290,11 @@ export default function LiveAgent() {
       if (chatIndex >= 0) {
         setSelected(chatIndex);
         setStudentId(studentIdNum);
-        
-        // Clear the stored ID after selecting
         localStorage.removeItem('selectedStudentId');
-        
         console.log('Auto-selected student from alert:', studentIdNum);
       }
     }
-  }, [chatData]); // Trigger when chatData is loaded
+  }, [chatData]);
 
   const handleAcceptChat = async () => {
     if (socketRef.current) {
@@ -286,8 +313,11 @@ export default function LiveAgent() {
           setChatData(updatedChatData);
         }
 
-        // 🆕 Set this agent as the handler (not view-only)
         setIsViewOnly(false);
+        setAgentInRoom(prev => ({
+          ...prev,
+          [student_id]: false
+        }));
       
         const isInAlerts = alerts.data?.some(alert => alert.student_id === student_id && alert.is_resolved === false);
       
@@ -308,7 +338,6 @@ export default function LiveAgent() {
   };
 
   const handleDisconnecting = async () => {
-    // 🆕 Only allow disconnect if not view-only
     if (isViewOnly) {
       alert("You cannot disconnect a chat handled by another agent.");
       return;
@@ -334,6 +363,8 @@ export default function LiveAgent() {
         setSelected(null);
         setStudentId(0);
         setIsViewOnly(false);
+        setOpenDisconnectModal(false);
+        setOpenDisconnectModal(false);
       } catch (error) {
         console.error('Error updating chat status:', error);
       }
@@ -443,8 +474,8 @@ export default function LiveAgent() {
                     {chat.status === "pending" && (
                       <div className="absolute bottom-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
                     )}
-                    {/* 🆕 Show eye icon for ongoing chats */}
-                    {chat.status === "on-going" && (
+                    {/* Show eye icon if another agent is in the room */}
+                    {agentInRoom[chat.id] && (
                       <Visibility className="absolute bottom-0 right-0 text-blue-500" sx={{ fontSize: 16 }} />
                     )}
                   </div>
@@ -463,7 +494,7 @@ export default function LiveAgent() {
             ) : (
               <div className="flex flex-col h-full w-full">
                 
-                {/* 🆕 View-Only Banner */}
+                {/* View-Only Banner */}
                 {isViewOnly && (
                   <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg mb-2 flex items-center gap-2">
                     <Visibility />
@@ -516,8 +547,15 @@ export default function LiveAgent() {
                   )}
                   {chatData[selected].status === 'pending' && (
                     <div className="mb-2 flex justify-start flex-col w-fit">
-                      <div className="py-2 px-4 rounded-full max-w-xs bg-[#1e3a8a] text-white">
-                        <p className="text-sm">Incoming live agent request from {chatData[selected].name}</p>
+                      <div className="py-2 px-4 rounded-lg max-w-md bg-[#1e3a8a] text-white">
+                        {alerts.data?.some(alert => alert.student_id === chatData[selected].id && alert.is_resolved === false) ? (
+                          <>
+                            <p className="text-sm font-bold">⚠️ Alert: Possible student in distress.</p>
+                            <p className="text-xs mt-1">This conversation was flagged for potential emotional distress. Please respond with empathy and assess if the student is safe.</p>
+                          </>
+                        ) : (
+                          <p className="text-sm">Incoming live agent request from {chatData[selected].name}</p>
+                        )}
                       </div>
 
                       <button className="flex" onClick={handleAcceptChat}>
@@ -532,7 +570,7 @@ export default function LiveAgent() {
                   {chatData[selected].status === 'on-going' && !isViewOnly && (
                     <button 
                       className="absolute right-[45%] left-[45%] -top-10 text-lg font-bold text-red-500 px-2 py-1 rounded-full hover:underline"
-                      onClick={handleDisconnecting}
+                      onClick={() => setOpenDisconnectModal(true)}
                     >
                       Disconnect
                     </button>
@@ -564,6 +602,49 @@ export default function LiveAgent() {
             )}
           </div>
         </div>
+        <Dialog
+          open={openDisconnectModal}
+          onClose={() => setOpenDisconnectModal(false)}
+          maxWidth="xs"
+          fullWidth
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: "white",
+              color: "#000",
+              borderRadius: "25px",
+            },
+          }}
+        >
+          <DialogTitle className="bg-[#ef4444] relative">
+            Confirm Disconnect
+            <DialogActions className="absolute -top-1 right-0">
+              <IconButton onClick={() => setOpenDisconnectModal(false)} className="rounded-full ">
+                <Close sx={{ fontSize: 40, color: 'black' }}></Close>
+              </IconButton>
+            </DialogActions>
+          </DialogTitle>
+          <div className="my-5 px-6">
+            <Typography variant="body1" className="text-center mt-4">
+              Are you sure you want to disconnect from this chat?
+            </Typography>
+          </div>
+          <DialogActions>
+              <Button onClick={() => setOpenDisconnectModal(false)}>
+                <p className="text-base font-roboto font-bold text-[#64748b] p-2">CANCEL</p>
+              </Button>
+              <Button 
+                onClick={handleDisconnecting} 
+                sx={{
+                  paddingX: "3rem",
+                  bgcolor: "#ef4444",
+                  color: "white",
+                  borderRadius: "100px",
+                }}
+              >
+                <p className="font-bold text-lg">DISCONNECT</p>
+              </Button>
+            </DialogActions>
+        </Dialog>
       </main>
     </div>
   );
