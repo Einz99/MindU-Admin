@@ -332,6 +332,7 @@ export function CompSchedules({ backlog, isAdviser }) {
 
 export function PendingStudentRequests({ filterBacklog, width, padding }){
   const navigation = useNavigate();
+  const staff = JSON.parse(localStorage.getItem("staff"));
 
   return (
     <div className={`flex flex-col w-[${width}%] ${padding && "p-5"} h-full`}>
@@ -356,7 +357,15 @@ export function PendingStudentRequests({ filterBacklog, width, padding }){
               className="w-full flex flex-row items-center justify-between border-b-2 border-[#94a3b8]"
             >
               <p className="font-roboto text-lg whitespace-nowrap overflow-hidden text-ellipsis">
-                New appointment request from {item.name}
+                {staff.position !== 'Admin' ? (
+                  `New appointment request from ${item.name}`
+                ) : (
+                  item.proposal ? (
+                    `New Event Proposal about ${item.name}`
+                  ) : (
+                    `New appointment request from ${item.name}`
+                  )
+                )}
               </p>
               <p className="text-[#f57c00]">{'\u25CF'}</p>
             </div>
@@ -446,7 +455,7 @@ export function CalmiTriggerAlert({ alerts, padding }) {
   );
 }
 
-export function ActiveStudentsPieChart({width, padding, marginTop}) {
+export function ActiveStudentsPieChart({width, padding, marginTop, circleWidth}) {
   const [studentActiveDate, setStudentActiveDate] = useState('');
   const [SAText, setSAText] = useState('Today');
   const [studentCounts, setStudentCounts] = useState({
@@ -534,7 +543,7 @@ export function ActiveStudentsPieChart({width, padding, marginTop}) {
       </div>
 
       <div className="w-full h-full flex items-center justify-center relative">
-        <div className="w-[60%] max-w-xs aspect-square relative">
+        <div className={`${circleWidth ? `w-[${circleWidth}%]` : 'w-[60%]'} max-w-xs aspect-square relative`}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie

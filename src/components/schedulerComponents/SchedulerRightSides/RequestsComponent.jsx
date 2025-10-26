@@ -181,7 +181,7 @@ export default function Requests({ initial, updateBacklogs }) {
         </Tabs>
       </div>
   
-      <div className="px-2 py-6 min-w-[90%] max-w-max mx-auto overflow-y-auto flex flex-col gap-6 h-[clamp(15rem,40vh,28rem)]">
+      <div className="px-2 py-6 min-w-[90%] max-w-max mx-auto overflow-y-auto flex flex-col gap-6 h-[clamp(15rem,40vh,28rem)] mb-10">
         {initial
           .filter(
             (item) =>
@@ -230,7 +230,7 @@ export default function Requests({ initial, updateBacklogs }) {
             </IconButton>
           </DialogActions>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent className="font-roboto">
             <p className="mt-3 font-roboto font-bold">Student Name</p>
             <TextField
               fullWidth

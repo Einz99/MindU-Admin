@@ -359,13 +359,15 @@ export default function Layout({ open, onMenuClick }) {
             </Typography>
           </div>
           <div className="flex gap-4 items-center">
-            <Link to="/Chat">
-              <IconButton color="inherit">
-                <Badge badgeContent={robitBadge} color="error">
-                  <img src={"/Robo.png"} alt="Chat" className="w-7 h-7"/>
-                </Badge>
-              </IconButton>
-            </Link>
+            {staff.position === 'Guidance Advocate' && (
+              <Link to="/Chat">
+                <IconButton color="inherit">
+                  <Badge badgeContent={robitBadge} color="error">
+                    <img src={"/Robo.png"} alt="Chat" className="w-7 h-7"/>
+                  </Badge>
+                </IconButton>
+              </Link>
+            )}
             <div className="w-0.5 h-8 bg-white my-auto"></div>
             <div className="flex items-end flex-col px-2">
               <p className="text-base font-bold">{staff.name}</p>

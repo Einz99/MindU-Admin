@@ -7,8 +7,8 @@ import './../../App.css';
 const LICENSE_KEY =
 	'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjE3NzgxOTgzOTksImp0aSI6IjRiYTA2N2JhLTUxMzgtNDJhZC1hMzU0LTExNGJiM2Y4NTVhNSIsImxpY2Vuc2VkSG9zdHMiOlsiMTI3LjAuMC4xIiwibG9jYWxob3N0IiwiMTkyLjE2OC4qLioiLCIxMC4qLiouKiIsIjE3Mi4qLiouKiIsIioudGVzdCIsIioubG9jYWxob3N0IiwiKi5sb2NhbCJdLCJ1c2FnZUVuZHBvaW50IjoiaHR0cHM6Ly9wcm94eS1ldmVudC5ja2VkaXRvci5jb20iLCJkaXN0cmlidXRpb25DaGFubmVsIjpbImNsb3VkIiwiZHJ1cGFsIl0sImxpY2Vuc2VUeXBlIjoiZGV2ZWxvcG1lbnQiLCJmZWF0dXJlcyI6WyJEUlVQIl0sInZjIjoiMmVlMDNiNDkifQ.xGIO0FDbjTm_iLSDiDfZo4okzkCBTg5j0CRG_rG6mV4mu5skh3Xo60kRKhHsHA4T2vOXrSqdFWWeM_tVHovo_w';
 
-export const DialogWrapper = ({ open, onClose, title, children, actionButtons, dialogSx = {} }) => (
-  <Dialog open={open} onClose={onClose} maxWidth="md" sx={{ "& .MuiPaper-root": { backgroundColor: "#b7cde3", color: "#000", borderRadius: "24px", width: "70%", height: "auto", minHeight: "50%", maxHeight: "90%", overflowX: "hidden", overflowY: "auto", display: "flex", ...dialogSx, } }}>
+export const DialogWrapper = ({ open, onClose, title, children, actionButtons, dialogSx = {}, maxwidth }) => (
+  <Dialog open={open} onClose={onClose} maxWidth={`${maxwidth}`} sx={{ "& .MuiPaper-root": { backgroundColor: "#b7cde3", color: "#000", borderRadius: "24px", width: "70%", height: "auto", minHeight: "50%", maxHeight: "90%", overflowX: "hidden", overflowY: "auto", display: "flex", ...dialogSx, } }}>
     <div className="w-[97.5%] h-full bg-white rounded-3xl mb-4">
       <DialogTitle className="border-b-2 border-[#737373]">
         <p className="text-4xl text-[#737373]">{title}</p>
@@ -18,7 +18,7 @@ export const DialogWrapper = ({ open, onClose, title, children, actionButtons, d
           </IconButton>
         </DialogActions>
       </DialogTitle>
-      <DialogContent className="border-b-2 border-b-gray-500">
+      <DialogContent className="border-b-2 border-b-gray-500 mt-4">
         {children}
       </DialogContent>
       <DialogActions>

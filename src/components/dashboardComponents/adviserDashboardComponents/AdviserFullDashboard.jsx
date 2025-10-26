@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { API } from '../../../api';
 import { ActiveStudentsPieChart, CompSchedules } from '../guidanceStaffDashboardComponent/Graphs';
 import AdviserCalendar from './AdviserCalendar';
-import { Dialog, DialogTitle, DialogActions, DialogContent, IconButton, Button } from '@mui/material';
+import { Dialog, DialogTitle, DialogActions, DialogContent, IconButton, Button, Autocomplete, TextField } from '@mui/material';
 import { Close } from '@mui/icons-material';
 
 export default function AdviserFullDashboard({ backlogs }) {
@@ -98,7 +98,7 @@ export default function AdviserFullDashboard({ backlogs }) {
     setMessage('');
   }
 
-  const filterBacklog = backlogs.filter((item) => (item.status === "Pending" && item.student_id && item.staff_id === staff.id));
+  const filterBacklog = backlogs.filter((item) => (item.status === "Scheduled" && item.student_id && item.staff_id === staff.id));
 
   useEffect(() => {
     if (viewId !== 0) {
@@ -114,7 +114,7 @@ export default function AdviserFullDashboard({ backlogs }) {
     >
       <div 
         className="grid grid-cols-3 gap-4"  // Using grid layout
-        style={{ gridTemplateColumns: "40% 60%" }}  // Set the width for the two main columns
+        style={{ gridTemplateColumns: "45% 55%" }}  // Set the width for the two main columns
       >
         {/* First Column (40% width) */}
         <div className="w-full h-full flex flex-col gap-4 p-5">
@@ -134,7 +134,7 @@ export default function AdviserFullDashboard({ backlogs }) {
           <div className="h-[25%]">
             {/* You can add more content here */}
             <div className='border-8 border-[#da2f47] h-full rounded-2xl py-4 px-8 overflow-auto'>
-                <h1 className='text-4xl text-[#317873] font-bold mb-4'>Your student is in need of guidance office services?</h1>
+                <h1 className='text-3xl text-[#317873] font-bold mb-4'>Your student is in need of guidance office services?</h1>
                 <p className='text-2xl text-black font-semibold mb-6'>Request an appointment now!</p>
                 <button
                   className='bg-[#ff9059] py-2 px-6 text-white rounded-3xl font-bold text-lg'
@@ -168,20 +168,48 @@ export default function AdviserFullDashboard({ backlogs }) {
                   
                 <DialogContent>
                   <p className="font-bold mt-3 text-lg">Student Name</p>
-                  <input
-                    type="text"
+                  <Autocomplete
+                    freeSolo
+                    options={students.map((student) => `${student.firstName} ${student.lastName}`)}
                     value={selectedStudent}
-                    onChange={handleStudentChange}
-                    list="students"
-                    className="w-full p-2 border rounded-lg"
-                    placeholder="Enter student name"
+                    onChange={(event, newValue) => {
+                      // Trigger the same logic as your original handleStudentChange
+                      handleStudentChange({ target: { value: newValue || '' } });
+                    }}
+                    onInputChange={(event, newInputValue) => {
+                      // Handle typing in the input
+                      handleStudentChange({ target: { value: newInputValue } });
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Enter student name"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: "0.5rem",
+                            "& fieldset": {
+                              borderRadius: "0.5rem",
+                            },
+                          },
+                        }}
+                      />
+                    )}
+                    sx={{
+                      width: "100%",
+                      "& .MuiAutocomplete-listbox": {
+                        maxHeight: "200px",
+                        backgroundColor: "white",
+                        "& .MuiAutocomplete-option": {
+                          '&:hover': {
+                            backgroundColor: "#f3f4f6",
+                          },
+                          '&[aria-selected="true"]': {
+                            backgroundColor: "#e5e7eb",
+                          },
+                        },
+                      },
+                    }}
                   />
-                  <datalist id="students">
-                    {students.map((student) => (
-                      <option key={student.id} value={`${student.firstName} ${student.lastName}`} />
-                    ))}
-                  </datalist>
-                  
                   <p className="font-bold mt-3 text-lg">Message</p>
                   <textarea
                     value={message}
@@ -213,8 +241,9 @@ export default function AdviserFullDashboard({ backlogs }) {
             </div>
           <div className="h-[25%]">
             <p className='text-[#f57c00] text-2xl font-bold mb-3'>Student Scheduled Appointments</p>
-            <div className='w-full h-[75%] border-4 border-[#f57c00] rounded-lg mb-4 overflow-y-auto'>
-              {filterBacklog.map((item, index) => (
+            <div className='w-full h-[75%] border-4 border-[#f57c00] rounded-lg mb-4 overflow-y-auto p-4'>
+              {filterBacklog.length > 0 ? (
+              filterBacklog.map((item, index) => (
                 <div
                   key={index}
                   className="w-full flex flex-row items-center justify-between border-b-2 border-[#94a3b8]"
@@ -229,7 +258,11 @@ export default function AdviserFullDashboard({ backlogs }) {
                     VIEW
                   </button>
                 </div>
-              ))}
+              ))) : (
+                <div className='flex items-center justify-center h-full'>
+                  <p className='text-center'>No students scheduled in guidance office to consult</p>
+                </div>
+              )}
               <Dialog
                 open={openView}
                 onClose={() => {setOpenView(false); setViewId(0)}}
@@ -253,10 +286,10 @@ export default function AdviserFullDashboard({ backlogs }) {
                   </DialogActions>
                 </DialogTitle>
                   
-                <DialogContent>
-                  <p>Name: {selectedBacklog.name}</p>
-                  <p>Message: {selectedBacklog.message}</p>
-                  <p>Scheduled: {selectedBacklog.sched_date}</p>
+                <DialogContent className='mt-4'>
+                  <p className='text-center'><strong>Name:</strong> {selectedBacklog.name}</p>
+                  <p className='text-center'><strong>Message:</strong> {selectedBacklog.message}</p>
+                  <p className='text-center'><strong>Scheduled:</strong> {selectedBacklog.sched_date}</p>
                 </DialogContent>
 
                 <DialogActions>

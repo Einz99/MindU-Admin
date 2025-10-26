@@ -124,9 +124,9 @@ export default function AdviserCalendar() {
   }, [selectedDay, studentRequests, staffRequests]);
 
   return (
-    <div className="flex flex-row w-full bg-[#b7cde3] p-2 flex-1 h-full overflow-y-auto">
+    <div className="flex flex-row w-full bg-[#b7cde3] py-5 pl-5 pr-3 flex-1 h-full overflow-y-auto">
       {/* Year */}
-      <div className="flex flex-col w-[60%] h-full pl-2">
+      <div className="flex flex-col w-[55%] h-full pl-2">
         <div className="text-center font-norwester mb-2 text-lg md:text-xl lg:text-2xl">
           S.Y. {currentDate.getFullYear()}
         </div>
@@ -215,7 +215,7 @@ export default function AdviserCalendar() {
       </div>
 
       {/* Appointments box */}
-      <div className="mt-3 w-[40%] pl-2">
+      <div className="mt-3 w-[45%] py-2 px-4">
         <textarea
           value={appointmentsText}
           readOnly

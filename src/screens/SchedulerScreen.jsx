@@ -7,7 +7,9 @@ import { API } from "../api";
 import axios from "axios";
 import { useContext } from 'react';
 import { OpenContext } from '../contexts/OpenContext';
-import { FilterAlt, Sort } from "@mui/icons-material";
+import { Download, FilterAlt, Sort } from "@mui/icons-material";
+import * as XLSX from 'xlsx';
+import { format } from "date-fns";
 
 /**
  * ===========================================
@@ -59,8 +61,7 @@ export default function Scheduler() {
   const [sortOpen, setSortOpen] = useState(false);
   const [filterType, setFilterType] = useState(0);
   const [sortType, setSortType] = useState(0);
-  // const [availableTimes, setAvailableTime] = useState([])
-
+  const [currentTab, setCurrentTab] = useState(0);
   /**
    * useEffect hook to fetch backlogs data from the database via backend API.
    * 
@@ -122,6 +123,91 @@ export default function Scheduler() {
     setSortType(type);
   }
 
+  // Add this function inside your Scheduler component
+  const handleDownload = () => {
+    // Get the filtered and sorted data from the table
+    const statusOrder = {
+      Scheduled: 0,
+      Completed: 1,
+      Cancelled: 2,
+      Trash: 3,
+    };
+
+    const filteredData = (backlogs || [])
+      .filter((data) => {
+        if (!data.sched_date || data.status === "Pending") return false;
+        if (filterType === 1 && data.status !== "Scheduled") return false;
+        if (filterType === 2 && data.status !== "Cancelled") return false;
+        if (filterType === 3 && data.status !== "Completed") return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const isAAppointment = a.student_id != null;
+        const isBAppointment = b.student_id != null;
+        if (isAAppointment !== isBAppointment) {
+          return isAAppointment ? 1 : -1;
+        }
+
+        const statusA = statusOrder[a.status] ?? 999;
+        const statusB = statusOrder[b.status] ?? 999;
+        if (statusA !== statusB) return statusA - statusB;
+
+        if (sortType === 0) {
+          return a.name.localeCompare(b.name);
+        }
+        if (sortType === 1) {
+          return b.name.localeCompare(a.name);
+        }
+        if (sortType === 2) {
+          const dateA = new Date(a.sched_date);
+          const dateB = new Date(b.sched_date);
+          return dateA - dateB;
+        }
+
+        return a.name.localeCompare(b.name);
+      });
+
+    // Format data for Excel
+    const excelData = filteredData.map((data) => ({
+      'Name/Event': data.name,
+      'Date & Time': format(new Date(data.sched_date), "MMMM dd, yyyy hh:mm a"),
+      'Status': data.status,
+      'Message': data.message || 'N/A',
+    }));
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 30 }, // Name/Event
+      { wch: 25 }, // Date & Time
+      { wch: 15 }, // Status
+      { wch: 50 }, // Message
+    ];
+
+    const filterNames = {
+      0: 'All',
+      1: 'Scheduled',
+      2: 'Cancelled',
+      3: 'Completed'
+    };
+
+    const tabName = currentTab === 0 ? 'Appointments' : 'Events';
+    const filterName = filterNames[filterType] || 'All';
+    const currentDate = format(new Date(), "yyyy-MM-dd");
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Scheduler Data');
+
+    // Generate filename with current date
+    const filename = `Scheduler_${tabName}_${filterName}_${currentDate}.xlsx`;
+
+    // Download file
+    XLSX.writeFile(wb, filename);
+  };
+
   return (
     <div className="flex bg-[#f8fafc] flex-1 overflow-hidden">
       {/* The Top and Left Bar */}
@@ -165,6 +251,11 @@ export default function Scheduler() {
                 </div>
                 <div className="flex items-center justify-center" style={{ height: '100%' }}>
                   <div className="flex gap-4">
+                    <div className="cursor-pointer" onClick={handleDownload}>
+                      <Download 
+                        style={{ fontSize: '2rem' }}
+                      />
+                    </div>
                     <div className="relative">
                       <FilterAlt 
                         style={{ fontSize: '2rem' }}
@@ -213,6 +304,7 @@ export default function Scheduler() {
                     updateBacklogs={updateBacklogs} 
                     filterType={filterType}
                     sortType={sortType}
+                    onTabChange={setCurrentTab}
                   />
               </div>
             </div>

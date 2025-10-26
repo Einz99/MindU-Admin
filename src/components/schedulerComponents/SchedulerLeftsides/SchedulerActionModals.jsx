@@ -8,6 +8,7 @@ import {
   TextField,
   Button,
   IconButton,
+  Autocomplete
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
@@ -204,7 +205,7 @@ export default function SchedulerActionModals({
                 </IconButton>
               </DialogActions>
             </DialogTitle>
-            <DialogContent>
+            <DialogContent className="mt-2 font-roboto">
               <p className="mt-3 font-roboto font-bold">{isRequest ? "Event Name" : "Student Name"}</p>
               {isRequest ? (
                 <TextField
@@ -226,18 +227,42 @@ export default function SchedulerActionModals({
                 />
               ) : (
                 <>
-                  <input
-                    list="students"
+                  <Autocomplete
+                    freeSolo
+                    options={students.map((student) => `${student.firstName} ${student.lastName}`)}
                     value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    className="w-full p-2 rounded-lg border-2 border-gray-300 bg-gray-200"
-                    placeholder="Student Name"
+                    onChange={(event, newValue) => setNewName(newValue || '')}
+                    onInputChange={(event, newInputValue) => setNewName(newInputValue)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Student Name"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            backgroundColor: "#e8e9eb",
+                            borderRadius: "20px",
+                            "& fieldset": {
+                              borderRadius: "20px",
+                            },
+                          },
+                        }}
+                      />
+                    )}
+                    sx={{
+                      "& .MuiAutocomplete-listbox": {
+                        maxHeight: "100px",
+                        backgroundColor: "white",
+                        "& .MuiAutocomplete-option": {
+                          '&:hover': {
+                            backgroundColor: "#f3f4f6",
+                          },
+                          '&[aria-selected="true"]': {
+                            backgroundColor: "#e5e7eb",
+                          },
+                        },
+                      },
+                    }}
                   />
-                  <datalist id="students">
-                    {students.map((student) => (
-                      <option key={student.id} value={`${student.firstName} ${student.lastName}`} />
-                    ))}
-                  </datalist>
                 </>
               )}
               {isRequest ? (
@@ -385,7 +410,7 @@ export default function SchedulerActionModals({
             <div className="bg-white w-[95%] mx-auto my-1 rounded-xl">
               <DialogContent className="text-center">
                 {selectedData && (
-                  <div style={{ fontSize: "1.2rem", padding: "10px" }}>
+                  <div className="font-roboto" style={{ fontSize: "1.2rem", padding: "10px" }}>
                     <p><strong>Name/Event:</strong> {selectedData.name}</p>
                     <p>
                       <strong>Date & Time:</strong>{" "}
@@ -414,7 +439,7 @@ export default function SchedulerActionModals({
               {actionState === 6 ? "Restore Event" : "Delete Permanently"}
             </DialogTitle>
             <DialogContent className="text-center">
-              <div style={{ fontSize: "1.2rem", padding: "10px" }}>
+              <div className="font-roboto" style={{ fontSize: "1.2rem", padding: "10px" }}>
                 <p>Are you sure you want to {actionState === 6 ? "restore event" : "delete permanently"} this event?</p>
               </div>
             </DialogContent>
@@ -460,7 +485,8 @@ export default function SchedulerActionModals({
             <div className="bg-white w-[95%] mx-auto my-1 rounded-xl">
               <DialogContent className="text-center">
                 {selectedData && (
-                  <div style={{ fontSize: "1.2rem", padding: "10px" }}>
+                  <div className="font-roboto"style={{ fontSize: "1.2rem", padding: "10px" }}>
+                    <p className="mb-4 text-gray-500">Are you sure you want to cancel this Name/Event Schedule</p>
                     <p><strong>Name/Event:</strong> {selectedData.name}</p>
                     <p>
                       <strong>Date & Time:</strong>{" "}
@@ -594,8 +620,8 @@ export default function SchedulerActionModals({
           </DialogActions>
         </DialogTitle>
         <div className="bg-white w-[95%] mx-auto my-1 rounded-xl">
-          <DialogContent className="text-center">
-            <p>Are you sure you want to move this event to trash?</p>
+          <DialogContent className="text-center font-roboto" style={{ fontSize: '1.2rem'}}>
+            <p className="mb-2 text-gray-500">Are you sure you want to move this event to trash?</p>
             <p><strong>Name/Event:</strong> {selectedData.name}</p>
             <p>
               <strong>Date & Time:</strong> {selectedData.sched_date ? format(new Date(String(selectedData.sched_date)), "MM/dd/yyyy h:mm a") : "N/A"}

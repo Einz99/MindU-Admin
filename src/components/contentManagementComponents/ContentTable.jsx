@@ -196,7 +196,7 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
           </TableHead>
 
           {/* Table Body */}
-          <TableBody sx={{ borderCollapse: "collapse" }}>
+          <TableBody sx={{ borderCollapse: "collapse" }} className="font-roboto">
             {data.length === 0 ? (
               <TableRow>
                 <TableCell 

@@ -25,7 +25,7 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
       fetchBacklogs(); // run when reloadKey changes
     }, []);
 
-  const filterBacklog = backlog.filter((item) => (item.status === "Pending" && item.student_id));
+  const filterBacklog = backlog.filter((item) => (item.status === "Pending" && (item.student_id || item.proposal)));
   
   useEffect(() => {
     const fetchData = async () => {
@@ -88,7 +88,7 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
   return (
       <div 
         className="w-full h-full grid"  // 👈 ensures grid has a real height
-        style={{ gridTemplateColumns: '40% 60%', gridTemplateRows: '60% 40% 50%' }}
+        style={{ gridTemplateColumns: '40% 60%', gridTemplateRows: '50% 40% 40%' }}
       > 
         <UsageUtilization />
 
@@ -115,7 +115,7 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
         
         <CompSchedules backlog={backlog} />
         <PendingStudentRequests filterBacklog={filterBacklog} padding={true}/>
-        <ActiveStudentsPieChart width={100} padding={10} marginTop={false}/>
+        <ActiveStudentsPieChart width={100} padding={10} marginTop={false} circleWidth={40}/>
 
         <div className="flex items-center justify-center p-5">
           <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col gap-20  overflow-y-auto">

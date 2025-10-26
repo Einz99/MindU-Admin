@@ -6,14 +6,22 @@ import {
   MenuItem, 
   Box, 
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
 } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API, RootAPI } from "../../api";
 import ReactPlayer from "react-player";
-import { CloudUpload, FileUpload } from "@mui/icons-material";
+import { CloudUpload, FileUpload, Close } from "@mui/icons-material";
 import { useDropzone } from "react-dropzone";
 import RichTextEditor, { DialogWrapper } from "./contentDialogComponents";
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
 export default function ContentDialog({
   tab,
@@ -53,6 +61,7 @@ export default function ContentDialog({
   const [blob, setBlob] = useState(null);
   const [editorData, setEditorData] = useState(null);
   const [isDraft, setIsDraft] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false); // 🆕 Confirmation dialog state
   
   const handleDialogClose = () => {
     setDialogOpen(false);
@@ -68,17 +77,56 @@ export default function ContentDialog({
     setArticleFile(null);
     setNewItem({});
     setIsRichText(false);
+    setShowSaveDialog(false);
+  };
+
+  // 🆕 Check if there are unsaved changes
+  const hasUnsavedChanges = () => {
+    if (editMode || viewMode || tab === 2) return false; // 👈 Added tab === 2 check
+    
+    // Check if any field has content
+    return (
+      newItem.title?.trim() ||
+      newItem.description?.trim() ||
+      newItem.category?.trim() ||
+      newItem.announcementContent?.trim() ||
+      newItem.end_date ||
+      bannerFile ||
+      articleFile ||
+      preview ||
+      videoPreview ||
+      blob
+    );
+  };
+
+  // 🆕 Handle close attempt
+  const handleCloseAttempt = () => {
+    if (hasUnsavedChanges()) {
+      setShowSaveDialog(true);
+    } else {
+      handleDialogClose();
+    }
+  };
+
+  // 🆕 Handle save as draft from confirmation
+  const handleSaveAsDraft = async () => {
+    setShowSaveDialog(false);
+    await handleSave(true);
+  };
+
+  // 🆕 Handle discard changes
+  const handleDiscardChanges = () => {
+    setShowSaveDialog(false);
+    handleDialogClose();
   };
 
   useEffect(() => {
     if (shouldHandleSave.current && articleFile) {
         handleSave(isDraft);
-        shouldHandleSave.current = false; // Reset flag
+        shouldHandleSave.current = false;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [articleFile, isDraft]);
-
-  
 
   useEffect(() => {
     if (tab === 2) return;
@@ -92,7 +140,6 @@ export default function ContentDialog({
         );
       }
 
-      // Fetch and set the banner file using axios
       axios
         .get(`${RootAPI}${newItem.banner}`, { responseType: 'blob' })
         .then(response => {
@@ -105,7 +152,6 @@ export default function ContentDialog({
           console.error("Error loading banner file:", error)
         );
 
-      // Fetch and set the article file if not video
       if (newItem.filepath && isVideo === false) {
         const loadFileContent = async () => {
           try {
@@ -124,7 +170,6 @@ export default function ContentDialog({
     }
   }, [editId, editMode, newItem.banner, newItem.filepath, newItem.title, isVideo, isAdd, tab]);
   
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewItem((prev) => ({ ...prev, [name]: value }));
@@ -144,7 +189,7 @@ export default function ContentDialog({
       setVideoPreview(videoURL);
       setVideoPath(selectedFile.name);
       setTimeout(() => {
-        setDialogOpen(true); // Open the main dialog with video preview
+        setDialogOpen(true);
       }, 100);
     } else {
       setAlertMessage("Please upload a valid video file.")
@@ -167,7 +212,7 @@ export default function ContentDialog({
       setVideoDialog(false);
   
       setTimeout(() => {
-        setDialogOpen(true); // Open the main dialog with video preview
+        setDialogOpen(true);
       }, 100);
     },
   });
@@ -190,7 +235,7 @@ export default function ContentDialog({
       let response;
       let requestBody;
       const staff = JSON.parse(localStorage.getItem("staff"));
-      const isUpdating = editMode; // true if updating, false if creating
+      const isUpdating = editMode;
       const statusText = isDraft ? "Draft" : "Posted";
     
       if (tab === 2) {
@@ -233,7 +278,6 @@ export default function ContentDialog({
         isUpdating ? prev.map((item) => (item.ID === editId ? response.data : item)) : [...prev, response.data]
       );
     
-      // Show customized alert message
       let alertMessage = "";
       if (!isUpdating && isDraft) alertMessage = "Draft created successfully.";
       else if (!isUpdating && !isDraft) alertMessage = "Post created successfully.";
@@ -259,21 +303,18 @@ export default function ContentDialog({
     }
   };
 
-  
-
   const handleBannerChange = (event) => {
     const file = event.target.files[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
       setPreview(imageUrl);
-      setBannerFile(file); // Save banner file to state
+      setBannerFile(file);
       if (onImageSelect) {
         onImageSelect(file);
       }
     }
   };
 
-  // Clean up function to prevent memory leaks
   useEffect(() => {
     return () => {
       if (preview) {
@@ -307,7 +348,6 @@ export default function ContentDialog({
   }, [editMode, setNewItem])
 
   const isFormValid = () => {
-    // Announcement: title, category, and announcementContent required
     if (tab === 2) {
       return (
         newItem.title?.trim() &&
@@ -316,7 +356,6 @@ export default function ContentDialog({
         newItem.end_date
       );
     }
-    // Video: title, description, category, banner file, and video file required
     else if (isVideo) {
       return (
         newItem.title?.trim() &&
@@ -326,9 +365,7 @@ export default function ContentDialog({
         (videoPreview || videoPath)
       );
     }
-    // Article (non-video): title, category, and banner file required
     else {
-      console.log(newItem, bannerFile)
       return (
         newItem.title?.trim() &&
         newItem.category?.trim() &&
@@ -347,38 +384,63 @@ export default function ContentDialog({
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const minDate = tomorrow.toISOString().split('T')[0];
+
   return (
     <>
-      <DialogWrapper
-        open={isArticle || open}
-        onClose={() => {
-          setIsAdd(true);
-          if(isRichText === true) {
-            setIsArticle(false);
-            setDialogOpen(false);
-            setEditorData(null);
-            setViewMode(false);
-            setIsVideo(false);
-          } 
-          else{
-            handleDialogClose()
+      <Dialog
+        open={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          "& .MuiPaper-root": {
+          borderRadius: "24px"
           }
         }}
+      >
+        <DialogTitle className="bg-[#b7cde3] relative">
+          Unsaved Changes
+          <DialogActions className="absolute -top-1 right-0">
+            <IconButton onClick={() => setShowSaveDialog(false)} className="rounded-full">
+              <Close sx={{ fontSize: 40, color: 'black' }} />
+            </IconButton>
+          </DialogActions>
+        </DialogTitle>
+        <div className="bg-white w-[95%] mx-auto my-1 rounded-xl">
+          <DialogContent className="text-center">
+            <div className="font-roboto" style={{ fontSize: "1.2rem", padding: "10px" }}>
+              <p><strong>Do you want to save this as draft?</strong></p>
+              <p className="text-gray-500 text-sm mt-2">Your changes will be lost if you don't save them.</p>
+            </div>
+          </DialogContent>
+          <DialogActions className="flex justify-between px-4 pb-4">
+            <Button onClick={() => setShowSaveDialog(false)}>
+              <p className="text-base font-roboto font-bold text-[#64748b] p-2">Cancel</p>
+            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleDiscardChanges}>
+                <p className="text-white text-lg rounded-3xl px-8 py-1 bg-red-500">Don't Save</p>
+              </Button>
+              <Button onClick={handleSaveAsDraft} disabled={loading}>
+                <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
+                  {loading ? "Saving..." : "Save as Draft"}
+                </p>
+              </Button>
+            </div>
+          </DialogActions>
+        </div>
+      </Dialog>
+
+      <DialogWrapper
+        maxwidth={`${tab === 2 ? "sm" : "md"}`}
+        open={isArticle || open}
+        onClose={tab === 2 ? handleDialogClose : handleCloseAttempt}
         title={`${editMode ? "Edit " : isAdd === false ? "View ": "Add "} ${
           tab === 0 ? "Resource" : tab === 1 ? "Wellness" : "Announcement"
         }`}
         actionButtons={
         <>
-        <Button onClick={() => {
-          setIsAdd(true);
-          if(isRichText === true) {
-            setIsArticle(false);
-            setDialogOpen(false);
-          } 
-          else{
-            handleDialogClose()
-          }
-        }}>
+        <Button onClick={tab === 2 ? handleDialogClose : handleCloseAttempt}>
           <p className="text-base font-roboto font-bold text-[#64748b] p-2">Back</p>
         </Button>
           {isArticle ? (
@@ -517,38 +579,49 @@ export default function ContentDialog({
                       Select the date when the announcement will expire
                     </h1>
 
-                    <TextField
-                      type="date"
-                      name="end_date"
-                      value={
-                        newItem.end_date
-                          ? new Date(newItem.end_date).toISOString().split('T')[0]
-                          : ''
-                      }
-                      onChange={handleDateChange}
-                      fullWidth
-                      margin="normal"
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                      inputProps={{
-                        min: minDate, // disables today and earlier
-                      }}
-                      sx={{
-                        borderWidth: "2px",
-                        borderColor: "gray",
-                        borderRadius: "12px",
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": {
-                            borderWidth: "2px",
-                            borderColor: "gray",
-                            borderRadius: "12px",
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                      <DatePicker
+                        value={newItem.end_date ? new Date(newItem.end_date) : new Date(minDate)}
+                        onChange={(newValue) => {
+                          handleDateChange({
+                            target: {
+                              name: 'end_date',
+                              value: newValue ? newValue.toISOString().split('T')[0] : ''
+                            }
+                          });
+                        }}
+                        minDate={new Date(minDate)}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            margin: "normal",
+                            sx: {
+                              borderWidth: "2px",
+                              borderColor: "gray",
+                              borderRadius: "12px",
+                              "& .MuiOutlinedInput-root": {
+                                "& fieldset": {
+                                  borderWidth: "2px",
+                                  borderColor: "gray",
+                                  borderRadius: "12px",
+                                },
+                                "&:hover fieldset": { borderColor: "darkgray" },
+                                "&.Mui-focused fieldset": { borderColor: "black" },
+                              },
+                            },
                           },
-                          "&:hover fieldset": { borderColor: "darkgray" },
-                          "&.Mui-focused fieldset": { borderColor: "black" },
-                        },
-                      }}
-                    />
+                          popper: {
+                            placement: "bottom-end", // 👈 Calendar appears aligned to the right
+                            modifiers: [
+                              {
+                                name: 'flip',
+                                enabled: false,
+                              },
+                            ],
+                          },
+                        }}
+                      />
+                    </LocalizationProvider>
                   </FormControl>
                   <h1 className="text-3xl text-[#737373] font-normal">Content</h1>
                   <TextField
@@ -731,12 +804,7 @@ export default function ContentDialog({
       </DialogWrapper>
       <DialogWrapper
         open={isRichText}
-        onClose={() => {
-          setIsRichText(false);
-          handleDialogClose();
-          setEditorData(null);
-          setViewMode(false);
-        }}
+        onClose={handleCloseAttempt}
         title={`${editMode ? "Edit " : viewMode ? "View ": "Add "} Content`}
         actionButtons={
           <>

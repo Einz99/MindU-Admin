@@ -99,7 +99,7 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
             </div>
             {isDropdownOpen && (
               <div 
-                className={`absolute top-5 right-0 mt-2 w-full ${isSubmenuOpen === true ? "h-44" : "h-32"} bg-[#b7cde3] shadow-lg rounded-md z-10`}
+                className={`absolute top-5 right-0 mt-2 w-full ${isSubmenuOpen === true ? "h-58" : "h-46"} bg-[#b7cde3] shadow-lg rounded-md z-10`}
                 onMouseEnter={() => setIsDropdownOpen(true)}
                 onMouseLeave={() => setIsDropdownOpen(false)}
               >

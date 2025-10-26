@@ -42,7 +42,7 @@ import { Close } from "@mui/icons-material";
  * - [Any important notes for future developers or groupmates]
  * ===========================================
  */
-export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortType, filterType }) {
+export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortType, filterType, onTabChange }) {
   const [open, setOpen] = useState(false);
   /**
    * actionState Dictionary
@@ -67,6 +67,13 @@ export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortTy
   const [alertMessage, setAlertMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState(0);
+
+  const handleTabChange = (newTab) => {
+    setTab(newTab);
+    if (onTabChange) {
+      onTabChange(newTab);
+    }
+  };
 
   const clampDate = (date) => {
     const now = new Date();
@@ -305,7 +312,7 @@ export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortTy
         handleSearchChange={handleSearchChange}
         setIsRequest={setIsRequest}
         tab={tab}
-        setTab={setTab}
+        setTab={handleTabChange}
       />
       {/* The table of left side */}
       <SchedulerTable
