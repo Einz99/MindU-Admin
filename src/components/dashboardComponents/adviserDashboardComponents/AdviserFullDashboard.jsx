@@ -98,7 +98,7 @@ export default function AdviserFullDashboard({ backlogs }) {
     setMessage('');
   }
 
-  const filterBacklog = backlogs.filter((item) => (item.status === "Scheduled" && item.student_id && item.staff_id === staff.id));
+  const filterBacklog = backlogs.filter((item) => (item.status === "Scheduled" && item.student_id));
 
   useEffect(() => {
     if (viewId !== 0) {
@@ -133,9 +133,9 @@ export default function AdviserFullDashboard({ backlogs }) {
           </div>
           <div className="h-[25%]">
             {/* You can add more content here */}
-            <div className='border-8 border-[#da2f47] h-full rounded-2xl py-4 px-8 overflow-auto'>
-                <h1 className='text-3xl text-[#317873] font-bold mb-4'>Your student is in need of guidance office services?</h1>
-                <p className='text-2xl text-black font-semibold mb-6'>Request an appointment now!</p>
+            <div className='border-8 border-[#da2f47] h-full rounded-2xl py-4 px-8'>
+                <h1 className='text-3xl text-[#317873] font-bold'>Your student is in need of guidance office services?</h1>
+                <p className='text-2xl text-black font-semibold mb-2'>Request an appointment now!</p>
                 <button
                   className='bg-[#ff9059] py-2 px-6 text-white rounded-3xl font-bold text-lg'
                   onClick={() => {setOpenRequest(true);}}

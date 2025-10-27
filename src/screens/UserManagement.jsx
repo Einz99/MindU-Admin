@@ -148,7 +148,7 @@ export default function DashboardLayout() {
     } else {
       setNewStaff({
         name: "",
-        position: "Guidance Advocate", // Default position
+        position: "Guidance Staff", // Default position
         status: "Active", // Set default status explicitly
         email: "",
         password: ""

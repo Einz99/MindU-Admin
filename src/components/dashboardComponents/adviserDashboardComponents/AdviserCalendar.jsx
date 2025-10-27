@@ -13,7 +13,7 @@ import { API } from "../../../api";
 export default function AdviserCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null);
-  const [appointmentsText, setAppointmentsText] = useState("");
+  const [appointments, setAppointments] = useState([]);
   const [studentRequests, setStudentRequests] = useState([]);
   const [staffRequests, setStaffRequests] = useState([]);
   const staff = JSON.parse(localStorage.getItem("staff"));
@@ -76,23 +76,22 @@ export default function AdviserCalendar() {
     setSelectedDay(fullDate);
   };
 
-  // Build appointments text when selectedDay changes
+  // Build appointments list when selectedDay changes
   useEffect(() => {
     if (!selectedDay) return;
 
-    const appointments = [];
+    const appointmentsList = [];
 
     studentRequests.forEach((r) => {
       if (
         r.status === "Scheduled" &&
         format(new Date(r.sched_date), "yyyy-MM-dd") === selectedDay
       ) {
-        appointments.push(
-          `${r.student_name} is appointed on ${format(
-            new Date(r.sched_date),
-            "hh:mm a"
-          )}`
-        );
+        appointmentsList.push({
+          name: r.student_name,
+          time: format(new Date(r.sched_date), "hh:mm a"),
+          type: "student", // Red dot
+        });
       }
     });
 
@@ -101,27 +100,25 @@ export default function AdviserCalendar() {
         r.status === "Scheduled" &&
         format(new Date(r.sched_date), "yyyy-MM-dd") === selectedDay
       ) {
-        appointments.push(
-          `${r.student_name} is appointed on ${format(
-            new Date(r.sched_date),
-            "hh:mm a"
-          )}`
-        );
+        appointmentsList.push({
+          name: r.student_name,
+          time: format(new Date(r.sched_date), "hh:mm a"),
+          type: "staff", // Blue dot
+        });
       }
     });
 
-    const formattedDate = format(new Date(selectedDay), "MMMM dd, yyyy");
+    // Sort by time
+    appointmentsList.sort((a, b) => {
+      const timeA = new Date(`2000/01/01 ${a.time}`);
+      const timeB = new Date(`2000/01/01 ${b.time}`);
+      return timeA - timeB;
+    });
 
-    if (appointments.length === 0) {
-      setAppointmentsText(
-        `Appointments for ${formattedDate}:\n\nNo appointments scheduled for this date.`
-      );
-    } else {
-      setAppointmentsText(
-        `Appointments for ${formattedDate}:\n\n${appointments.join("\n")}`
-      );
-    }
+    setAppointments(appointmentsList);
   }, [selectedDay, studentRequests, staffRequests]);
+
+  const formattedDate = selectedDay ? format(new Date(selectedDay), "MM/dd/yyyy") : "";
 
   return (
     <div className="flex flex-row w-full bg-[#b7cde3] py-5 pl-5 pr-3 flex-1 h-full overflow-y-auto">
@@ -201,7 +198,7 @@ export default function AdviserCalendar() {
                 {/* Dot indicators */}
                 <div className="absolute top-1 flex space-x-1">
                   {hasStudent && (
-                    <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                    <span className="w-2 h-2 rounded-full bg-[#ff9059]"></span>
                   )}
                   {hasStaff && (
                     <span className="w-2 h-2 rounded-full bg-blue-600"></span>
@@ -216,12 +213,43 @@ export default function AdviserCalendar() {
 
       {/* Appointments box */}
       <div className="mt-3 w-[45%] py-2 px-4">
-        <textarea
-          value={appointmentsText}
-          readOnly
-          rows={4}
-          className="w-full h-full px-3 py-2 border border-gray-400 rounded-md bg-white focus:outline-none resize-none text-right overflow-y-auto"
-        />
+        <div className="w-full h-full px-3 py-2 border border-gray-400 rounded-md bg-white overflow-y-auto">
+          <div className="font-semibold text-lg mb-3 text-center">
+            Appointments for {formattedDate}
+          </div>
+          
+          {appointments.length === 0 ? (
+            <div className="text-gray-500 text-center mt-8">
+              No appointments scheduled for this date.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {appointments.map((apt, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-md transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-800">
+                      {apt.name}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {apt.time}
+                    </div>
+                  </div>
+                  
+                  {/* Colored dot indicator */}
+                  <div
+                    className={`w-3 h-3 rounded-full flex-shrink-0 ml-3 ${
+                      apt.type === "student" ? "bg-[#ff9059]" : "bg-blue-600"
+                    }`}
+                    title={apt.type === "student" ? "Student Request" : "Staff Request"}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

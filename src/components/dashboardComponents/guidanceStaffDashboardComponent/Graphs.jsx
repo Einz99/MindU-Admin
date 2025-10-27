@@ -228,12 +228,45 @@ export function AlertsOvertime({ alerts }) {
     return result.reverse();
   }, [alerts]);
 
+  const generateDateRangeString = () => {
+    const firstDate = new Date(AlertData[0]?.date);
+    const lastDate = new Date(AlertData[AlertData.length - 1]?.date);
+
+    const startMonth = firstDate.getMonth() + 1; // Month is 0-based
+    const startYear = firstDate.getFullYear();
+    const endMonth = lastDate.getMonth() + 1;
+
+    return `${startMonth}-${endMonth} (${startYear})`;
+  };
+
+  const handleExportToExcel = () => {
+    const formattedData = AlertData.map((data) => ({
+      Date: data.date,
+      Alerts: data.value,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(formattedData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Alert Data");
+
+    const dateRange = generateDateRangeString();
+    XLSX.writeFile(wb, `alerts_${dateRange}.xlsx`);
+  };
+
   return (
     <div className="flex flex-col p-5">
       <div className="flex w-full flex-row justify-between">
         <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">
           Alerts Recorded Overtime
         </p>
+        <FileDownload
+          sx={{
+            fontSize: 25,
+            justifyItems: 'center',
+            color: '#64748b',
+          }}
+          onClick={handleExportToExcel} // Export when clicked
+        />
       </div>
       
       <div className="w-full h-[100%] px-2">
@@ -303,12 +336,46 @@ export function CompSchedules({ backlog, isAdviser }) {
     return result.reverse();
   }, [backlog]);
 
+  // Generate Date Range for File Name (e.g., 6-31 for 4 months)
+  const generateDateRangeString = () => {
+    const firstDate = new Date(Scheduledata[0]?.date);
+    const lastDate = new Date(Scheduledata[Scheduledata.length - 1]?.date);
+
+    const startMonth = firstDate.getMonth() + 1; // Month is 0-based
+    const startYear = firstDate.getFullYear();
+    const endMonth = lastDate.getMonth() + 1;
+
+    return `${startMonth}-${endMonth} (${startYear})`;
+  };
+
+  const handleExportToExcel = () => {
+    const formattedData = Scheduledata.map((data) => ({
+      Date: data.date,
+      CompletedSchedules: data.value,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(formattedData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Schedule Data");
+
+    const dateRange = generateDateRangeString();
+    XLSX.writeFile(wb, `schedules_${dateRange}.xlsx`);
+  };
+
   return (
     <div className="flex flex-col p-5">
       <div className="flex w-full flex-row justify-between">
         <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">
           Schedules Completed Overtime
         </p>
+        <FileDownload
+          sx={{
+            fontSize: 25,
+            justifyItems: 'center',
+            color: '#64748b',
+          }}
+          onClick={handleExportToExcel} // Export when clicked
+        />
       </div>
       
       <div className="w-full h-[100%] px-2">
@@ -383,6 +450,30 @@ export function PendingStudentRequests({ filterBacklog, width, padding }){
 };
 
 export function CalmiTriggerAlert({ alerts, padding }) {
+  const [filteredAlerts, setFilteredAlerts] = useState([]);
+
+  useEffect(() => {
+    // Step 1: Filter out resolved alerts
+    const unresolvedAlerts = alerts.filter(alert => alert.is_resolved === false);
+
+    // Step 2: Group alerts by student_id
+    const groupedAlerts = unresolvedAlerts.reduce((acc, alert) => {
+      if (!acc[alert.student_id]) {
+        acc[alert.student_id] = [];
+      }
+      acc[alert.student_id].push(alert);
+      return acc;
+    }, {});
+
+    // Step 3: For each student, select the oldest alert
+    const oldestAlerts = Object.values(groupedAlerts).map(studentAlerts => {
+      return studentAlerts.sort((a, b) => new Date(a.date) - new Date(b.date))[0]; // Sort by date (oldest first) and pick the first one
+    });
+
+    // Step 4: Set the filtered alerts to state
+    setFilteredAlerts(oldestAlerts);
+  }, [alerts]);
+
   const navigation = useNavigate();
 
   const handleViewAlert = (studentId) => {
@@ -422,12 +513,12 @@ export function CalmiTriggerAlert({ alerts, padding }) {
       
       <div className="w-full h-[90%] border-4 border-[#b91c1c] rounded-xl p-2 flex flex-col">
         <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-          {alerts.length === 0 ? (
+          {filteredAlerts.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-500 text-3xl">No Alerts Reported Today From Calmi</p>
             </div>
           ) : (
-            alerts.slice().reverse().map((item, index) => (
+            filteredAlerts.slice(5).reverse().map((item, index) => (
               <div
                 key={index}
                 className="w-full flex flex-row items-center justify-between border-b-2 border-[#94a3b8]"
@@ -528,7 +619,7 @@ export function ActiveStudentsPieChart({width, padding, marginTop, circleWidth})
   return (
     <div className={`flex flex-col w-[${width}%]  h-full p-${padding}`}>
       <div className="flex w-full flex-row justify-between items-center">
-        <p className="text-[#10b981] font-bold font-roboto">In app Student Login</p>
+        <p className="text-[#10b981] font-bold font-roboto text-2xl">In app Student Login</p>
         
         <div className="relative flex items-center bg-[#b7cde3] rounded-lg px-2 py-1">
           <span className="text-black text-sm mr-1">{SAText} |</span>
@@ -586,8 +677,8 @@ export function ActiveStudentsPieChart({width, padding, marginTop, circleWidth})
 export function LowerRight({ filterBacklog }){
   return (
     <div className="flex w-full h-full flex-row p-5 gap-10 justify-between">
-      <PendingStudentRequests filterBacklog={filterBacklog} width={60} padding={false}/>
-      <ActiveStudentsPieChart width={40} padding={2} marginTop={true}/>
+      <PendingStudentRequests filterBacklog={filterBacklog} width={50} padding={false}/>
+      <ActiveStudentsPieChart width={50} padding={2} marginTop={true}/>
     </div>
   );
 };

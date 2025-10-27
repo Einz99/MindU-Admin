@@ -39,7 +39,16 @@ export default function LiveAgent() {
     try {
       const response = await axios.get(`${API}/chatbot/students-asking-for-help`);
       if (response.data.studentHistory) {
-        setChatData(response.data.studentHistory);
+        const filteredChatData = response.data.studentHistory.map(chat => {
+          // Filter messages within each chat
+          const filteredMessages = chat.messages.filter(msg => msg.text !== "Connect to guidance");
+          
+          // Return the chat object with filtered messages
+          return { ...chat, messages: filteredMessages };
+        });
+
+        // Update the state with the filtered data
+        setChatData(filteredChatData);
       } else {
         setChatData([]);
       }
@@ -67,7 +76,8 @@ export default function LiveAgent() {
         
         const alertResponse = await axios.get(`${API}/chatbot/alerts`)
         if (alertResponse.data) {
-          setAlerts(alertResponse);
+          setAlerts(alertResponse.data);
+          console.log(alertResponse.data)
         } else {
           setAlerts([]);
         }
@@ -143,142 +153,183 @@ export default function LiveAgent() {
   };
 
   useEffect(() => {
-    if (!socketRef.current) {
-      const newSocket = io(RootAPI);
-      socketRef.current = newSocket;
+  if (!socketRef.current) {
+    const newSocket = io(RootAPI);
+    socketRef.current = newSocket;
 
-      newSocket.on('connect', () => {
-        console.log('✅ Agent connected to server:', newSocket.id);
-        newSocket.emit('join-agent');
-      });
-
-      newSocket.on('disconnect', () => {
-        console.log('❌ Agent disconnected from server');
-      });
-
-      newSocket.on('connect_error', (error) => {
-        console.error('Connection error:', error);
-      });
-
-      // Listen for agent room status
-      newSocket.on('agent-room-status', (data) => {
-        const { student_id, hasActiveAgent, agentCount } = data;
-        console.log(`Agent room status for ${student_id}: ${agentCount} agents`);
-        
-        setAgentInRoom(prev => ({
-          ...prev,
-          [student_id]: hasActiveAgent && agentCount > 1 // View-only if more than 1 agent
-        }));
-
-        // Update view-only status if this is the selected chat
-        if (selected !== null && chatData[selected]?.id === student_id) {
-          setIsViewOnly(hasActiveAgent && agentCount > 1);
-        }
-      });
-
-      // Listen for new help requests
-      newSocket.on('new-help-request', async (data) => {
-        console.log('🆕 New help request received:', data);
-        await fetchChatData();
-      });
-
-      // Listen for completed help requests
-      newSocket.on('help-request-completed', async (data) => {
-        console.log('✅ Help request completed:', data);
-        await fetchChatData();
-        
-        if (student_id === data.userId) {
-          setSelected(null);
-          setStudentId(0);
-          setIsViewOnly(false);
-        }
-      });
-
-      // Listen for chat accepted by another agent
-      newSocket.on('chat-accepted-by-another-agent', (data) => {
-        console.log('👁️ Chat accepted by another agent:', data);
-        
-        setChatData((prevChatData) => {
-          const updatedChatData = [...prevChatData];
-          const chatIndex = updatedChatData.findIndex(chat => chat.id === data.student_id);
-          
-          if (chatIndex >= 0) {
-            updatedChatData[chatIndex].status = 'on-going';
-            
-            // Set to view-only if this is the currently selected chat
-            if (selected === chatIndex) {
-              setIsViewOnly(true);
-              setAgentInRoom(prev => ({
-                ...prev,
-                [data.student_id]: true
-              }));
-            }
-          }
-          
-          return updatedChatData;
-        });
-      });
-    }
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.off('new-help-request');
-        socketRef.current.off('help-request-completed');
-        socketRef.current.off('chat-accepted-by-another-agent');
-        socketRef.current.off('agent-room-status');
-        socketRef.current.close();
-        socketRef.current = null;
-      }
-    };
-  }, [selected, student_id, chatData]);
-
-  useEffect(() => {
-    if (socketRef.current && student_id) {
-      console.log('🔗 Agent joining room for student:', student_id);
-      socketRef.current.emit('join-room', student_id);
+    newSocket.on('connect', () => {
+      console.log('✅ Agent connected to server:', newSocket.id);
+      newSocket.emit('join-agent');
       
-      // Check if agent already in room
-      checkAgentInRoom(student_id);
-    }
-  }, [student_id]);
+      // Rejoin all rooms for active chats after connection
+      if (chatData.length > 0) {
+        console.log('🔄 Rejoining rooms after connection...');
+        chatData.forEach(chat => {
+          console.log('🔗 Rejoining room for student:', chat.id);
+          newSocket.emit('join-room', chat.id);
+        });
+      }
+    });
 
-  useEffect(() => {
-    if (socketRef.current) {
-      socketRef.current.on('new-chat-message', (data) => {
-        const { student_id: msgStudentId, message, is_from_office } = data;
+    newSocket.on('disconnect', () => {
+      console.log('❌ Agent disconnected from server');
+    });
 
-        if (msgStudentId === student_id) {
-          setChatData((prevChatData) => {
-            const updatedChatData = [...prevChatData];
-            const chatIndex = updatedChatData.findIndex(chat => chat.id === msgStudentId);
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+    });
 
-            if (chatIndex >= 0) {
-              const newMessageObject = {
-                sender: is_from_office ? "agent" : "student",
-                text: message,
-                timestamp: new Date().toLocaleString()
-              };
+    // Listen for agent room status
+    newSocket.on('agent-room-status', (data) => {
+      const { student_id, hasActiveAgent, agentCount } = data;
+      console.log(`📊 Agent room status for ${student_id}: ${agentCount} agents`);
+      
+      setAgentInRoom(prev => ({
+        ...prev,
+        [student_id]: hasActiveAgent && agentCount > 1
+      }));
 
-              updatedChatData[chatIndex].messages.push(newMessageObject);
-              updatedChatData[chatIndex].lastMessage = message;
+      if (selected !== null && chatData[selected]?.id === student_id) {
+        setIsViewOnly(hasActiveAgent && agentCount > 1);
+      }
+    });
 
-              if (selected === chatIndex) {
-                setTimeout(() => scrollToBottom(), 50);
-              }
-            }
+    // Listen for new chat messages - THIS IS THE KEY FIX
+    newSocket.on('new-chat-message', (data) => {
+      console.log('📨 Received new-chat-message:', data);
+      const { student_id: msgStudentId, message, is_from_office } = data;
 
-            return updatedChatData;
-          });
+      setChatData((prevChatData) => {
+        const updatedChatData = [...prevChatData];
+        const chatIndex = updatedChatData.findIndex(chat => chat.id === msgStudentId);
+
+        if (chatIndex >= 0) {
+          const newMessageObject = {
+            sender: is_from_office ? "agent" : "student",
+            text: message,
+            timestamp: new Date().toLocaleString()
+          };
+
+          updatedChatData[chatIndex].messages.push(newMessageObject);
+          updatedChatData[chatIndex].lastMessage = message;
+
+          console.log(`✅ Message added to chat ${msgStudentId}`);
+          
+          // Scroll if this is the selected chat
+          if (updatedChatData[chatIndex].id === student_id) {
+            setTimeout(() => scrollToBottom(), 50);
+          }
+        } else {
+          console.warn(`⚠️ Chat index not found for student ${msgStudentId}`);
         }
+
+        return updatedChatData;
       });
+    });
 
-      return () => {
-        if (socketRef.current) {
-          socketRef.current.off('new-chat-message');
+    // Listen for new help requests
+    newSocket.on('new-help-request', async (data) => {
+      console.log('🆕 New help request received:', data);
+      await fetchChatData();
+    });
+
+    // Listen for completed help requests
+    newSocket.on('help-request-completed', async (data) => {
+      console.log('✅ Help request completed:', data);
+      await fetchChatData();
+      
+      if (student_id === data.userId) {
+        setSelected(null);
+        setStudentId(0);
+        setIsViewOnly(false);
+      }
+    });
+
+    // Listen for chat accepted by another agent
+    newSocket.on('chat-accepted-by-another-agent', (data) => {
+      console.log('👁️ Chat accepted by another agent:', data);
+      
+      setChatData((prevChatData) => {
+        const updatedChatData = [...prevChatData];
+        const chatIndex = updatedChatData.findIndex(chat => chat.id === data.student_id);
+        
+        if (chatIndex >= 0) {
+          updatedChatData[chatIndex].status = 'on-going';
+          
+          if (selected === chatIndex) {
+            setIsViewOnly(true);
+            setAgentInRoom(prev => ({
+              ...prev,
+              [data.student_id]: true
+            }));
+          }
         }
-      };
+        
+        return updatedChatData;
+      });
+    });
+
+    newSocket.on('agent-available', () => {
+      setChatData((prevChatData) => {
+        const updatedChatData = [...prevChatData];
+        if (selected !== null && updatedChatData[selected]) {
+          updatedChatData[selected].status = 'on-going'; 
+        }
+        return updatedChatData;
+      });
+    });
+
+    newSocket.on('student-chatStatus-updated', (data) => {
+      console.log('Chat status updated for user:', data.userId);
+      setChatData((prevChatData) => {
+        const updatedChatData = [...prevChatData];
+        const chatIndex = updatedChatData.findIndex((chat) => chat.id === data.userId);
+        if (chatIndex >= 0) {
+          updatedChatData[chatIndex].status = data.status;
+        }
+        return updatedChatData;
+      });
+    });
+  }
+
+  return () => {
+    if (socketRef.current) {
+      console.log('🧹 Cleaning up socket listeners');
+      socketRef.current.off('new-help-request');
+      socketRef.current.off('help-request-completed');
+      socketRef.current.off('chat-accepted-by-another-agent');
+      socketRef.current.off('agent-room-status');
+      socketRef.current.off('new-chat-message');
+      socketRef.current.off('agent-available');
+      socketRef.current.off('student-chatStatus-updated');
+      socketRef.current.close();
+      socketRef.current = null;
     }
-  }, [selected, student_id]);
+  };
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []); // Empty dependency array - only run once
+
+// CRITICAL: Join rooms when chatData updates
+useEffect(() => {
+  if (socketRef.current?.connected && chatData.length > 0) {
+    console.log('🔗 Joining rooms for all active chats:', chatData.length);
+    chatData.forEach(chat => {
+      console.log('📍 Emitting join-room for student:', chat.id);
+      socketRef.current.emit('join-room', chat.id);
+    });
+  }
+}, [chatData]);
+
+// Join room when student is selected
+useEffect(() => {
+  if (socketRef.current?.connected && student_id) {
+    console.log('🔗 Agent joining room for selected student:', student_id);
+    socketRef.current.emit('join-room', student_id);
+    
+    // Check if agent already in room
+    checkAgentInRoom(student_id);
+  }
+}, [student_id]);
 
   useEffect(() => {
     const selectedStudentId = localStorage.getItem('selectedStudentId');
@@ -319,7 +370,7 @@ export default function LiveAgent() {
           [student_id]: false
         }));
       
-        const isInAlerts = alerts.data?.some(alert => alert.student_id === student_id && alert.is_resolved === false);
+        const isInAlerts = alerts.data?.some(alert => alert.student_id === chatData[selected].id && alert.is_resolved === 0);
       
         let message;
         if (isInAlerts) {
@@ -346,25 +397,28 @@ export default function LiveAgent() {
     if (socketRef.current) {
       console.log('Agent disconnecting chat for student:', student_id);
       sendMessageToServer("Your session has expired.")
-      socketRef.current.emit('agent-disconnecting', { student_id });
-
       try {
-        const isInAlerts = alerts.data?.some(alert => alert.student_id === student_id && alert.is_resolved === false);
-
-        if (isInAlerts) {
-          await axios.put(`${API}/chatbot/resolve/${student_id}`)
-        }
+        // Check if student has unresolved alerts
+        const isInAlerts = alerts.data?.some(alert => alert.student_id === chatData[selected].id && alert.is_resolved === 0);
         
+        console.log("isInAlerts: " + isInAlerts)
+        if (isInAlerts) {
+          // Resolve alerts if the student is in distress
+          await axios.put(`${API}/chatbot/resolve/${student_id}`);
+          console.log('Alerts resolved for student:', student_id);
+        }
+
+        // Update the chat status for the student
         const response = await axios.put(`${API}/chatbot/deactivateStatus/${student_id}`);
         console.log('Chat status updated successfully:', response.data);
-        
-        await fetchChatData();
-        
+
+        await fetchChatData(); // Re-fetch chat data after the disconnection
+
         setSelected(null);
         setStudentId(0);
         setIsViewOnly(false);
         setOpenDisconnectModal(false);
-        setOpenDisconnectModal(false);
+        socketRef.current.emit('agent-disconnecting', { student_id });
       } catch (error) {
         console.error('Error updating chat status:', error);
       }
@@ -548,13 +602,14 @@ export default function LiveAgent() {
                   {chatData[selected].status === 'pending' && (
                     <div className="mb-2 flex justify-start flex-col w-fit">
                       <div className="py-2 px-4 rounded-lg max-w-md bg-[#1e3a8a] text-white">
-                        {alerts.data?.some(alert => alert.student_id === chatData[selected].id && alert.is_resolved === false) ? (
+                        {alerts.data?.some(alert => alert.student_id === chatData[selected].id && alert.is_resolved === 0) ? (
                           <>
                             <p className="text-sm font-bold">⚠️ Alert: Possible student in distress.</p>
+                            <br />
                             <p className="text-xs mt-1">This conversation was flagged for potential emotional distress. Please respond with empathy and assess if the student is safe.</p>
                           </>
                         ) : (
-                          <p className="text-sm">Incoming live agent request from {chatData[selected].name}</p>
+                          <p className="text-sm">A request to connect to the guidance has been sent by {chatData[selected].name}</p>
                         )}
                       </div>
 
@@ -615,7 +670,7 @@ export default function LiveAgent() {
             },
           }}
         >
-          <DialogTitle className="bg-[#ef4444] relative">
+          <DialogTitle className="bg-[#ef4444] relative font-bold">
             Confirm Disconnect
             <DialogActions className="absolute -top-1 right-0">
               <IconButton onClick={() => setOpenDisconnectModal(false)} className="rounded-full ">

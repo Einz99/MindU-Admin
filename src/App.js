@@ -34,7 +34,7 @@ export default function App() {
           <Route 
             path="/content-management" 
             element={
-              <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Advocate", "Admin"]}>
+              <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Staff", "Admin"]}>
                 <ContentManagement />
               </ProtectedRoute>
             } 
@@ -43,7 +43,7 @@ export default function App() {
           <Route 
             path="/user-management" 
             element={
-              <ProtectedRoute allowedRoles={["Guidance Counselor", "Admin", "Adviser"]}>
+              <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Staff", "Admin", "Adviser"]}>
                 <UserManagement />
               </ProtectedRoute>
             } 
@@ -52,7 +52,7 @@ export default function App() {
           <Route 
             path="/scheduler" 
             element={
-              <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Advocate", "Admin"]}>
+              <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Staff", "Admin"]}>
                 <Scheduler />
               </ProtectedRoute>
             } 
@@ -61,7 +61,7 @@ export default function App() {
           <Route 
             path="/Chat" 
             element={
-              <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Advocate", "Admin"]}>
+              <ProtectedRoute allowedRoles={["Guidance Counselor", "Guidance Staff", "Admin"]}>
                 <LiveAgent />
               </ProtectedRoute>
             } 

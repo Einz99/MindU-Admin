@@ -583,7 +583,7 @@ const UserDialog = ({
                     displayEmpty
                   >
                     <MenuItem value="" disabled hidden>Select position</MenuItem>
-                    <MenuItem value="Guidance Advocate">Guidance Advocate</MenuItem>
+                    <MenuItem value="Guidance Staff">Guidance Staff</MenuItem>
                     <MenuItem value="Guidance Counselor">Guidance Counselor</MenuItem>
                   </Select>
                   

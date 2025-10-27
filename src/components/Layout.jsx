@@ -359,7 +359,7 @@ export default function Layout({ open, onMenuClick }) {
             </Typography>
           </div>
           <div className="flex gap-4 items-center">
-            {staff.position === 'Guidance Advocate' && (
+            {staff.position !== 'Adviser' && (
               <Link to="/Chat">
                 <IconButton color="inherit">
                   <Badge badgeContent={robitBadge} color="error">
@@ -423,7 +423,7 @@ export default function Layout({ open, onMenuClick }) {
             {menuItems.map((item, index) => ((
               (index === 0) ||   
               ((index === 2 || index === 1) && staffData.position !== "Adviser") || 
-              (index === 3 && (staffData.position !== 'Guidance Advocate'))) && (
+              (index === 3)) && (
               <ListItem key={index} disablePadding className="w-full">
                 <ListItemButton
                   component={Link}

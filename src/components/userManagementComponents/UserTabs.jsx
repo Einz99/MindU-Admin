@@ -12,9 +12,15 @@ export default function UserTabs({
   staff
 }) {
   const isAdviser = staff?.position === "Adviser";
+  const isStaff = staff?.position === "Guidance Staff";
 
   const visibleTabs = isAdviser 
     ? [{ label: "Students" }] 
+    : isStaff ? 
+      [
+        { label: "Students" },
+        { label: "Advisers" },
+      ] 
     : [
         { label: "Students" },
         { label: "Advisers" },

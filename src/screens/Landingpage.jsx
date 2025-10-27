@@ -146,7 +146,7 @@ export default function Landingpage() {
   const renderBasedOnRole = () => {
     if (staff.position === "Adviser") {
         return <AdviserFullDashboard backlogs={backlogs}/>;
-    } else if (staff.position === "Guidance Advocate") {
+    } else if (staff.position === "Guidance Staff") {
       return <StaffDashboard />;
     } else if (staff.position === "Admin" || staff.position === "Guidance Counselor") {
       return (
@@ -246,12 +246,12 @@ export default function Landingpage() {
       {/* Main Content */}
       <main
         className={`flex-1 bg-[#f8fafc] transition-all ${
-          open ? "ml-60" : "ml-20"
+          open ? "ml-60" : "ml-16"
         } mt-20`}
         style={{ height: "calc(100vh - 80px)"}}
       >
         <div 
-          className="flex flex-col flex-grow gap-[clamp(0.75rem,1.5vw,2rem)] px-[clamp(1rem,2vw,4rem)] pt-4"
+          className="flex flex-col flex-grow gap-[clamp(0.75rem,1.5vw,2rem)] px-[clamp(0.5rem,1vw,2rem)] pt-4"
           style={{ height: "100%"}}
         >
           <div 
