@@ -8,7 +8,6 @@ import axios from "axios";
 import { useContext } from 'react';
 import { OpenContext } from '../contexts/OpenContext';
 import { Download, FilterAlt, Sort } from "@mui/icons-material";
-import * as XLSX from 'xlsx';
 import { format } from "date-fns";
 
 /**
@@ -123,6 +122,42 @@ export default function Scheduler() {
     setSortType(type);
   }
 
+  // 🔹 Helper function to convert array to CSV string
+  const convertToCSV = (data, headers) => {
+    const csvRows = [];
+    
+    // Add headers
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    data.forEach(row => {
+      const values = headers.map(header => {
+        const value = row[header] || '';
+        // Escape values that contain commas, quotes, or newlines
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+  };
+
+  // 🔹 Helper function to download CSV
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Add this function inside your Scheduler component
   const handleDownload = () => {
     // Get the filtered and sorted data from the table
@@ -167,24 +202,13 @@ export default function Scheduler() {
         return a.name.localeCompare(b.name);
       });
 
-    // Format data for Excel
-    const excelData = filteredData.map((data) => ({
+    // Format data for CSV
+    const csvData = filteredData.map((data) => ({
       'Name/Event': data.name,
       'Date & Time': format(new Date(data.sched_date), "MMMM dd, yyyy hh:mm a"),
       'Status': data.status,
       'Message': data.message || 'N/A',
     }));
-
-    // Create worksheet
-    const ws = XLSX.utils.json_to_sheet(excelData);
-
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 30 }, // Name/Event
-      { wch: 25 }, // Date & Time
-      { wch: 15 }, // Status
-      { wch: 50 }, // Message
-    ];
 
     const filterNames = {
       0: 'All',
@@ -197,15 +221,14 @@ export default function Scheduler() {
     const filterName = filterNames[filterType] || 'All';
     const currentDate = format(new Date(), "yyyy-MM-dd");
 
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Scheduler Data');
+    // Generate CSV content
+    const csvContent = convertToCSV(csvData, ['Name/Event', 'Date & Time', 'Status', 'Message']);
 
     // Generate filename with current date
-    const filename = `Scheduler_${tabName}_${filterName}_${currentDate}.xlsx`;
+    const filename = `Scheduler_${tabName}_${filterName}_${currentDate}.csv`;
 
     // Download file
-    XLSX.writeFile(wb, filename);
+    downloadCSV(csvContent, filename);
   };
 
   return (

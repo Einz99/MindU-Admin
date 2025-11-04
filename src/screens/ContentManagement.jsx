@@ -40,9 +40,15 @@ export default function ContentManagement() {
       const endpoints = [
         `${API}/resources/`,
         `${API}/resources/wellness`,
-        `${API}/announcements`
+        `${API}/announcements`,
+        `${API}/chatbotSettings/admin/all`
       ];
       const response = await axios.get(endpoints[tab]);
+      if(tab === 3) {
+        setData(response.data.faqs);
+        console.log(response.data.faqs);
+        return;
+      }
       setData(response.data);
     } catch (error) {
     }
@@ -75,40 +81,63 @@ export default function ContentManagement() {
   }
 
   const handleDeleteConfirm = async () => {
-    try {
-      const deleteEndpoints = [
-        `${API}/resources/`,
-        `${API}/resources/`,
-        `${API}/announcements/`
-      ];
-      setLoading(true);
-      const staff = JSON.parse(localStorage.getItem("staff"));
-      if (deleteTarget) {
-        // Use the POST endpoint for deleting single items too
-        await axios.post(`${deleteEndpoints[tab]}delete-multiple`, { ids: [deleteTarget], staff_name: staff.name, staff_position: staff.position });
-        setData((prevData) => prevData.filter((item) => item.ID !== deleteTarget));
-        setDeleteTarget(null);
-        updateContent();
-        onCloseDelete();
-        setLoading(false);
-      } else if (selectedItems.length > 0) {
-        await axios.post(`${deleteEndpoints[tab]}delete-multiple`, { ids: selectedItems, staff_name: staff.name, staff_position: staff.position });
-        setData((prevData) => prevData.filter((item) => !selectedItems.includes(item.ID)));
-        setSelectedItems([]);
-        updateContent();
-        onCloseDelete();
-        setLoading(false);
-      }
-      setIsDeleteOpen(false);
+  try {
+    const deleteEndpoints = [
+      `${API}/resources/`,
+      `${API}/resources/`,
+      `${API}/announcements/`,
+      `${API}/faq/admin/` // FAQ endpoint
+    ];
+    setLoading(true);
+    const staff = JSON.parse(localStorage.getItem("staff"));
+    
+    if (deleteTarget) {
+      // Single delete
+      await axios.post(`${deleteEndpoints[tab]}delete-multiple`, { 
+        ids: [deleteTarget], 
+        staff_name: staff.name, 
+        staff_position: staff.position 
+      });
+      setData((prevData) => prevData.filter((item) => (item.ID || item.id) !== deleteTarget));
+      setDeleteTarget(null);
+      updateContent();
+      onCloseDelete();
       setLoading(false);
-      const message = tab === 0 ? "Resource Deleted Successfully" : tab === 1 ? "Wellness Deleted Successfully" : "Announcement Deleted Successfully";
-      setAlertMessage(message);
-      setIsSuccessful(true);
-      setOpenError(true);
-    } catch (error) {
-      console.error("Error deleting content:", error);
+    } else if (selectedItems.length > 0) {
+      // Bulk delete
+      await axios.post(`${deleteEndpoints[tab]}delete-multiple`, { 
+        ids: selectedItems, 
+        staff_name: staff.name, 
+        staff_position: staff.position 
+      });
+      setData((prevData) => prevData.filter((item) => !selectedItems.includes(item.ID || item.id)));
+      setSelectedItems([]);
+      updateContent();
+      onCloseDelete();
+      setLoading(false);
     }
-  };
+    
+    setIsDeleteOpen(false);
+    setLoading(false);
+    
+    const messages = [
+      "Resource Deleted Successfully",
+      "Wellness Deleted Successfully",
+      "Announcement Deleted Successfully",
+      "FAQ Deleted Successfully"
+    ];
+    
+    setAlertMessage(messages[tab]);
+    setIsSuccessful(true);
+    setOpenError(true);
+  } catch (error) {
+    console.error("Error deleting content:", error);
+    setAlertMessage("Failed to delete content.");
+    setIsSuccessful(false);
+    setOpenError(true);
+    setLoading(false);
+  }
+};
 
   const handleDeleteOpen = () => {
     if (selectedItems.length === 0) {
@@ -232,6 +261,7 @@ export default function ContentManagement() {
         selectedItems={selectedItems}
         data={data}
         loading={loading}
+        tab={tab}
       />
 
       <Dialog

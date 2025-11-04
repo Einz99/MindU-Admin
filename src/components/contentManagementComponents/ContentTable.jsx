@@ -119,6 +119,161 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
     }[action];
   };
 
+  const TableHeadCells = (tab) => {
+    switch (tab) {
+      case 0:
+        return (
+          <>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Type</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Description</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Status</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Date Posted</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
+            </TableCell>
+          </>
+        );
+      case 1:
+        return (
+          <>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Description</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Status</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Date Posted</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
+            </TableCell>
+          </>
+        );
+      case 2:
+        return (
+          <>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Content</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">End Date</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Date Modified</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
+            </TableCell>
+          </>
+        );
+      case 3:
+        return (
+          <>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Answer</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Status</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Date Posted</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
+            </TableCell>
+          </>
+        );
+      case 4:
+        return (
+          <>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Status</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Date Posted</p>
+            </TableCell>
+            <TableCell className="p-3 font-bold text-center">
+              <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
+            </TableCell>
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const noFoundMessage = () => {
+    switch (tab) {
+      case 0:
+        return "No Resources Found";
+      case 1:
+        return "No Wellness Found";
+      case 2:
+        return "No Announcements Found";
+      case 3:
+        return "No FAQs Found";
+      case 4:
+        return "No Triggers Found"; 
+      default:
+        return "No Items Found";
+    }
+  };
+
+  const tableBodyCells = (item, tab) => {
+    switch (tab) {
+      case 0:
+        return (
+          <>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.resourceType}</p></TableCell>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.description ? item.description : "No Description Available"}</p></TableCell>
+            <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.status}</p></TableCell>
+            <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.posted_at)}</p></TableCell>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.created_at)}</p></TableCell>
+          </>
+        );
+      case 1:
+        return (
+          <>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.description}</p></TableCell>
+            <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.status}</p></TableCell>
+            <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.posted_at)}</p></TableCell>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.created_at)}</p></TableCell>
+          </>
+        );
+      case 2:
+        return (
+          <>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.announcementContent}</p></TableCell>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.end_date)}</p></TableCell>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.modified_at)}</p></TableCell>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.created_at)}</p></TableCell>
+          </>
+        );
+      case 3:
+        return (
+          <>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.answer}</p></TableCell>
+            <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.status}</p></TableCell>
+            <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.posted_at)}</p></TableCell>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.created_at)}</p></TableCell>
+          </>
+        );
+      case 4: 
+        return null;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div>
       <TableContainer className="border-b border-black">
@@ -134,61 +289,13 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell className="p-3 font-bold">
-                <p className="mx-auto font-roboto font-bold">Title</p>
+              <TableCell className="p-3 font-bold text-center">
+                <p className="mx-auto font-roboto font-bold">{tab === 3 ? "Question" : tab === 4 ? "Trigger" : "Title"}</p>
               </TableCell>
               <TableCell className="p-3 font-bold text-center">
                 <p className="mx-auto font-roboto font-bold text-center">Category</p>
               </TableCell>
-              {tab === 0 ? (
-                <>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Type</p>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Description</p>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Status</p>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Date Posted</p>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
-                  </TableCell>
-                </>
-              ) : tab === 1 ? (
-                <>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Description</p>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Status</p>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Date Posted</p>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
-                  </TableCell>
-                </>
-              ) : (
-                <>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Content</p>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">End Date</p>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Date Modified</p>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-center">
-                    <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
-                  </TableCell>
-                </>
-              )}
+              {TableHeadCells(tab)}
               <TableCell className="p-1 text-center w-[12.5%]">
                 <p className="mx-auto font-roboto font-bold text-center">Actions</p>
               </TableCell>
@@ -204,7 +311,7 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
                   sx={{ borderBottom: "none" }}
                   className="text-center py-10 text-gray-500"
                 >
-                  <p className="text-center font-roboto font-bold">No {tab === 0 ? "Resources Found" : tab === 1 ? "Wellness Found" : "Announcement Found"}</p>
+                  <p className="text-center font-roboto font-bold">{noFoundMessage(tab)}</p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -225,7 +332,7 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
                     className="p-3 text-center"
                     sx={{ borderBottom: "none" }}
                   >
-                    {item.title}
+                    {tab === 3 ? item.question : item.title}
                   </TableCell>
                   <TableCell 
                     className="p-3 text-center"
@@ -233,29 +340,7 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
                   >
                     <p className="text-center">{item.category}</p>
                   </TableCell>
-                  {tab === 0 ? (
-                    <>
-                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.resourceType}</p></TableCell>
-                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.description ? item.description : "No Description Available"}</p></TableCell>
-                      <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.status}</p></TableCell>
-                      <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.posted_at)}</p></TableCell>
-                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.created_at)}</p></TableCell>
-                    </>
-                  ) : tab === 1 ? (
-                    <>
-                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.description}</p></TableCell>
-                    <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.status}</p></TableCell>
-                    <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.posted_at)}</p></TableCell>
-                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.created_at)}</p></TableCell>
-                    </>
-                  ) : (
-                    <>
-                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.announcementContent}</p></TableCell>
-                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.end_date)}</p></TableCell>
-                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.modified_at)}</p></TableCell>
-                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.created_at)}</p></TableCell>
-                    </>
-                  )}
+                  {tableBodyCells(item, tab)}
                   <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
                     <div className="flex justify-center">
                       <Tooltip title={getLabel("view")} arrow>

@@ -61,7 +61,7 @@ export default function ContentDialog({
   const [blob, setBlob] = useState(null);
   const [editorData, setEditorData] = useState(null);
   const [isDraft, setIsDraft] = useState(false);
-  const [showSaveDialog, setShowSaveDialog] = useState(false); // 🆕 Confirmation dialog state
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
   
   const handleDialogClose = () => {
     setDialogOpen(false);
@@ -80,11 +80,17 @@ export default function ContentDialog({
     setShowSaveDialog(false);
   };
 
-  // 🆕 Check if there are unsaved changes
   const hasUnsavedChanges = () => {
-    if (editMode || viewMode || tab === 2) return false; // 👈 Added tab === 2 check
+    if (editMode || viewMode || tab === 2) return false;
     
-    // Check if any field has content
+    if (tab === 3) {
+      return (
+        newItem.question?.trim() ||
+        newItem.answer?.trim() ||
+        newItem.category?.trim()
+      );
+    }
+    
     return (
       newItem.title?.trim() ||
       newItem.description?.trim() ||
@@ -99,7 +105,6 @@ export default function ContentDialog({
     );
   };
 
-  // 🆕 Handle close attempt
   const handleCloseAttempt = () => {
     if (hasUnsavedChanges()) {
       setShowSaveDialog(true);
@@ -108,13 +113,11 @@ export default function ContentDialog({
     }
   };
 
-  // 🆕 Handle save as draft from confirmation
   const handleSaveAsDraft = async () => {
     setShowSaveDialog(false);
     await handleSave(true);
   };
 
-  // 🆕 Handle discard changes
   const handleDiscardChanges = () => {
     setShowSaveDialog(false);
     handleDialogClose();
@@ -129,7 +132,7 @@ export default function ContentDialog({
   }, [articleFile, isDraft]);
 
   useEffect(() => {
-    if (tab === 2) return;
+    if (tab === 2 || tab === 3) return;
     if ((editMode && editId) || (editId && isAdd === false)) {
       setPreview(`${RootAPI}${newItem.banner}`);
 
@@ -221,6 +224,7 @@ export default function ContentDialog({
     0: ["Emotional/Mental", "Social", "Financial/Occupation", "Physical", "Spiritual", "Intellectual", "Environmental"],
     1: ["Breathing Exercises", "Meditation Guide"],
     2: ["Important", "General", "Update", "Advisory"],
+    3: ["Emotional & Mental Wellness", "Social Wellness", "Financial & Occupational Wellness", "Physical Wellness", "Spiritual Wellness", "Intellectual Wellness", "Environmental Wellness"],
   }[tab] || [];
 
   function formatDateForMySQL(date) {
@@ -236,9 +240,25 @@ export default function ContentDialog({
       let requestBody;
       const staff = JSON.parse(localStorage.getItem("staff"));
       const isUpdating = editMode;
-      const statusText = isDraft ? "Draft" : "Posted";
+      const statusText = isDraft ? "draft" : "posted";
     
-      if (tab === 2) {
+      if (tab === 3) {
+        // FAQ handling
+        requestBody = {
+          category: newItem.category || "",
+          question: newItem.question || "",
+          answer: newItem.answer || "",
+          status: statusText
+        };
+        response = isUpdating
+          ? await axios.put(`${API}/faq/admin/update/${editId}`, requestBody, { 
+              headers: { "Content-Type": "application/json" } 
+            })
+          : await axios.post(`${API}/faq/admin/create`, requestBody, { 
+              headers: { "Content-Type": "application/json" } 
+            });
+      } else if (tab === 2) {
+        // Announcement handling
         requestBody = {
           title: newItem.title || "",
           category: newItem.category || "",
@@ -248,9 +268,14 @@ export default function ContentDialog({
           staff_position: staff.position || "",
         };
         response = isUpdating
-          ? await axios.put(`${API}/announcements/${editId}`, requestBody, { headers: { "Content-Type": "application/json" } })
-          : await axios.post(`${API}/announcements`, requestBody, { headers: { "Content-Type": "application/json" } });
+          ? await axios.put(`${API}/announcements/${editId}`, requestBody, { 
+              headers: { "Content-Type": "application/json" } 
+            })
+          : await axios.post(`${API}/announcements`, requestBody, { 
+              headers: { "Content-Type": "application/json" } 
+            });
       } else {
+        // Resource/Wellness handling
         const formData = new FormData();
         formData.append("title", newItem.title || "");
         formData.append("category", newItem.category || "");
@@ -275,14 +300,21 @@ export default function ContentDialog({
       }
     
       setData((prev) =>
-        isUpdating ? prev.map((item) => (item.ID === editId ? response.data : item)) : [...prev, response.data]
+        isUpdating ? prev.map((item) => (item.ID === editId || item.id === editId ? response.data : item)) : [...prev, response.data]
       );
     
       let alertMessage = "";
-      if (!isUpdating && isDraft) alertMessage = "Draft created successfully.";
-      else if (!isUpdating && !isDraft) alertMessage = "Post created successfully.";
-      else if (isUpdating && isDraft) alertMessage = "Draft updated successfully.";
-      else if (isUpdating && !isDraft) alertMessage = "Post updated successfully.";
+      if (tab === 3) {
+        if (!isUpdating && isDraft) alertMessage = "FAQ draft created successfully.";
+        else if (!isUpdating && !isDraft) alertMessage = "FAQ posted successfully.";
+        else if (isUpdating && isDraft) alertMessage = "FAQ draft updated successfully.";
+        else if (isUpdating && !isDraft) alertMessage = "FAQ updated successfully.";
+      } else {
+        if (!isUpdating && isDraft) alertMessage = "Draft created successfully.";
+        else if (!isUpdating && !isDraft) alertMessage = "Post created successfully.";
+        else if (isUpdating && isDraft) alertMessage = "Draft updated successfully.";
+        else if (isUpdating && !isDraft) alertMessage = "Post updated successfully.";
+      }
       
       setAlertMessage(alertMessage)
       setIsSuccessful(true)
@@ -348,6 +380,13 @@ export default function ContentDialog({
   }, [editMode, setNewItem])
 
   const isFormValid = () => {
+    if (tab === 3) {
+      return (
+        newItem.question?.trim() &&
+        newItem.answer?.trim() &&
+        newItem.category?.trim()
+      );
+    }
     if (tab === 2) {
       return (
         newItem.title?.trim() &&
@@ -432,11 +471,11 @@ export default function ContentDialog({
       </Dialog>
 
       <DialogWrapper
-        maxwidth={`${tab === 2 ? "sm" : "md"}`}
+        maxwidth={`${tab === 2 || tab === 3 ? "sm" : "md"}`}
         open={isArticle || open}
         onClose={tab === 2 ? handleDialogClose : handleCloseAttempt}
         title={`${editMode ? "Edit " : isAdd === false ? "View ": "Add "} ${
-          tab === 0 ? "Resource" : tab === 1 ? "Wellness" : "Announcement"
+          tab === 0 ? "Resource" : tab === 1 ? "Wellness" : tab === 2 ? "Announcement" : "Chatbot FAQ"
         }`}
         actionButtons={
         <>
@@ -504,18 +543,21 @@ export default function ContentDialog({
       }
       >
         <div className="w-full">
-          {/* Title Field */}
-          <div className="flex flex-row">
-            <div className={`${isVideo === true ? 'w-[50%]' : 'w-full'}`}>
-              <h1 className="text-3xl text-[#737373] font-normal">Title</h1>
+          {/* FAQ Form (tab === 3) */}
+          {tab === 3 ? (
+            <>
+              <h1 className="text-3xl text-[#737373] font-normal">Question</h1>
               <TextField
-                name="title"
+                name="question"
                 placeholder="Type here..."
                 fullWidth
                 variant="outlined"
-                value={newItem.title || ""}
+                multiline
+                rows={2}
+                value={newItem.question || ""}
                 onChange={handleInputChange}
                 margin="dense"
+                disabled={!editMode && !isAdd}
                 sx={{
                   borderWidth: "2px",
                   borderColor: "gray",
@@ -532,278 +574,375 @@ export default function ContentDialog({
                 }}
               />
 
-              {/* Conditionally show content for Announcement vs. Resource/Wellness */}
-              {tab === 2 ? (
-                <>
-                  {/* Category Field for Announcements - Moved above content */}
-                  <FormControl fullWidth margin="dense">
-                    <h1 className="text-3xl text-[#737373] font-normal">Category</h1>
-                    <h1 className="text-lg text-gray-400 mb-4">
-                      Select a category that the post falls under
-                    </h1>
-                    <Select
-                      name="category"
-                      value={newItem.category || ""}
-                      onChange={handleCategoryChange}
-                      displayEmpty
-                      sx={{
+              <h1 className="text-3xl text-[#737373] font-normal mt-4">Answer</h1>
+              <TextField
+                name="answer"
+                placeholder="Type here..."
+                fullWidth
+                variant="outlined"
+                multiline
+                rows={4}
+                value={newItem.answer || ""}
+                onChange={handleInputChange}
+                margin="dense"
+                disabled={!editMode && !isAdd}
+                sx={{
+                  borderWidth: "2px",
+                  borderColor: "gray",
+                  borderRadius: "12px",
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": {
+                      borderWidth: "2px",
+                      borderColor: "gray",
+                      borderRadius: "12px",
+                    },
+                    "&:hover fieldset": { borderColor: "darkgray" },
+                    "&.Mui-focused fieldset": { borderColor: "black" },
+                  },
+                }}
+              />
+
+              <FormControl fullWidth margin="dense">
+                <h1 className="text-3xl text-[#737373] font-normal">Category</h1>
+                <h1 className="text-lg text-gray-400 mb-4">
+                  Select a category where the FAQ falls under
+                </h1>
+                <Select
+                  name="category"
+                  value={newItem.category || ""}
+                  onChange={handleCategoryChange}
+                  displayEmpty
+                  disabled={!editMode && !isAdd}
+                  sx={{
+                    borderWidth: "2px",
+                    borderColor: "gray",
+                    borderRadius: "12px",
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
                         borderWidth: "2px",
                         borderColor: "gray",
                         borderRadius: "12px",
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": {
+                      },
+                      "&:hover fieldset": { borderColor: "darkgray" },
+                      "&.Mui-focused fieldset": { borderColor: "black" },
+                    },
+                  }}
+                >
+                  <MenuItem value="" disabled>
+                    <p className="text-gray-400">Select Category</p>
+                  </MenuItem>
+                  {categoryOptions.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </>
+          ) : (
+            <>
+              {/* Original Form for other tabs */}
+              <div className="flex flex-row">
+                <div className={`${isVideo === true ? 'w-[50%]' : 'w-full'}`}>
+                  <h1 className="text-3xl text-[#737373] font-normal">Title</h1>
+                  <TextField
+                    name="title"
+                    placeholder="Type here..."
+                    fullWidth
+                    variant="outlined"
+                    disabled={!editMode && !isAdd}
+                    value={newItem.title || ""}
+                    onChange={handleInputChange}
+                    margin="dense"
+                    sx={{
+                      borderWidth: "2px",
+                      borderColor: "gray",
+                      borderRadius: "12px",
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderWidth: "2px",
+                          borderColor: "gray",
+                          borderRadius: "12px",
+                        },
+                        "&:hover fieldset": { borderColor: "darkgray" },
+                        "&.Mui-focused fieldset": { borderColor: "black" },
+                      },
+                    }}
+                  />
+
+                  {tab === 2 ? (
+                    <>
+                      <FormControl fullWidth margin="dense">
+                        <h1 className="text-3xl text-[#737373] font-normal">Category</h1>
+                        <h1 className="text-lg text-gray-400 mb-4">
+                          Select a category that the post falls under
+                        </h1>
+                        <Select
+                          name="category"
+                          value={newItem.category || ""}
+                          onChange={handleCategoryChange}
+                          displayEmpty
+                          disabled={!editMode && !isAdd}
+                          sx={{
                             borderWidth: "2px",
                             borderColor: "gray",
                             borderRadius: "12px",
-                          },
-                          "&:hover fieldset": { borderColor: "darkgray" },
-                          "&.Mui-focused fieldset": { borderColor: "black" },
-                        },
-                      }}
-                    >
-                      <MenuItem value="" disabled>
-                        <p className="text-gray-400">Select Category</p>
-                      </MenuItem>
-                      {categoryOptions.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl fullWidth margin="dense">
-                    <h1 className="text-3xl text-[#737373] font-normal">
-                      Duration of Announcement
-                    </h1>
-                    <h1 className="text-lg text-gray-400">
-                      Select the date when the announcement will expire
-                    </h1>
+                            "& .MuiOutlinedInput-root": {
+                              "& fieldset": {
+                                borderWidth: "2px",
+                                borderColor: "gray",
+                                borderRadius: "12px",
+                              },
+                              "&:hover fieldset": { borderColor: "darkgray" },
+                              "&.Mui-focused fieldset": { borderColor: "black" },
+                            },
+                          }}
+                        >
+                          <MenuItem value="" disabled>
+                            <p className="text-gray-400">Select Category</p>
+                          </MenuItem>
+                          {categoryOptions.map((option) => (
+                            <MenuItem key={option} value={option}>
+                              {option}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl fullWidth margin="dense">
+                        <h1 className="text-3xl text-[#737373] font-normal">
+                          Duration of Announcement
+                        </h1>
+                        <h1 className="text-lg text-gray-400">
+                          Select the date when the announcement will expire
+                        </h1>
 
-                    <LocalizationProvider dateAdapter={AdapterDateFns}>
-                      <DatePicker
-                        value={newItem.end_date ? new Date(newItem.end_date) : new Date(minDate)}
-                        onChange={(newValue) => {
-                          handleDateChange({
-                            target: {
-                              name: 'end_date',
-                              value: newValue ? newValue.toISOString().split('T')[0] : ''
-                            }
-                          });
-                        }}
-                        minDate={new Date(minDate)}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            margin: "normal",
-                            sx: {
-                              borderWidth: "2px",
-                              borderColor: "gray",
-                              borderRadius: "12px",
-                              "& .MuiOutlinedInput-root": {
-                                "& fieldset": {
+                        <LocalizationProvider dateAdapter={AdapterDateFns}>
+                          <DatePicker
+                            value={newItem.end_date ? new Date(newItem.end_date) : new Date(minDate)}
+                            onChange={(newValue) => {
+                              handleDateChange({
+                                target: {
+                                  name: 'end_date',
+                                  value: newValue ? newValue.toISOString().split('T')[0] : ''
+                                }
+                              });
+                            }}
+                            disabled={!editMode && !isAdd}
+                            minDate={new Date(minDate)}
+                            slotProps={{
+                              textField: {
+                                fullWidth: true,
+                                margin: "normal",
+                                sx: {
                                   borderWidth: "2px",
                                   borderColor: "gray",
                                   borderRadius: "12px",
+                                  "& .MuiOutlinedInput-root": {
+                                    "& fieldset": {
+                                      borderWidth: "2px",
+                                      borderColor: "gray",
+                                      borderRadius: "12px",
+                                    },
+                                    "&:hover fieldset": { borderColor: "darkgray" },
+                                    "&.Mui-focused fieldset": { borderColor: "black" },
+                                  },
                                 },
-                                "&:hover fieldset": { borderColor: "darkgray" },
-                                "&.Mui-focused fieldset": { borderColor: "black" },
                               },
+                              popper: {
+                                placement: "bottom-end",
+                                modifiers: [
+                                  {
+                                    name: 'flip',
+                                    enabled: false,
+                                  },
+                                ],
+                              },
+                            }}
+                          />
+                        </LocalizationProvider>
+                      </FormControl>
+                      <h1 className="text-3xl text-[#737373] font-normal">Content</h1>
+                      <TextField
+                        name="announcementContent"
+                        placeholder="Type here..."
+                        fullWidth
+                        variant="outlined"
+                        multiline
+                        rows={5}
+                        value={newItem.announcementContent || ""}
+                        onChange={handleInputChange}
+                        margin="dense"
+                        disabled={!editMode && !isAdd}
+                        sx={{
+                          borderWidth: "2px",
+                          borderColor: "gray",
+                          borderRadius: "12px",
+                          "& .MuiOutlinedInput-root": {
+                            "& fieldset": {
+                              borderWidth: "2px",
+                              borderColor: "gray",
+                              borderRadius: "12px",
                             },
-                          },
-                          popper: {
-                            placement: "bottom-end", // 👈 Calendar appears aligned to the right
-                            modifiers: [
-                              {
-                                name: 'flip',
-                                enabled: false,
-                              },
-                            ],
+                            "&:hover fieldset": { borderColor: "darkgray" },
+                            "&.Mui-focused fieldset": { borderColor: "black" },
                           },
                         }}
                       />
-                    </LocalizationProvider>
-                  </FormControl>
-                  <h1 className="text-3xl text-[#737373] font-normal">Content</h1>
-                  <TextField
-                    name="announcementContent"
-                    placeholder="Type here..."
-                    fullWidth
-                    variant="outlined"
-                    multiline
-                    rows={5}
-                    value={newItem.announcementContent || ""}
-                    onChange={handleInputChange}
-                    margin="dense"
-                    sx={{
-                      borderWidth: "2px",
-                      borderColor: "gray",
-                      borderRadius: "12px",
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderWidth: "2px",
-                          borderColor: "gray",
-                          borderRadius: "12px",
-                        },
-                        "&:hover fieldset": { borderColor: "darkgray" },
-                        "&.Mui-focused fieldset": { borderColor: "black" },
-                      },
-                    }}
-                  />
-                </>
-              ) : ((tab === 0 || tab === 1) && isVideo === true) && (
-                <>
-                  <h1 className="text-3xl text-[#737373] font-normal">Description</h1>
-                  <TextField
-                    name="description"
-                    fullWidth
-                    variant="outlined"
-                    multiline
-                    rows={3}
-                    placeholder="Type here..."
-                    value={newItem.description || ""}
-                    onChange={handleInputChange}
-                    margin="dense"
-                    sx={{
-                      borderWidth: "2px",
-                      borderColor: "gray",
-                      borderRadius: "12px",
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderWidth: "2px",
-                          borderColor: "gray",
-                          borderRadius: "12px",
-                        },
-                        "&:hover fieldset": { borderColor: "darkgray" },
-                        "&.Mui-focused fieldset": { borderColor: "black" },
-                      },
-                    }}
-                  />
-                </>
-              )}
-            </div>
-            
-
-            {/* If it's a video resource, include the video upload preview */}
-            {isVideo && (
-              <div className="w-[50%] h-[18.4rem] px-5">
-                <div className="w-full h-[75%]">
-                  <ReactPlayer url={videoPreview} controls width="100%" height="100%" />
-                </div>
-                <div
-                  className="w-full h-[25%] bg-[#b7cde3] rounded-b-3xl px-4"
-                  {...getRootProps()}
-                >
-                  <input
-                    {...getInputProps()}
-                    onChange={handleVideoUpload}
-                    disabled={viewMode}
-                    onClick={() => (newItem.resourceType = "Video")}
-                  />
-                  <h1 className="text-sm text-gray-500">File Name:</h1>
-                  <p className="font-bold text-gray-800">{videoPath}</p>
-                </div>
-              </div>
-            )}
-          </div>
-          
-      
-          {/* Render a flex container for banner/thumbnail and category */}
-          <div className="flex flex-row mt-4">
-            {tab !== 2 && (
-              <div className="w-[50%] p-4 border-r-2">
-                {/* For video, label it as Thumbnail; otherwise Banner */}
-                <h1 className="text-3xl text-[#737373] font-normal">
-                  {isVideo ? "Thumbnail" : "Banner"}
-                </h1>
-                <h1 className="text-lg text-gray-400">
-                  Set an image that draws attention
-                </h1>
-                <Box
-                  sx={{
-                    width: "200px",
-                    height: "100px",
-                    border: "2px dashed gray",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    backgroundColor: "#f9f9f9",
-                    overflow: "hidden",
-                  }}
-                  onClick={() => document.getElementById("imageInput").click()}
-                >
-                  {preview ? (
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  ) : (
+                    </>
+                  ) : ((tab === 0 || tab === 1) && isVideo === true) && (
                     <>
-                      <CloudUpload sx={{ fontSize: 40, color: "#94a3b8" }} />
-                      <Typography sx={{ fontSize: 14, color: "#737373" }}>
-                        Upload file here
-                      </Typography>
+                      <h1 className="text-3xl text-[#737373] font-normal">Description</h1>
+                      <TextField
+                        name="description"
+                        fullWidth
+                        variant="outlined"
+                        multiline
+                        rows={3}
+                        placeholder="Type here..."
+                        value={newItem.description || ""}
+                        onChange={handleInputChange}
+                        margin="dense"
+                        disabled={!editMode && !isAdd}
+                        sx={{
+                          borderWidth: "2px",
+                          borderColor: "gray",
+                          borderRadius: "12px",
+                          "& .MuiOutlinedInput-root": {
+                            "& fieldset": {
+                              borderWidth: "2px",
+                              borderColor: "gray",
+                              borderRadius: "12px",
+                            },
+                            "&:hover fieldset": { borderColor: "darkgray" },
+                            "&.Mui-focused fieldset": { borderColor: "black" },
+                          },
+                        }}
+                      />
                     </>
                   )}
-                  <input
-                    type="file"
-                    id="imageInput"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={handleBannerChange}
-                    disabled={viewMode}
-                  />
-                </Box>
+                </div>
+                
+                {isVideo && (
+                  <div className="w-[50%] h-[18.4rem] px-5">
+                    <div className="w-full h-[75%]">
+                      <ReactPlayer url={videoPreview} controls width="100%" height="100%" />
+                    </div>
+                    <div
+                      className="w-full h-[25%] bg-[#b7cde3] rounded-b-3xl px-4"
+                      {...getRootProps()}
+                    >
+                      <input
+                        {...getInputProps()}
+                        onChange={handleVideoUpload}
+                        disabled={viewMode}
+                        onClick={() => (newItem.resourceType = "Video")}
+                      />
+                      <h1 className="text-sm text-gray-500">File Name:</h1>
+                      <p className="font-bold text-gray-800">{videoPath}</p>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+              
+              <div className="flex flex-row mt-4">
+                {tab !== 2 && (
+                  <div className="w-[50%] p-4 border-r-2">
+                    <h1 className="text-3xl text-[#737373] font-normal">
+                      {isVideo ? "Thumbnail" : "Banner"}
+                    </h1>
+                    <h1 className="text-lg text-gray-400">
+                      Set an image that draws attention
+                    </h1>
+                    <Box
+                      sx={{
+                        width: "200px",
+                        height: "100px",
+                        border: "2px dashed gray",
+                        borderRadius: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        backgroundColor: "#f9f9f9",
+                        overflow: "hidden",
+                      }}
+                      onClick={() => document.getElementById("imageInput").click()}
+                    >
+                      {preview ? (
+                        <img
+                          src={preview}
+                          alt="Preview"
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <>
+                          <CloudUpload sx={{ fontSize: 40, color: "#94a3b8" }} />
+                          <Typography sx={{ fontSize: 14, color: "#737373" }}>
+                            Upload file here
+                          </Typography>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        id="imageInput"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={handleBannerChange}
+                        disabled={viewMode}
+                      />
+                    </Box>
+                  </div>
+                )}
 
-            {/* Only show category section for non-announcement tabs since announcement's category is moved up */}
-            {tab !== 2 && (
-              <div className="w-[50%] p-4">
-                <FormControl fullWidth margin="dense">
-                  <h1 className="text-3xl text-[#737373] font-normal">Category</h1>
-                  <h1 className="text-lg text-gray-400 mb-4">
-                    Select a category that the post falls under
-                  </h1>
-                  <Select
-                    name="category"
-                    value={newItem.category || ""}
-                    onChange={handleCategoryChange}
-                    displayEmpty
-                    sx={{
-                      borderWidth: "2px",
-                      borderColor: "gray",
-                      borderRadius: "12px",
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
+                {tab !== 2 && (
+                  <div className="w-[50%] p-4">
+                    <FormControl fullWidth margin="dense">
+                      <h1 className="text-3xl text-[#737373] font-normal">Category</h1>
+                      <h1 className="text-lg text-gray-400 mb-4">
+                        Select a category that the post falls under
+                      </h1>
+                      <Select
+                        name="category"
+                        value={newItem.category || ""}
+                        onChange={handleCategoryChange}
+                        displayEmpty
+                        disabled={!editMode && !isAdd}
+                        sx={{
                           borderWidth: "2px",
                           borderColor: "gray",
                           borderRadius: "12px",
-                        },
-                        "&:hover fieldset": { borderColor: "darkgray" },
-                        "&.Mui-focused fieldset": { borderColor: "black" },
-                      },
-                    }}
-                  >
-                    <MenuItem value="" disabled>
-                      <p className="text-gray-400">Select Category</p>
-                    </MenuItem>
-                    {categoryOptions.map((option) => (
-                      <MenuItem key={option} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                          "& .MuiOutlinedInput-root": {
+                            "& fieldset": {
+                              borderWidth: "2px",
+                              borderColor: "gray",
+                              borderRadius: "12px",
+                            },
+                            "&:hover fieldset": { borderColor: "darkgray" },
+                            "&.Mui-focused fieldset": { borderColor: "black" },
+                          },
+                        }}
+                      >
+                        <MenuItem value="" disabled>
+                          <p className="text-gray-400">Select Category</p>
+                        </MenuItem>
+                        {categoryOptions.map((option) => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </DialogWrapper>
+
       <DialogWrapper
         open={isRichText}
+        maxwidth='md'
         onClose={handleCloseAttempt}
         title={`${editMode ? "Edit " : viewMode ? "View ": "Add "} Content`}
         actionButtons={
@@ -851,14 +990,15 @@ export default function ContentDialog({
         }
       >
         <div>
-          <RichTextEditor setBlob={setBlob} editorData={editorData} />
+          <RichTextEditor setBlob={setBlob} editorData={editorData} readOnly={(!editMode && !isAdd) || viewMode}/>
         </div>
       </DialogWrapper>
+
       <DialogWrapper
         open={videoDialog}
         onClose={() => setVideoDialog(false)}
         title="Upload Files"
-        actionButtons={null} // You can add action buttons if needed
+        actionButtons={null}
       >
         <div className="w-[97.5%] h-full bg-white rounded-3xl flex flex-col items-center justify-center mb-4">
           <div

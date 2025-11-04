@@ -109,7 +109,7 @@ export default function SchedulerTable({ initial, handleOpen, searchTerm, tab, f
             <TableHead>
               <TableRow className="bg-white border-y border-black">
                 <TableCell className="p-3 font-bold " sx={{ borderBottom: "none" }}>
-                  <p className="mx-auto text-center font-roboto font-bold">Names/Events</p>
+                  <p className="mx-auto text-center font-roboto font-bold">{tab === 0 ? "Names" : "Events"}</p>
                 </TableCell>
                 <TableCell className="p-3 font-bold" sx={{ borderBottom: "none" }}>
                   <p className="mx-auto text-center font-roboto font-bold">Date & Time</p>

@@ -6,6 +6,25 @@ import '../../handsontable.css'
 export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDeleteOpen, setIsVideo, setVideoDialog, setIsArticle, handleSearchChange, setEditMode}) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
+  const staff = JSON.parse(localStorage.getItem("staff"));
+
+  const searchPlaceholder = () => {
+    switch(tab) {
+      case 0:
+        return "Search Resources";
+      case 1:
+        return "Search Wellness";
+      case 2:
+        return "Search Announcements";
+      case 3: 
+        return "Search FAQ";
+      case 4:
+        return "Search Trigger";
+      default:
+        return "Search";
+    }
+  };
+
   return (
     <div className="flex items-center justify-between w-full h-12 mb-5"> 
       {/* Tab Navigation */}
@@ -54,6 +73,12 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
         <Tab label="Resources" />
         <Tab label="Wellness" />
         <Tab label="Announcements" />
+        {staff.position === "Admin" && (
+          <Tab label="FAQ" />
+        )}
+        {staff.position === "Admin" && (
+          <Tab label="Trigger" />
+        )}
       </Tabs>
 
       {/* Action Buttons and Search Bar */}
@@ -61,7 +86,7 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
         {/* Left-aligned Search Bar */}
         <TextField
           className="search-bar"
-          placeholder={`Search ${tab === 0 ? "Resources" : tab === 1 ? "Wellness" : "Announcements"}`}
+          placeholder={searchPlaceholder()}
           variant="outlined"
           size="small"
           InputProps={{ endAdornment: <Search className="text-gray-500" /> }}
@@ -224,6 +249,64 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
                         marginLeft: '8px',
                       }}/>
                       <p className="text-[1rem]">Annoucement</p>
+                    </button>
+                  </li>
+                  <li
+                    className={`group p-2 hover:text-[#334155] ${
+                      tab === 3 ? "text-[#334155]" : "text-[#64748b]"
+                    }`}
+                    onClick={() => {setTab(3); setIsDialogOpen(true); setIsVideo(false); setEditMode(false);}}
+                  >
+                    <button
+                      sx={{
+                        borderColor: `${tab === 3 ? "rbg(75 85 99)" : "white" }`,
+                        borderWidth: 1,
+                        borderStyle: "solid",
+                        color: `${tab === 3 ? "rbg(75 85 99)" : "white" }`,
+                        marginRight: "10px",
+                        padding: 0,
+                      }}
+                      className="group-hover:text-[#334155] flex items-center gap-1"
+                    >
+                      <Add sx={{
+                        fontSize: 17,
+                        color: '#334155',
+                        backgroundColor: 'transparent',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        borderRadius: 9999,
+                        marginLeft: '8px',
+                      }}/>
+                      <p className="text-[1rem]">FAQ</p>
+                    </button>
+                  </li>
+                  <li
+                    className={`group p-2 hover:text-[#334155] ${
+                      tab === 4 ? "text-[#334155]" : "text-[#64748b]"
+                    }`}
+                    onClick={() => {setTab(4); setIsDialogOpen(true); setIsVideo(false); setEditMode(false);}}
+                  >
+                    <button
+                      sx={{
+                        borderColor: `${tab === 4 ? "rbg(75 85 99)" : "white" }`,
+                        borderWidth: 1,
+                        borderStyle: "solid",
+                        color: `${tab === 4 ? "rbg(75 85 99)" : "white" }`,
+                        marginRight: "10px",
+                        padding: 0,
+                      }}
+                      className="group-hover:text-[#334155] flex items-center gap-1"
+                    >
+                      <Add sx={{
+                        fontSize: 17,
+                        color: '#334155',
+                        backgroundColor: 'transparent',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        borderRadius: 9999,
+                        marginLeft: '8px',
+                      }}/>
+                      <p className="text-[1rem]">Trigger</p>
                     </button>
                   </li>
                 </ul>

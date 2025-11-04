@@ -1,7 +1,7 @@
 import { Dialog, DialogActions, DialogContent, DialogTitle, Button, IconButton } from "@mui/material";
 import { Close } from "@mui/icons-material";
 
-export default function DeleteDialog({ open, onClose, onConfirm, deleteTarget, selectedItems, data, loading }) {
+export default function DeleteDialog({ open, onClose, onConfirm, deleteTarget, selectedItems, data, loading, tab }) {
 
   const dataDetails = data.find((item) => item.ID === deleteTarget);
   return (
@@ -26,7 +26,13 @@ export default function DeleteDialog({ open, onClose, onConfirm, deleteTarget, s
           {deleteTarget ? (
                 <div className="text-center items-center mb-3">
                   <p className="my-3">Are you sure you want to delete this item?</p>
+                  {tab === 3 ? (
+                    <>
+                      <p className="font-bold mb-4 text-lg">{dataDetails.question}</p>
+                      <p className="font-semibold">{dataDetails.answer}</p> 
+                    </>) : (
                   <p className="font-bold">{dataDetails.title}</p> 
+                  )}
                 </div>
             ) : (
                 <div className="text-center items-center mb-3">
@@ -34,7 +40,11 @@ export default function DeleteDialog({ open, onClose, onConfirm, deleteTarget, s
                   {selectedItems.map((item) => {
                     const itemDetails = data.find((dataItem) => dataItem.ID === item);
                     return (
-                      <p key={item} className="font-bold">{itemDetails.title}</p>
+                      tab === 3 ? (
+                        <p key={item} className="font-bold">{itemDetails.question}</p>
+                      ) : (
+                        <p key={item} className="font-bold">{itemDetails.title}</p>
+                      )
                     );
                   })}
                 </div>

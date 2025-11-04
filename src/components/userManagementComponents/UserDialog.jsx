@@ -182,39 +182,46 @@ const UserDialog = ({
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-  
+
     const reader = new FileReader();
+    
     const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
-  
+    const isCSV = file.name.endsWith('.csv');
+
     reader.onload = (event) => {
       const content = event.target.result;
       let parsedData = [];
-  
-      if (isExcel) {
-        const workbook = XLSX.read(content, { type: 'binary' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        parsedData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      } else {
+
+      if (isCSV) {
+        // Handle CSV file
         parsedData = Papa.parse(content, {
           skipEmptyLines: true,
           header: false,
         }).data;
+      } else if (isExcel) {
+        // Handle Excel file
+        const workbook = XLSX.read(content, { type: 'binary' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        parsedData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      } else {
+        alert("Unsupported file type. Please upload a CSV or Excel file.");
+        return;
       }
-  
+
       // Skip the header row and remove completely empty rows
       const [, ...withoutHeader] = parsedData;
       const cleaned = withoutHeader.filter(row =>
         row.some(cell => cell?.toString().trim() !== '')
       );
-  
+
       if (cleaned.length === 0) {
         alert("No valid rows found in the file.");
         return;
       }
-  
+
       const newData = [...data];
       let insertIndex = 1;
-  
+
       // Find the first empty row (starting after placeholder)
       for (let i = 1; i < newData.length; i++) {
         const isEmpty = newData[i].every(cell => !cell || cell.toString().trim() === '');
@@ -223,7 +230,7 @@ const UserDialog = ({
           break;
         }
       }
-  
+
       // Insert cleaned rows
       cleaned.forEach((row, idx) => {
         const paddedRow = [...row].slice(0, columnHeaders.length); // Limit to column count
@@ -232,44 +239,79 @@ const UserDialog = ({
         }
         newData[insertIndex + idx] = paddedRow;
       });
-  
+
       // Pad table if needed
       const requiredLength = insertIndex + cleaned.length;
       while (newData.length <= requiredLength) {
         newData.push(Array(columnHeaders.length).fill(""));
       }
-  
+
       setData(newData);
     };
-  
-    if (isExcel) {
-      reader.readAsBinaryString(file);
+
+    if (isCSV) {
+      reader.readAsText(file); // For CSV, we read as text
+    } else if (isExcel) {
+      reader.readAsBinaryString(file); // For Excel, we read as binary string
     } else {
-      reader.readAsText(file);
+      alert("Unsupported file type. Please upload a CSV or Excel file.");
     }
-  
-    e.target.value = null; // Reset file input
+
+    e.target.value = null; // Reset file input after processing
   };
 
   const filteredAdvisers = staffs.filter((staff) => staff.position === "Adviser");
 
-  function exportHotTableToExcelWithHeaders(
-    hotInstance,
-    columnHeaders,
-    filename = tab === 0
-      ? "Mind-U Bulk Creation Students Draft.xlsx"
-      : "Mind-U Bulk Creation Advisers Draft.xlsx"
-  ) {
+  const convertToCSV = (data, headers) => {
+  const csvRows = [];
+  
+  // Add headers
+  csvRows.push(headers.join(','));
+  
+  // Add data rows
+  data.forEach(row => {
+    const values = headers.map(header => {
+      const value = row[header] || '';
+      // Escape values that contain commas, quotes, or newlines
+      const escaped = String(value).replace(/"/g, '""');
+      return `"${escaped}"`;
+    });
+    csvRows.push(values.join(','));
+  });
+  
+  return csvRows.join('\n');
+};
+
+  // Helper function to download CSV
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Function to export HotTable data to CSV
+  const exportHotTableToCSV = (hotInstance, columnHeaders, filename = tab === 0
+    ? "Mind-U Bulk Creation Students Draft.csv"
+    : "Mind-U Bulk Creation Advisers Draft.csv") => {
+    
     // Get all table data
     const allData = hotInstance.getData();
-  
-    // Skip first row (placeholder row)
+    
+    // Skip the first row (placeholder row)
     const dataRows = allData.slice(1).filter(row =>
       row.some(cell => cell && cell.toString().trim() !== "")
     );
-  
-    // ✅ Always allow export — even with no data
-    // If there’s no data, just include headers + one empty example row
+
+    // Always allow export — even with no data
+    // If there's no data, just include headers + one empty example row
     const exportData =
       dataRows.length > 0
         ? [columnHeaders, ...dataRows]
@@ -279,13 +321,17 @@ const UserDialog = ({
               ? ["example@student.com", "John", "Doe", "Section A"]
               : ["example@adviser.com", "Jane Doe", "Section A"]
           ];
+
+    // Format data to CSV
+    const csvContent = convertToCSV(exportData, columnHeaders);
         
-    const worksheet = XLSX.utils.aoa_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-        
-    XLSX.writeFile(workbook, filename);
-  }
+    // Generate filename with current date
+    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const finalFilename = `${filename.replace(".csv", "")}_${currentDate}.csv`;
+
+    // Download CSV file
+    downloadCSV(csvContent, finalFilename);
+  };
 
   const handleFormSubmitting = (e) => {
     e.preventDefault();
@@ -803,8 +849,8 @@ const UserDialog = ({
           <Button onClick={() => setBulkUploadOpen(false)}>
             <p className="text-base font-roboto font-bold text-[#64748b] p-2">Cancel</p>
           </Button>
-          <Button onClick={() => exportHotTableToExcelWithHeaders(hotRef.current.hotInstance, columnHeaders)} disabled={loading}>
-            <p className="text-white text-lg rounded-3xl px-8 py-1 bg-green-500">{loading ? "Exporting..." : "Export to Excel"}</p>
+          <Button onClick={() => exportHotTableToCSV(hotRef.current.hotInstance, columnHeaders)} disabled={loading}>
+            <p className="text-white text-lg rounded-3xl px-8 py-1 bg-green-500">{loading ? "Exporting..." : "Export to CSV"}</p>
           </Button>
           <Button onClick={() => fileInputRef.current?.click()} disabled={loading}>
             <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">{loading ? "Inserting..." : "Insert From File"}</p>

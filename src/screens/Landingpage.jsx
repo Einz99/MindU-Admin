@@ -147,7 +147,7 @@ export default function Landingpage() {
     if (staff.position === "Adviser") {
         return <AdviserFullDashboard backlogs={backlogs}/>;
     } else if (staff.position === "Guidance Staff") {
-      return <StaffDashboard />;
+      return <StaffDashboard filterBacklogs={filterBacklogs}/>;
     } else if (staff.position === "Admin" || staff.position === "Guidance Counselor") {
       return (
         <>

@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { FileDownload } from '@mui/icons-material';
-import { TableContainer, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
 import axios from 'axios';
 import { API, RootAPI } from '../../api';
-import { UsageUtilization, CompSchedules, LowerRight, AlertsOvertime, CalmiTriggerAlert } from "./guidanceStaffDashboardComponent/Graphs";
+import { UsageUtilization, CompSchedules, ActiveStudentsPieChart, AlertsOvertime, CalmiTriggerAlert, Resource, Wellness } from "./guidanceStaffDashboardComponent/Graphs";
 import io from "socket.io-client";
 
 export default function StaffDashboard() {
@@ -13,7 +11,6 @@ export default function StaffDashboard() {
   const [alerts, setAlerts] = useState([]);
   const socketRef = useRef(null);
 
-  // Fetch alerts function - extracted so we can reuse it
   const fetchAlerts = async () => {
     try {
       const response = await axios.get(`${API}/chatbot/alerts`);
@@ -74,27 +71,95 @@ export default function StaffDashboard() {
         }
       };
   
-      fetchBacklogs();
+      fetchBacklogs(); // run when reloadKey changes
     }, []);
 
-  const filterBacklog = backlog.filter((item) => (item.status === "Pending" && item.student_id));
+  const filterBacklog = backlog.filter((item) => (item.status === "Pending" && (item.student_id || item.proposal)));
   
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await axios.get(`${API}/resources/top`);
-        setTopResources(res.data.topResources);
-        setTopWellness(res.data.topWellness);
+        setTopResources(res.data.resources);
+        setTopWellness(res.data.wellness);
       } catch (err) {
         console.error("Error fetching top resources/wellness:", err);
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, 10 * 60 * 1000);
+    fetchData(); // initial fetch
+    const interval = setInterval(fetchData, 10 * 60 * 1000); // repeat every 10 minutes
 
-    return () => clearInterval(interval);
+    return () => clearInterval(interval); // cleanup
   }, []);
+
+  // 🔹 Helper function to convert array to CSV string
+  const convertToCSV = (data, headers) => {
+    const csvRows = [];
+    
+    // Add headers
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    data.forEach(row => {
+      const values = headers.map(header => {
+        const value = row[header] || '';
+        // Escape values that contain commas, quotes, or newlines
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+  };
+
+  // 🔹 Helper function to download CSV
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 🔹 Export Resources to CSV
+  const exportResourcesToCSV = () => {
+    if (!topResources.length) return alert("No Resource Library data to export.");
+    
+    const data = topResources.map(row => ({
+      Title: row.title,
+      Category: row.category,
+      Views: row.views,
+    }));
+    
+    const csvContent = convertToCSV(data, ['Title', 'Category', 'Views']);
+    const filename = `Resource_Library_${new Date().toISOString().slice(0,10)}.csv`;
+    
+    downloadCSV(csvContent, filename);
+  };
+  
+  // 🔹 Export Wellness Tools to CSV
+  const exportWellnessToCSV = () => {
+    if (!topWellness.length) return alert("No Wellness Tools data to export.");
+  
+    const data = topWellness.map(row => ({
+      Title: row.title,
+      Category: row.category,
+      Views: row.views,
+    }));
+    
+    const csvContent = convertToCSV(data, ['Title', 'Category', 'Views']);
+    const filename = `Wellness_Tools_${new Date().toISOString().slice(0,10)}.csv`;
+    
+    downloadCSV(csvContent, filename);
+  };
 
   return (
       <div 
@@ -103,107 +168,24 @@ export default function StaffDashboard() {
       >
         <div 
           className="grid gap-4" 
-          style={{ gridTemplateRows: '40% 35% 35%' }}
+          style={{ gridTemplateRows: '35% 30% 30% 30%' }}
         >
           <UsageUtilization />
           <AlertsOvertime alerts={alerts} />
           <CompSchedules backlog={backlog} />
+          <ActiveStudentsPieChart width={100} padding={10} marginTop={false} circleWidth={45}/>
         </div>
         
         <div 
           className="grid gap-4" 
-          style={{ gridTemplateRows: '30% 30% 50%' }}
+          style={{ gridTemplateRows: '40% 85%' }}
         >
-          <LowerRight filterBacklog={filterBacklog} />
-          <CalmiTriggerAlert alerts={alerts} padding={true} />
-          <div className="flex items-center justify-center p-5">
-            <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col gap-20  overflow-y-auto">
-              <div>
-                <div className="flex w-full flex-row justify-between p-4">
-                  <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">Resource Library</p>
-                  <FileDownload sx={{
-                    fontSize: 25,
-                    justifyItems: 'center',
-                    color: '#64748b',
-                  }}/>
-                </div>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow className="border-t-2 border-b-2 border-[#636363] h-8">
-                        <TableCell className="py-0.5 px-2 text-sm w-[75%]" sx={{paddingY: '8px'}}>
-                          <p className="leading-none font-bold">Title</p>
-                        </TableCell>
-                        <TableCell className="py-0.5 px-2 text-sm w-[15%] text-center" sx={{paddingY: '8px'}}>
-                          <p className="leading-none text-center font-bold">Category</p>
-                        </TableCell>
-                        <TableCell className="py-0.5 px-2 text-sm w-[10%] text-center" sx={{paddingY: '8px'}}>
-                          <p className="leading-none text-center font-bold">Views</p>
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {topResources.map((row, index) => (
-                        <TableRow key={index} className="h-4">
-                          <TableCell className="py-0 px-2 text-sm w-[65%]">
-                            <p className="leading-none">{row.title}</p>
-                          </TableCell>
-                          <TableCell className="py-0 px-2 text-sm w-[25%] text-center">
-                            <p className="text-center">{row.category}</p>
-                          </TableCell>
-                          <TableCell className="py-0 px-2 text-sm w-[10%] text-center">
-                            <p className="text-center">{row.views}</p>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </div>
-                
-              <div>
-                <div className="flex w-full flex-row justify-between p-4">
-                  <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">Wellness Tools</p>
-                  <FileDownload sx={{
-                    fontSize: 25,
-                    justifyItems: 'center',
-                    color: '#64748b',
-                  }}/>
-                </div>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow className="border-t-2 border-b-2 border-[#636363] h-8">
-                        <TableCell className="py-0.5 px-2 text-sm w-[65%]" sx={{paddingY: '8px'}}>
-                          <p className="leading-none font-bold">Title</p>
-                        </TableCell>
-                        <TableCell className="py-0.5 px-2 text-sm w-[25%] text-center" sx={{paddingY: '8px'}}>
-                          <p className="leading-none text-center font-bold">Category</p>
-                        </TableCell>
-                        <TableCell className="py-0.5 px-2 text-sm w-[10%] text-center" sx={{paddingY: '8px'}}>
-                          <p className="leading-none text-center font-bold">Views</p>
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {topWellness.map((row, index) => (
-                        <TableRow key={index} className="h-4">
-                          <TableCell className="py-0 px-2 text-sm w-[75%]">
-                            <p className="leading-none">{row.title}</p>
-                          </TableCell>
-                          <TableCell className="py-0 px-2 text-sm w-[15%] text-center">
-                            <p className="text-center">{row.category}</p>
-                          </TableCell>
-                          <TableCell className="py-0 px-2 text-sm w-[10%] text-center">
-                            <p className="text-center">{row.views}</p>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </div>
-            </div>
+          <div className="flex flex-col flex-grow">
+            <CalmiTriggerAlert alerts={alerts} padding={true} filterBacklog={filterBacklog}/>
+          </div>
+          <div className="flex items-center justify-center p-5 flex-col">
+            <Resource exportResourcesToExcel={exportResourcesToCSV} topResources={topResources} />
+            <Wellness exportWellnessToExcel={exportWellnessToCSV} topWellness={topWellness} />
           </div>
         </div>
       </div>

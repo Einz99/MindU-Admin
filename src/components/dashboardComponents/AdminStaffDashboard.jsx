@@ -1,17 +1,15 @@
-import { useState, useEffect } from "react";
-import { FileDownload, Edit } from '@mui/icons-material';
-import { TableContainer, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
+import { useState, useEffect, useRef } from "react";
 import axios from 'axios';
-import { API } from '../../api';
-import { UsageUtilization, CompSchedules, PendingStudentRequests, ActiveStudentsPieChart, AlertsOvertime, CalmiTriggerAlert } from "./guidanceStaffDashboardComponent/Graphs";
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import { API, RootAPI } from '../../api';
+import { UsageUtilization, CompSchedules, ActiveStudentsPieChart, AlertsOvertime, CalmiTriggerAlert, Resource, Wellness } from "./guidanceStaffDashboardComponent/Graphs";
+import io from "socket.io-client";
 
 export default function AdminStaffDashboard({filterBacklogs, handleViewingRequest}) {
   const [backlog, setBacklogs] = useState([]);
   const [topResources, setTopResources] = useState([]);
   const [topWellness, setTopWellness] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const socketRef = useRef(null);
 
   const fetchAlerts = async () => {
     try {
@@ -24,6 +22,43 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
 
   useEffect(() => {
     fetchAlerts();
+  }, []);
+
+  // 🆕 Socket.IO for real-time alert updates
+  useEffect(() => {
+    if (!socketRef.current) {
+      const newSocket = io(RootAPI);
+      socketRef.current = newSocket;
+
+      newSocket.on('connect', () => {
+        console.log('✅ Dashboard connected to server:', newSocket.id);
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('❌ Dashboard disconnected from server');
+      });
+
+      // Listen for new alerts
+      newSocket.on('new-alert-created', async (data) => {
+        console.log('🆕 New alert created:', data);
+        await fetchAlerts();
+      });
+
+      // Listen for resolved alerts
+      newSocket.on('alerts-resolved', async (data) => {
+        console.log('✅ Alerts resolved:', data);
+        await fetchAlerts();
+      });
+    }
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('new-alert-created');
+        socketRef.current.off('alerts-resolved');
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -45,8 +80,8 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
     const fetchData = async () => {
       try {
         const res = await axios.get(`${API}/resources/top`);
-        setTopResources(res.data.topResources);
-        setTopWellness(res.data.topWellness);
+        setTopResources(res.data.resources);
+        setTopWellness(res.data.wellness);
       } catch (err) {
         console.error("Error fetching top resources/wellness:", err);
       }
@@ -58,45 +93,72 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
     return () => clearInterval(interval); // cleanup
   }, []);
 
-  const exportResourcesToExcel = () => {
+  // 🔹 Helper function to convert array to CSV string
+  const convertToCSV = (data, headers) => {
+    const csvRows = [];
+    
+    // Add headers
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    data.forEach(row => {
+      const values = headers.map(header => {
+        const value = row[header] || '';
+        // Escape values that contain commas, quotes, or newlines
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+  };
+
+  // 🔹 Helper function to download CSV
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 🔹 Export Resources to CSV
+  const exportResourcesToCSV = () => {
     if (!topResources.length) return alert("No Resource Library data to export.");
     
-    const worksheet = XLSX.utils.json_to_sheet(
-      topResources.map(row => ({
-        Title: row.title,
-        Category: row.category,
-        Views: row.views,
-      }))
-    );
-  
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Resource Library");
-  
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-  
-    saveAs(blob, `Resource_Library_${new Date().toISOString().slice(0,10)}.xlsx`);
+    const data = topResources.map(row => ({
+      Title: row.title,
+      Category: row.category,
+      Views: row.views,
+    }));
+    
+    const csvContent = convertToCSV(data, ['Title', 'Category', 'Views']);
+    const filename = `Resource_Library_${new Date().toISOString().slice(0,10)}.csv`;
+    
+    downloadCSV(csvContent, filename);
   };
   
-  // 🔹 Export Wellness Tools table
-  const exportWellnessToExcel = () => {
+  // 🔹 Export Wellness Tools to CSV
+  const exportWellnessToCSV = () => {
     if (!topWellness.length) return alert("No Wellness Tools data to export.");
   
-    const worksheet = XLSX.utils.json_to_sheet(
-      topWellness.map(row => ({
-        Title: row.title,
-        Category: row.category,
-        Views: row.views,
-      }))
-    );
-  
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Wellness Tools");
-  
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-  
-    saveAs(blob, `Wellness_Tools_${new Date().toISOString().slice(0,10)}.xlsx`);
+    const data = topWellness.map(row => ({
+      Title: row.title,
+      Category: row.category,
+      Views: row.views,
+    }));
+    
+    const csvContent = convertToCSV(data, ['Title', 'Category', 'Views']);
+    const filename = `Wellness_Tools_${new Date().toISOString().slice(0,10)}.csv`;
+    
+    downloadCSV(csvContent, filename);
   };
 
   return (
@@ -104,137 +166,25 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
         className="w-full h-full grid"  // 👈 ensures grid has a real height
         style={{ gridTemplateColumns: '40% 60%'}}
       > 
-
-
         <div 
           className="grid gap-4" 
-          style={{ gridTemplateRows: '30% 25% 25% 20%' }}
+          style={{ gridTemplateRows: '35% 30% 30% 30%' }}
         >
           <UsageUtilization />
           <AlertsOvertime alerts={alerts} />
           <CompSchedules backlog={backlog} />
-          <ActiveStudentsPieChart width={100} padding={10} marginTop={false} circleWidth={50}/>
+          <ActiveStudentsPieChart width={100} padding={10} marginTop={false} circleWidth={45}/>
         </div>
         <div 
           className="grid gap-4" 
-          style={{ gridTemplateRows: '20% 20% 20% 40%' }}
+          style={{ gridTemplateRows: '40% 85%' }}
         >
-          <PendingStudentRequests filterBacklog={filterBacklog} padding={true}/>
-          <CalmiTriggerAlert alerts={alerts} padding={true} />
-          <div className="w-full p-3">
-            <div className="flex w-full flex-row justify-between">
-              <p className="font-roboto font-bold text-[#bc3f8d] text-2xl">Pending Events Proposal</p>
-              <Edit sx={{
-                fontSize: 25,
-                justifyItems: 'center',
-                color: '#64748b',
-              }}/>
-            </div>
-            <div className="w-full h-[90%] border-4 border-[#bc3f8d] rounded-xl p-2 flex flex-col gap-3 overflow-y-auto">
-              {filterBacklogs.map((item) => (
-                <div key={item.id} className="flex flex-row justify-between border-b-2 border-[#94a3b8]">
-                  <p>
-                    {item.name} Proposal
-                  </p>
-                  <button className="mr-5" onClick={() => handleViewingRequest(item)}><p className="bg-[#1e3a8a] text-white px-3 rounded-lg mb-0.5">View</p></button>
-                </div>
-              ))}
-            </div>
+          <div className="flex flex-col flex-grow">
+            <CalmiTriggerAlert alerts={alerts} padding={true} filterBacklog={filterBacklog} filterBacklogs={filterBacklogs} handleViewingRequest={handleViewingRequest}/>
           </div>
-          <div className="flex items-center justify-center p-5">
-            <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col gap-20  overflow-y-auto">
-              <div>
-                <div className="flex w-full flex-row justify-between p-4">
-                  <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">Resource Library</p>
-                  <FileDownload 
-                    sx={{
-                      fontSize: 25,
-                      justifyItems: 'center',
-                      color: '#64748b',
-                    }}
-                    onClick={exportResourcesToExcel}
-                  />
-                </div>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow className="border-t-2 border-b-2 border-[#636363] h-8">
-                        <TableCell className="py-0.5 px-2 text-sm w-[75%]" sx={{paddingY: '8px'}}>
-                          <p className="leading-none font-bold">Title</p>
-                        </TableCell>
-                        <TableCell className="py-0.5 px-2 text-sm w-[15%] text-center" sx={{paddingY: '8px'}}>
-                          <p className="leading-none text-center font-bold">Category</p>
-                        </TableCell>
-                        <TableCell className="py-0.5 px-2 text-sm w-[10%] text-center" sx={{paddingY: '8px'}}>
-                          <p className="leading-none text-center font-bold">Views</p>
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {topResources.map((row, index) => (
-                        <TableRow key={index} className="h-4">
-                          <TableCell className="py-0 px-2 text-sm w-[65%]">
-                            <p className="leading-none">{row.title}</p>
-                          </TableCell>
-                          <TableCell className="py-0 px-2 text-sm w-[25%] text-center">
-                            <p className="text-center">{row.category}</p>
-                          </TableCell>
-                          <TableCell className="py-0 px-2 text-sm w-[10%] text-center">
-                            <p className="text-center">{row.views}</p>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </div>
-
-              <div>
-                <div className="flex w-full flex-row justify-between p-4">
-                  <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">Wellness Tools</p>
-                  <FileDownload 
-                    sx={{
-                      fontSize: 25,
-                      justifyItems: 'center',
-                      color: '#64748b',
-                    }}
-                    onClick={exportWellnessToExcel}
-                  />
-                </div>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow className="border-t-2 border-b-2 border-[#636363] h-8">
-                        <TableCell className="py-0.5 px-2 text-sm w-[65%]" sx={{paddingY: '8px'}}>
-                          <p className="leading-none font-bold">Title</p>
-                        </TableCell>
-                        <TableCell className="py-0.5 px-2 text-sm w-[25%] text-center" sx={{paddingY: '8px'}}>
-                          <p className="leading-none text-center font-bold">Category</p>
-                        </TableCell>
-                        <TableCell className="py-0.5 px-2 text-sm w-[10%] text-center" sx={{paddingY: '8px'}}>
-                          <p className="leading-none text-center font-bold">Views</p>
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {topWellness.map((row, index) => (
-                        <TableRow key={index} className="h-4">
-                          <TableCell className="py-0 px-2 text-sm w-[75%]">
-                            <p className="leading-none">{row.title}</p>
-                          </TableCell>
-                          <TableCell className="py-0 px-2 text-sm w-[15%] text-center">
-                            <p className="text-center">{row.category}</p>
-                          </TableCell>
-                          <TableCell className="py-0 px-2 text-sm w-[10%] text-center">
-                            <p className="text-center">{row.views}</p>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </div>
-            </div>
+          <div className="flex items-center justify-center p-5 flex-col">
+            <Resource exportResourcesToExcel={exportResourcesToCSV} topResources={topResources} />
+            <Wellness exportWellnessToExcel={exportWellnessToCSV} topWellness={topWellness} />
           </div>
         </div>
       </div>
