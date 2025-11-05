@@ -3,6 +3,7 @@ import axios from 'axios';
 import { API, RootAPI } from '../../api';
 import { UsageUtilization, CompSchedules, ActiveStudentsPieChart, AlertsOvertime, CalmiTriggerAlert, Resource, Wellness } from "./guidanceStaffDashboardComponent/Graphs";
 import io from "socket.io-client";
+import { FilterAlt } from "@mui/icons-material";
 
 export default function AdminStaffDashboard({filterBacklogs, handleViewingRequest}) {
   const [backlog, setBacklogs] = useState([]);
@@ -10,6 +11,14 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
   const [topWellness, setTopWellness] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const socketRef = useRef(null);
+
+  const [filteringDateType, setFilteringDateType] = useState('today');
+  const [filteringSection, setFilteringSection] = useState('all');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterDateOpen, setFilterDateOpen] = useState(false);
+  const [filterSectionOpen, setFilterSectionOpen] = useState(false);
+  const [sendFilterDate, setSendFilterDate] = useState('today');
+  const [sendFilterSection, setSendFilterSection] = useState('all');
 
   const fetchAlerts = async () => {
     try {
@@ -74,7 +83,7 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
       fetchBacklogs(); // run when reloadKey changes
     }, []);
 
-  const filterBacklog = backlog.filter((item) => (item.status === "Pending" && (item.student_id || item.proposal)));
+  const filterBacklog = backlog.filter((item) => (item.status === "Pending" && (item.student_id || !item.proposal)));
   
   useEffect(() => {
     const fetchData = async () => {
@@ -161,19 +170,159 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
     downloadCSV(csvContent, filename);
   };
 
+  const handleApplyFilters = () => {
+    setSendFilterDate(filteringDateType);
+    setSendFilterSection(filteringSection);
+    setFilterOpen(false);
+  };
+
   return (
       <div 
         className="w-full h-full grid"  // 👈 ensures grid has a real height
         style={{ gridTemplateColumns: '40% 60%'}}
       > 
         <div 
-          className="grid gap-4" 
-          style={{ gridTemplateRows: '35% 30% 30% 30%' }}
+          className="grid gap-4 relative" 
+          style={{ gridTemplateRows: '0.5% 35% 30% 30% 30%' }}
         >
-          <UsageUtilization />
+          {filterOpen && (
+            <div className="absolute top-5 right-2 z-40 bg-white border-[1px] border-[#1e3a8a] rounded-md shadow-lg text-[#1e3a8a] w-60 pt-2">
+              <p className="font-bold p-2">Filter Date</p>
+              <div 
+                className="relative -mt-2"
+                onClick={() => {setFilterDateOpen(!filterDateOpen); setFilterSectionOpen(false);}}
+              >
+                {filterDateOpen && (
+                  <div className="bg-white text-[#1e3a8a] border-[1px] border-[#1e3a8a] rounded-md shadow-lg absolute top-8 right-2 w-36 z-0">
+                    <div
+                      onClick={() => {setFilteringDateType("today");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer rounded-t-md"
+                    >
+                      Today
+                    </div>
+                    <div
+                      onClick={() => {setFilteringDateType("last7days");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      Last 7 Days
+                    </div>
+                    <div
+                      onClick={() => {setFilteringDateType("lastMonth");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      Last 30 Days
+                    </div>
+                    <div
+                      onClick={() => {setFilteringDateType("last3Months");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      Last 3 Months
+                    </div>
+                    <div
+                      onClick={() => {setFilteringDateType("last6Months");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      Last 6 Months
+                    </div>
+                    <div
+                      onClick={() => {setFilteringDateType("lastYear");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer rounded-b-md"
+                    >
+                      Last 1 Year
+                    </div>
+                  </div>
+                )}
+                <div className="z-50">
+                  <p className="bg-[#1e3a8a] text-white p-2 border-b-2 cursor-pointer rounded-md mx-2">
+                    {filteringDateType === 'today' ? 'Today' :
+                      filteringDateType === 'last7days' ? 'Last 7 Days' :
+                      filteringDateType === 'lastMonth' ? 'Last 30 Days' :
+                      filteringDateType === 'last3Months' ? 'Last 3 Months' :
+                      filteringDateType === 'last6Months' ? 'Last 6 Months' :
+                      filteringDateType === 'lastYear' ? 'Last 1 Year' :
+                      'Select Date Range'}
+                  </p>
+                </div>
+              </div>
+              <p className="font-bold p-2">Filter Section</p>
+              <div 
+                className={`relative -mt-2 ${filterDateOpen ? '-z-50' : 'z-50'}`}
+                onClick={() => {setFilterDateOpen(false); setFilterSectionOpen(!filterSectionOpen);}}
+              >
+                {filterSectionOpen && (
+                  <div className="bg-white text-[#1e3a8a] border-[1px] border-[#1e3a8a] rounded-md shadow-lg absolute top-8 right-2 w-36 -z-10">
+                    <div
+                      onClick={() => {setFilteringSection("All");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer rounded-t-md"
+                    >
+                      All Sections
+                    </div>
+                    <div
+                      onClick={() => {setFilteringSection("ABM");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      ABM
+                    </div>
+                    <div
+                      onClick={() => {setFilteringSection("HE");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      HE
+                    </div>
+                    <div
+                      onClick={() => {setFilteringSection("HUMSS");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      HUMSS
+                    </div>
+                    <div
+                      onClick={() => {setFilteringSection("ICT");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      ICT
+                    </div>
+                    <div
+                      onClick={() => {setFilteringSection("STEM");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer rounded-b-md"
+                    >
+                      STEM
+                    </div>
+                  </div>
+                )}
+                <div className={`${filterDateOpen ? '-z-50' : 'z-50'}`}>
+                  <p className="bg-[#1e3a8a] text-white p-2 border-b-2 cursor-pointer rounded-md mx-2">
+                    {filteringSection === 'all' ? 'All Sections' : filteringSection}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end p-2">
+                <button
+                  className="text-red-500"
+                  onClick={() => setFilterOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="text-[#1e3a8a] px-4 py-2 rounded-md"
+                  onClick={handleApplyFilters}
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          )}
+          <div 
+            className="absolute w-fit h-fit bg-white rounded-full z-50 border-2 border-[#1e3a8a] top-0 right-2 flex flex-row items-center justify-center py-1 px-3 gap-2 text-[#1e3a8a]"
+            onClick={() => setFilterOpen(!filterOpen)}
+          >
+            <p className="italic">Filter Options</p>
+            <FilterAlt />
+          </div>
+          <div />
+          <UsageUtilization filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
+          <ActiveStudentsPieChart width={100} padding={10} marginTop={false} circleWidth={45} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
           <AlertsOvertime alerts={alerts} />
           <CompSchedules backlog={backlog} />
-          <ActiveStudentsPieChart width={100} padding={10} marginTop={false} circleWidth={45}/>
         </div>
         <div 
           className="grid gap-4" 

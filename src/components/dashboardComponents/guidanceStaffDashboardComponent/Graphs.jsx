@@ -21,93 +21,165 @@ import axios from "axios";
 import { API } from "../../../api";
 import * as XLSX from 'xlsx';
 
-export function UsageUtilization() {
-  const [usageDate, setUsageDate] = useState('Today');
-  const [dateUsageValue, setDateUsageValue] = useState('');
+export function UsageUtilization({ filteringDateType, filteringSection }) {
+  const [dateRange, setDateRange] = useState(filteringDateType || 'today');
+  const [section, setSection] = useState(filteringSection || 'All');
+  const [rawData, setRawData] = useState([]); // Cache all data from backend
   const [chartData, setChartData] = useState([]);
 
-  const handleChangeUsageDate = (e) => {
-    const selectedDate = new Date(e.target.value);
-    const today = new Date();
-
-    // Zero out time
-    selectedDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-
-    const diffTime = today - selectedDate;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      setUsageDate('Today');
-    } else if (diffDays === 1) {
-      setUsageDate('Yesterday');
-    } else {
-      setUsageDate(`${diffDays} days ago`);
-    }
-
-    setDateUsageValue(e.target.value);
-  };
-
-  // 🔥 Fetch data from backend whenever `dateUsageValue` changes
+  // Fetch all data from backend once and cache it
   useEffect(() => {
-    if (!dateUsageValue) return;
-
     const fetchData = async () => {
       try {
+        // Fetch data for the last year (maximum range)
+        const today = new Date();
+        const lastYear = new Date();
+        lastYear.setFullYear(today.getFullYear() - 1);
+        
         const res = await axios.get(`${API}/student-activities`, {
-          params: { date: dateUsageValue }, // yyyy-mm-dd
+          params: { 
+            startDate: lastYear.toLocaleDateString('en-CA'),
+            endDate: today.toLocaleDateString('en-CA')
+          }
         });
 
-        // Define all expected modules with default 0 value
-        const modules = [
-          "Resource", "Wellness", "Chatbot", "Mood", "Scheduler", "Pet"
-        ];
-
-        // If no data is returned, show the modules with 0 visits
-        const transformed = modules.map((module) => {
-          const activity = res.data.activities.find((row) => row.module === module);
-          return {
-            label: module,
-            value: activity ? activity.visits : 0,  // Set value to 0 if no data for the module
-            color:
-              module === "Resource"
-                ? "#6ce5e8"
-                : module === "Wellness"
-                ? "#41b8d5"
-                : module === "Chatbot"
-                ? "#2d8bba"
-                : module === "Mood"
-                ? "#2f5f98"
-                : module === "Scheduler"
-                ? "#86469c"
-                : module === "Pet"
-                ? "#bc3f8d"
-                : "#999999", // fallback (neutral gray)
-          };
-        });
-
-        setChartData(transformed);
+        setRawData(res.data.activities);
       } catch (err) {
         console.error("Error fetching usage data:", err);
-        setChartData([]); // Set empty data in case of error
+        setRawData([]);
       }
     };
 
-    // Initial fetch
     fetchData();
 
-    // ⏳ Repeat every 10 minutes
+    // Repeat every 10 minutes to refresh cache
     const interval = setInterval(fetchData, 10 * 60 * 1000);
 
-    // Cleanup
     return () => clearInterval(interval);
-  }, [dateUsageValue]);
+  }, []);
+
+  // Filter and process cached data on the frontend
+  useEffect(() => {
+    if (rawData.length === 0) {
+      // Initialize with zeros if no data
+      const modules = ["Resource", "Wellness", "Chatbot", "Mood", "Scheduler", "Pet"];
+      const emptyData = modules.map((module) => ({
+        label: module,
+        value: 0,
+        color: getModuleColor(module),
+      }));
+      setChartData(emptyData);
+      return;
+    }
+
+    // Calculate date range for filtering
+    const { start } = getDateRange(dateRange);
+    const startDate = new Date(start);
+    const endDate = new Date();
+
+    // Filter data based on date range and section
+    const filtered = rawData.filter((row) => {
+      const rowDate = new Date(row.date);
+      const dateMatch = rowDate >= startDate && rowDate <= endDate;
+      
+      // Section filter - use includes() to match anywhere in the string
+      let sectionMatch = true;
+      if (section !== 'All') {
+        sectionMatch = row.section && row.section.toUpperCase().includes(section.toUpperCase());
+      }
+      
+      return dateMatch && sectionMatch;
+    });
+
+    // Aggregate by module
+    const modules = ["Resource", "Wellness", "Chatbot", "Mood", "Scheduler", "Pet"];
+    const moduleMap = {};
+    
+    filtered.forEach((row) => {
+      if (!moduleMap[row.module]) {
+        moduleMap[row.module] = 0;
+      }
+      moduleMap[row.module] += row.visits;
+    });
+
+    // Transform to chart format
+    const transformed = modules.map((module) => ({
+      label: module,
+      value: moduleMap[module] || 0,
+      color: getModuleColor(module),
+    }));
+
+    setChartData(transformed);
+  }, [rawData, dateRange, section]);
+
+  // Sync with parent component props
+  useEffect(() => {
+    if (filteringDateType) setDateRange(filteringDateType);
+  }, [filteringDateType]);
 
   useEffect(() => {
+    if (filteringSection) setSection(filteringSection);
+  }, [filteringSection]);
+
+  // Helper: Get color for module
+  const getModuleColor = (module) => {
+    switch (module) {
+      case "Resource": return "#6ce5e8";
+      case "Wellness": return "#41b8d5";
+      case "Chatbot": return "#2d8bba";
+      case "Mood": return "#2f5f98";
+      case "Scheduler": return "#86469c";
+      case "Pet": return "#bc3f8d";
+      default: return "#999999";
+    }
+  };
+
+  // Helper: Calculate date range
+  const getDateRange = (range) => {
     const today = new Date();
-    const isoDate = today.toLocaleDateString('en-CA'); // yyyy-mm-dd
-    setDateUsageValue(isoDate); // set input value to today
-  }, []);
+    let startDate = new Date();
+    
+    switch(range) {
+      case 'today':
+        startDate = new Date(today);
+        break;
+      case 'last7days':
+        startDate.setDate(today.getDate() - 7);
+        break;
+      case 'lastMonth':
+        startDate.setMonth(today.getMonth() - 1);
+        break;
+      case 'last3Months':
+        startDate.setMonth(today.getMonth() - 3);
+        break;
+      case 'last6Months':
+        startDate.setMonth(today.getMonth() - 6);
+        break;
+      case 'lastYear':
+        startDate.setFullYear(today.getFullYear() - 1);
+        break;
+      default:
+        startDate = new Date(today);
+    }
+    
+    return {
+      start: startDate.toLocaleDateString('en-CA'),
+      end: today.toLocaleDateString('en-CA')
+    };
+  };
+
+  // Helper: Get display text
+  const getDisplayText = (range) => {
+    switch(range) {
+      case 'today': return 'Today';
+      case 'last7days': return 'Last 7 Days';
+      case 'lastMonth': return 'Last Month';
+      case 'last3Months': return 'Last 3 Months';
+      case 'last6Months': return 'Last 6 Months';
+      case 'lastYear': return 'Last Year';
+      default: return 'Today';
+    }
+  };
 
   const handleExportToExcel = () => {
     const formattedData = chartData.map((data) => ({
@@ -115,38 +187,35 @@ export function UsageUtilization() {
       Visits: data.value,
     }));
 
-    // Create worksheet and workbook
     const ws = XLSX.utils.json_to_sheet(formattedData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Usage Data");
 
-    // Export file
-    XLSX.writeFile(wb, "usage_data.xlsx");
+    const sectionLabel = section === 'All' ? 'All_Sections' : section;
+    const dateLabel = getDisplayText(dateRange).replace(/\s+/g, '_');
+    XLSX.writeFile(wb, `Usage_${sectionLabel}_${dateLabel}.xlsx`);
   };
 
   return (
     <div className="flex flex-col p-5">
-      <div className="flex w-full flex-row justify-between">
+      <div className="flex w-full flex-row justify-between items-center">
         <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">Usage Utilization</p>
         <FileDownload
           sx={{
             fontSize: 25,
             justifyItems: 'center',
             color: '#64748b',
+            marginRight: 2,
           }}
-          onClick={handleExportToExcel} // Export when clicked
+          onClick={handleExportToExcel}
         />
       </div>
 
-      <div className="flex w-full flex-row justify-between mb-4">
-        <p className="font-bold text-lg">{usageDate}</p>
-        <input
-          type="date"
-          className="bg-[#b7cde3] rounded-lg px-1 py-0.5"
-          onChange={handleChangeUsageDate}
-          value={dateUsageValue}
-          max={new Date().toLocaleDateString('en-CA')}
-        />
+      <div className="flex w-full flex-col mb-2">
+        <div className="flex flex-row justify-between  items-center  mr-2">
+          <p className="font-bold text-lg">{getDisplayText(dateRange)}</p>
+          <p className="text-sm text-gray-600">Strand: {section}</p>
+        </div>
       </div>
 
       {/* Chart */}
@@ -156,7 +225,7 @@ export function UsageUtilization() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="label"
-              interval={0} // force all labels to show
+              interval={0}
               tick={({ x, y, payload }) => {
                 const words = payload.value.split(" ");
                 return (
@@ -425,12 +494,12 @@ export function PendingStudentRequests({ filterBacklog, width, padding }){
             >
               <p className="font-roboto text-lg whitespace-nowrap overflow-hidden text-ellipsis">
                 {staff.position !== 'Admin' ? (
-                  `New appointment request from ${item.name}`
+                  `New appointment request from ${item.name}.`
                 ) : (
                   item.proposal ? (
-                    `New Event Proposal about ${item.name}`
+                    `New Event Proposal about ${item.name}.`
                   ) : (
-                    `New appointment request from ${item.name}`
+                    `New appointment request from ${item.name}.`
                   )
                 )}
               </p>
@@ -626,12 +695,12 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
               >
                 <p className="font-roboto text-lg whitespace-nowrap overflow-hidden text-ellipsis">
                   {staff.position !== 'Admin' ? (
-                    `New appointment request from ${item.name}`
+                    `New appointment request from ${item.name}.`
                   ) : (
                     item.proposal ? (
-                      `New Event Proposal about ${item.name}`
+                      `New Event Proposal about ${item.name}.`
                     ) : (
-                      `New appointment request from ${item.name}`
+                      `New appointment request from ${item.name}.`
                     )
                   )}
                 </p>
@@ -647,7 +716,7 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
           : 
           (<div className="flex flex-col gap-3 overflow-y-auto">
             {filterBacklogs.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((item) => (
-              <div key={item.id} className="flex flex-row justify-between border-b-2 border-[#94a3b8]">
+              <div key={item.id} className="flex flex-row justify-between border-b-2 border-[#94a3b8] items-center">
                 <p>
                   {item.name} Proposal
                 </p>
@@ -681,99 +750,204 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
   );
 }
 
-export function ActiveStudentsPieChart({width, padding, marginTop, circleWidth}) {
-  const [studentActiveDate, setStudentActiveDate] = useState('');
-  const [SAText, setSAText] = useState('Today');
-  const [studentCounts, setStudentCounts] = useState({
-    totalStudents: 0,
-    today: 0,
-    yesterday: 0,
-    selectedDay: 0,
-  });
+export function ActiveStudentsPieChart({width, padding, marginTop, circleWidth, filteringDateType, filteringSection }) {
+  const [dateRange, setDateRange] = useState(filteringDateType || 'today');
+  const [section, setSection] = useState(filteringSection || 'All');
+  const [rawData, setRawData] = useState(null); // Cache all login data
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [piePercentage, setPiePercentage] = useState(0);
+  const [barPercentage, setBarPercentage] = useState(0);
 
-  const fetchStudentCounts = async (selectedDate) => {
-    try {
-      const res = await axios.get(`${API}/student-login-percentages`, {
-        params: { date: selectedDate },
-      });
-      setStudentCounts(res.data);
-    } catch (err) {
-      console.error("Error fetching student counts:", err);
-    }
-  };
-
-  const handleChangeASDate = (e) => {
-    const selectedDate = e.target.value;
-    const today = new Date();
-    const selDate = new Date(selectedDate);
-
-    // Zero out time
-    selDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-
-    const diffTime = today - selDate;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      setSAText("Today");
-    } else {
-      setSAText(`${diffDays} days ago`);
-    }
-
-    setStudentActiveDate(selectedDate);
-    fetchStudentCounts(selectedDate);
-  };
+  // Sync with parent component props
+  useEffect(() => {
+    if (filteringDateType) setDateRange(filteringDateType);
+  }, [filteringDateType]);
 
   useEffect(() => {
+    if (filteringSection) setSection(filteringSection);
+  }, [filteringSection]);
+
+  // Helper: Calculate date range
+  const getDateRange = (range) => {
     const today = new Date();
-    const isoDate = today.toISOString().slice(0, 10);
-    setStudentActiveDate(isoDate);
-    fetchStudentCounts(isoDate);
+    let startDate = new Date();
+    
+    switch(range) {
+      case 'today':
+        startDate = new Date(today);
+        break;
+      case 'last7days':
+        startDate.setDate(today.getDate() - 7);
+        break;
+      case 'lastMonth':
+        startDate.setMonth(today.getMonth() - 1);
+        break;
+      case 'last3Months':
+        startDate.setMonth(today.getMonth() - 3);
+        break;
+      case 'last6Months':
+        startDate.setMonth(today.getMonth() - 6);
+        break;
+      case 'lastYear':
+        startDate.setFullYear(today.getFullYear() - 1);
+        break;
+      default:
+        startDate = new Date(today);
+    }
+    
+    return {
+      start: startDate.toISOString().slice(0, 10),
+      end: today.toISOString().slice(0, 10)
+    };
+  };
+
+  // Helper: Get display text
+  const getDisplayText = (range) => {
+    switch(range) {
+      case 'today': return 'Today';
+      case 'last7days': return 'Last 7 Days';
+      case 'lastMonth': return 'Last Month';
+      case 'last3Months': return 'Last 3 Months';
+      case 'last6Months': return 'Last 6 Months';
+      case 'lastYear': return 'Last Year';
+      default: return 'Today';
+    }
+  };
+
+  // Fetch all data once and cache it
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch login data for the last year
+        const today = new Date();
+        const lastYear = new Date();
+        lastYear.setFullYear(today.getFullYear() - 1);
+        
+        const res = await axios.get(`${API}/student-logins`, {
+          params: { 
+            startDate: lastYear.toISOString().slice(0, 10),
+            endDate: today.toISOString().slice(0, 10)
+          }
+        });
+
+        setRawData(res.data.logins);
+        setTotalStudents(res.data.totalStudents);
+      } catch (err) {
+        console.error("Error fetching login data:", err);
+        setRawData([]);
+      }
+    };
+
+    fetchData();
+
+    // Refresh every 10 minutes
+    const interval = setInterval(fetchData, 10 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  const { piePct, progressPct, progressLabel } = useMemo(() => {
-    const { totalStudents, today, yesterday, selectedDay } = studentCounts;
+  // Filter and calculate percentages on frontend
+  useEffect(() => {
+    if (!rawData || totalStudents === 0) {
+      setPiePercentage(0);
+      setBarPercentage(0);
+      return;
+    }
 
-    // Determine if selected date is today
-    const todayISO = new Date().toISOString().slice(0, 10);
-    const isToday = !studentActiveDate || studentActiveDate === todayISO;
+    const { start } = getDateRange(dateRange);
+    const startDate = new Date(start);
+    const todayDate = new Date();
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(todayDate.getDate() - 1);
 
-    // Pie chart → selected date (or today if default)
-    const pieCount = isToday ? today : selectedDay;
+    // Filter data based on section
+    const filteredData = rawData.filter((row) => {
+      if (section === 'All') return true;
+      return row.section && row.section.toUpperCase().includes(section.toUpperCase());
+    });
 
-    // Progress bar → today (or yesterday if default)
-    const progressCount = isToday ? yesterday : today;
+    // Get unique students count based on section filter
+    const sectionStudentsCount = section === 'All' 
+      ? totalStudents 
+      : new Set(filteredData.map(row => row.student_id)).size;
 
-    return {
-      piePct: totalStudents ? Math.round((pieCount / totalStudents) * 100) : 0,
-      progressPct: totalStudents ? Math.round((progressCount / totalStudents) * 100) : 0,
-      progressLabel: isToday ? "Yesterday" : "Today",
-    };
-  }, [studentCounts, studentActiveDate]);
+    // PIE CHART CALCULATION
+    let pieCount = 0;
+    
+    if (dateRange === 'today') {
+      // Show today's logins for pie
+      pieCount = new Set(
+        filteredData
+          .filter(row => {
+            const loginDate = new Date(row.login_date);
+            return loginDate.toDateString() === todayDate.toDateString();
+          })
+          .map(row => row.student_id)
+      ).size;
+    } else {
+      // For date ranges (last 7 days, last month, etc.)
+      // Show unique students who logged in within that range
+      pieCount = new Set(
+        filteredData
+          .filter(row => {
+            const loginDate = new Date(row.login_date);
+            return loginDate >= startDate && loginDate <= todayDate;
+          })
+          .map(row => row.student_id)
+      ).size;
+    }
+
+    // BAR CHART CALCULATION (always shows yesterday for 'today', today for other ranges)
+    let barCount = 0;
+    
+    if (dateRange === 'today') {
+      // Show yesterday's logins for bar
+      barCount = new Set(
+        filteredData
+          .filter(row => {
+            const loginDate = new Date(row.login_date);
+            return loginDate.toDateString() === yesterdayDate.toDateString();
+          })
+          .map(row => row.student_id)
+      ).size;
+    } else {
+      // Show today's logins for bar
+      barCount = new Set(
+        filteredData
+          .filter(row => {
+            const loginDate = new Date(row.login_date);
+            return loginDate.toDateString() === todayDate.toDateString();
+          })
+          .map(row => row.student_id)
+      ).size;
+    }
+
+    // Calculate percentages
+    const piePct = sectionStudentsCount ? Math.round((pieCount / sectionStudentsCount) * 100) : 0;
+    const barPct = sectionStudentsCount ? Math.round((barCount / sectionStudentsCount) * 100) : 0;
+
+    setPiePercentage(piePct);
+    setBarPercentage(barPct);
+  }, [rawData, dateRange, section, totalStudents]);
+
+  const barLabel = dateRange === 'today' ? 'Yesterday' : 'Today';
 
   return (
-    <div className={`flex flex-col w-[${width}%]  h-full p-${padding}`}>
+    <div className={`flex flex-col w-[${width}%] h-full p-${padding}`}>
       <div className="flex w-full flex-row justify-between items-center">
-        <p className="text-[#10b981] font-bold font-roboto text-2xl">In app Student Login</p>
-        
-        <div className="relative flex items-center bg-[#b7cde3] rounded-lg px-2 py-1">
-          <span className="text-black text-sm mr-1">{SAText} |</span>
-          <input
-            type="date"
-            className="bg-transparent outline-none text-black text-sm"
-            onChange={handleChangeASDate}
-            value={studentActiveDate}
-            max={new Date().toLocaleDateString("en-CA")}
-          />
-        </div>
+        <p className="text-[#1e3a8a] font-bold font-roboto text-2xl">In-app Student Login</p>
+        <p className="text-gray-400 text-sm">Strand: {filteringSection}</p>
       </div>
 
-      <div className="w-full h-full flex items-center justify-center relative">
+      <div className="w-full h-full flex flex-col items-center justify-center relative">
+        <p className="-mb-7 text-[#10b981] text-lg font-bold">{getDisplayText(dateRange)}</p>
         <div className={`${circleWidth ? `w-[${circleWidth}%]` : 'w-[60%]'} max-w-xs aspect-square relative`}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={[{ name: "active", value: piePct }, { name: "inactive", value: 100 - piePct }]}
+                data={[
+                  { name: "active", value: piePercentage }, 
+                  { name: "inactive", value: 100 - piePercentage }
+                ]}
                 innerRadius="60%"
                 outerRadius="80%"
                 startAngle={90}
@@ -787,27 +961,27 @@ export function ActiveStudentsPieChart({width, padding, marginTop, circleWidth})
           </ResponsiveContainer>
           
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-xl font-bold text-green-600">{piePct}%</p>
+            <p className="text-xl font-bold text-green-600">{piePercentage}%</p>
           </div>
         </div>
       </div>
 
-      <div className={`flex flex-col w-full ${marginTop ? "-mt-[20%]" : "-mt-[10%]"}  px-4`}>
+      <div className={`flex flex-col w-full ${marginTop ? "-mt-[20%]" : "-mt-[10%]"} px-4`}>
         <div className="flex flex-col mb-1">
-          <p className="font-bold text-lg text-black">{progressPct}%</p>
-          <p className="text-sm text-gray-600">{progressLabel}</p>
+          <p className="font-bold text-lg text-black">{barPercentage}%</p>
+          <p className="text-sm text-gray-600">{barLabel}</p>
         </div>
 
         <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
           <div
             className="bg-[#10b981] h-3 rounded-full transition-all duration-500"
-            style={{ width: `${progressPct}%` }}
+            style={{ width: `${barPercentage}%` }}
           />
         </div>
       </div>
     </div>
   );
-};
+}
 
 export function LowerRight({ filterBacklog }){
   return (

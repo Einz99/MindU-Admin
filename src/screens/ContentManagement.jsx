@@ -41,12 +41,16 @@ export default function ContentManagement() {
         `${API}/resources/`,
         `${API}/resources/wellness`,
         `${API}/announcements`,
-        `${API}/chatbotSettings/admin/all`
+        `${API}/chatbotSettings/admin/all`,
+        `${API}/chatbotSettings/admin/all-triggers`
       ];
       const response = await axios.get(endpoints[tab]);
       if(tab === 3) {
         setData(response.data.faqs);
-        console.log(response.data.faqs);
+        return;
+      }
+      if (tab === 4) {
+        setData(response.data.triggers);
         return;
       }
       setData(response.data);
@@ -56,6 +60,7 @@ export default function ContentManagement() {
 
   const filterData = data?.filter((item) => (
     (item?.title && item.title.toLowerCase().includes(searchTerm?.toLowerCase() || "")) ||
+    (item?.question && item.question.toLowerCase().includes(searchTerm?.toLowerCase() || "")) ||
     (item?.category && item.category.toLowerCase().includes(searchTerm?.toLowerCase() || "")) ||
     (item?.resourceType && item.resourceType.toLowerCase().includes(searchTerm?.toLowerCase() || ""))
   )) || [];
@@ -86,7 +91,8 @@ export default function ContentManagement() {
       `${API}/resources/`,
       `${API}/resources/`,
       `${API}/announcements/`,
-      `${API}/faq/admin/` // FAQ endpoint
+      `${API}/chatbotSettings/admin/`, // FAQ endpoint
+      `${API}/chatbotSettings/admin/trigger/`  // Triggers endpoint
     ];
     setLoading(true);
     const staff = JSON.parse(localStorage.getItem("staff"));

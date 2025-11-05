@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { 
   Table, 
   TableBody, 
@@ -13,13 +13,58 @@ import {
   Button,
   Tooltip,
  } from "@mui/material";
-import { Edit, Delete, Summarize } from "@mui/icons-material";
+import { Edit, Delete, Summarize, ArrowUpward, ArrowDownward } from "@mui/icons-material";
 
 export default function ContentTable({ tab, data, setSelectedItems, setDeleteTarget, setIsDeleteOpen, setNewItem, setEditMode, setEditId, setIsDialogOpen, setIsArticle, setVideoDialog, setIsVideo, selectedRows, setSelectedRows, setIsAdd, setViewMode}) {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(1);
+  const [sortField, setSortField] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
 
-  const totalPages = Math.ceil(data.length / rowsPerPage)
+  useEffect(() => {
+    setPage(1);
+    setSortField(null);
+    setSortDirection('asc');
+  }, [tab]);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortedData = () => {
+    if (!sortField) return data;
+
+    return [...data].sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+
+      // Handle null/undefined values
+      if (aVal == null) aVal = '';
+      if (bVal == null) bVal = '';
+
+      // Convert to lowercase for string comparison
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      // Handle date fields
+      if (sortField.includes('_at') || sortField === 'end_date') {
+        aVal = new Date(aVal).getTime() || 0;
+        bVal = new Date(bVal).getTime() || 0;
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const sortedData = getSortedData();
+  const totalPages = Math.ceil(sortedData.length / rowsPerPage);
 
   const handlePreviousPage = () => {
     if (page > 1) setPage(page - 1);
@@ -93,23 +138,13 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
     });
   };
 
-  // const filteredUnexpiredAnnouncements = () => {
-  //   if (tab === 2) {
-  //     const now = new Date();
-  //     return data.filter((item) => {
-  //       const modifiedDate = new Date(item.modified_at);
-  //       const createdDate = new Date(item.created_at);
-  //       return createdDate <= now && modifiedDate >= now;
-  //     });
-  //   }
-  //   return data; // return full data for other tabs if needed
-  // };
-
   const getLabel = (action) => {
     const target =
       tab === 0 ? "Resource" :
       tab === 1 ? "Wellness" :
       tab === 2 ? "Announcement" :
+      tab === 3 ? "FAQ" :
+      tab === 4 ? "Trigger" :
       "Record";
 
     return {
@@ -119,25 +154,48 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
     }[action];
   };
 
+  const SortHeader = ({ field, label, isTitle = false }) => {
+    const isActive = sortField === field;
+    
+    return (
+      <div 
+        className={`flex items-center gap-1 cursor-pointer ${isTitle ? 'justify-between' : 'justify-center'}`}
+        onClick={() => handleSort(field)}
+      >
+        <p className={`font-roboto font-bold ${isTitle ? '' : 'text-center'}`}>{label}</p>
+        <div className="flex flex-col">
+          <ArrowUpward 
+            sx={{ fontSize: 14 }} 
+            className={isActive && sortDirection === 'asc' ? 'text-black' : 'text-gray-300'} 
+          />
+          <ArrowDownward 
+            sx={{ fontSize: 14, marginTop: '-4px' }} 
+            className={isActive && sortDirection === 'desc' ? 'text-black' : 'text-gray-300'} 
+          />
+        </div>
+      </div>
+    );
+  };
+
   const TableHeadCells = (tab) => {
     switch (tab) {
       case 0:
         return (
           <>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Type</p>
+              <SortHeader field="resourceType" label="Type" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Description</p>
+              <SortHeader field="description" label="Description" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Status</p>
+              <SortHeader field="status" label="Status" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Date Posted</p>
+              <SortHeader field="posted_at" label="Posted" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
+              <SortHeader field="created_at" label="Created" />
             </TableCell>
           </>
         );
@@ -145,16 +203,16 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
         return (
           <>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Description</p>
+              <SortHeader field="description" label="Description" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Status</p>
+              <SortHeader field="status" label="Status" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Date Posted</p>
+              <SortHeader field="posted_at" label="Posted" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
+              <SortHeader field="created_at" label="Created" />
             </TableCell>
           </>
         );
@@ -162,16 +220,16 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
         return (
           <>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Content</p>
+              <SortHeader field="announcementContent" label="Content" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">End Date</p>
+              <SortHeader field="end_date" label="End Date" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Date Modified</p>
+              <SortHeader field="modified_at" label="Date Modified" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
+              <SortHeader field="created_at" label="Date Created" />
             </TableCell>
           </>
         );
@@ -179,16 +237,16 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
         return (
           <>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Answer</p>
+              <SortHeader field="answer" label="Answer" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Status</p>
+              <SortHeader field="status" label="Status" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Date Posted</p>
+              <SortHeader field="posted_at" label="Date Posted" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
+              <SortHeader field="created_at" label="Date Created" />
             </TableCell>
           </>
         );
@@ -196,13 +254,13 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
         return (
           <>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Status</p>
+              <SortHeader field="status" label="Status" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Date Posted</p>
+              <SortHeader field="posted_at" label="Date Posted" />
             </TableCell>
             <TableCell className="p-3 font-bold text-center">
-              <p className="mx-auto font-roboto font-bold text-center">Date Created</p>
+              <SortHeader field="created_at" label="Date Created" />
             </TableCell>
           </>
         );
@@ -268,7 +326,13 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
           </>
         );
       case 4: 
-        return null;
+        return (
+          <>
+            <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.status}</p></TableCell>
+            <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.posted_at)}</p></TableCell>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.created_at)}</p></TableCell>
+          </>
+        )
       default:
         return null;
     }
@@ -290,10 +354,16 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
                 />
               </TableCell>
               <TableCell className="p-3 font-bold text-center">
-                <p className="mx-auto font-roboto font-bold">{tab === 3 ? "Question" : tab === 4 ? "Trigger" : "Title"}</p>
+                {tab === 3 ? (
+                  <SortHeader field="question" label="Question" isTitle />
+                ) : tab === 4 ? (
+                  <SortHeader field="chatTriggers" label="Trigger" isTitle />
+                ) : (
+                  <SortHeader field="title" label="Title" isTitle />
+                )}
               </TableCell>
               <TableCell className="p-3 font-bold text-center">
-                <p className="mx-auto font-roboto font-bold text-center">Category</p>
+                <SortHeader field="category" label="Category" />
               </TableCell>
               {TableHeadCells(tab)}
               <TableCell className="p-1 text-center w-[12.5%]">
@@ -304,7 +374,7 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
 
           {/* Table Body */}
           <TableBody sx={{ borderCollapse: "collapse" }} className="font-roboto">
-            {data.length === 0 ? (
+            {sortedData.length === 0 ? (
               <TableRow>
                 <TableCell 
                   colSpan={tab === 0 ? 10 : tab === 1 ? 9 : 9} 
@@ -315,7 +385,7 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
                 </TableCell>
               </TableRow>
             ) : (
-              data.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((item, index) => (
+              sortedData.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((item, index) => (
                 <TableRow key={item.ID || index}>
                   <TableCell 
                     className="p-3 font-bold w-[40px]"
@@ -332,7 +402,7 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
                     className="p-3 text-center"
                     sx={{ borderBottom: "none" }}
                   >
-                    {tab === 3 ? item.question : item.title}
+                    {tab === 3 ? item.question : tab === 4 ? item.chatTriggers : item.title}
                   </TableCell>
                   <TableCell 
                     className="p-3 text-center"
@@ -367,7 +437,7 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
           </TableBody>
         </Table>
       </TableContainer>
-      {data.length > 5 && (
+      {sortedData.length > 5 && (
         <div className="flex items-center justify-end p-2">
           <span className="pr-5">Show: </span>
           <Select value={rowsPerPage} onChange={handleRowsPerPageChange} size="small">

@@ -82,6 +82,13 @@ export default function ContentDialog({
 
   const hasUnsavedChanges = () => {
     if (editMode || viewMode || tab === 2) return false;
+
+    if (tab === 4) {
+      return (
+        newItem.chatTriggers?.trim() ||
+        newItem.category?.trim()
+      );
+    }
     
     if (tab === 3) {
       return (
@@ -225,6 +232,7 @@ export default function ContentDialog({
     1: ["Breathing Exercises", "Meditation Guide"],
     2: ["Important", "General", "Update", "Advisory"],
     3: ["Emotional & Mental Wellness", "Social Wellness", "Financial & Occupational Wellness", "Physical Wellness", "Spiritual Wellness", "Intellectual Wellness", "Environmental Wellness"],
+    4: ["Word", "Phrase"],
   }[tab] || [];
 
   function formatDateForMySQL(date) {
@@ -242,7 +250,21 @@ export default function ContentDialog({
       const isUpdating = editMode;
       const statusText = isDraft ? "draft" : "posted";
     
-      if (tab === 3) {
+      if (tab === 4) {
+        // Trigger handling
+        requestBody = {
+          category: newItem.category || "",
+          trigger: newItem.chatTriggers || "",
+          status: statusText
+        };
+        response = isUpdating
+          ? await axios.put(`${API}/chatbotSettings/admin/update-trigger/${editId}`, requestBody, {
+              headers: { "Content-Type": "application/json" }
+            })
+          : await axios.post(`${API}/chatbotSettings/admin/create-trigger`, requestBody, {
+              headers: { "Content-Type": "application/json" }
+            });
+      } else if (tab === 3) {
         // FAQ handling
         requestBody = {
           category: newItem.category || "",
@@ -251,10 +273,10 @@ export default function ContentDialog({
           status: statusText
         };
         response = isUpdating
-          ? await axios.put(`${API}/faq/admin/update/${editId}`, requestBody, { 
+          ? await axios.put(`${API}/chatbotSettings/admin/update/${editId}`, requestBody, { 
               headers: { "Content-Type": "application/json" } 
             })
-          : await axios.post(`${API}/faq/admin/create`, requestBody, { 
+          : await axios.post(`${API}/chatbotSettings/admin/create`, requestBody, { 
               headers: { "Content-Type": "application/json" } 
             });
       } else if (tab === 2) {
@@ -380,6 +402,12 @@ export default function ContentDialog({
   }, [editMode, setNewItem])
 
   const isFormValid = () => {
+    if (tab === 4) {
+      return (
+        newItem.chatTriggers?.trim() &&
+        newItem.category?.trim()
+      );
+    }
     if (tab === 3) {
       return (
         newItem.question?.trim() &&
@@ -471,11 +499,11 @@ export default function ContentDialog({
       </Dialog>
 
       <DialogWrapper
-        maxwidth={`${tab === 2 || tab === 3 ? "sm" : "md"}`}
+        maxwidth={`${tab === 2 || tab === 3 || tab === 4 ? "sm" : "md"}`}
         open={isArticle || open}
         onClose={tab === 2 ? handleDialogClose : handleCloseAttempt}
         title={`${editMode ? "Edit " : isAdd === false ? "View ": "Add "} ${
-          tab === 0 ? "Resource" : tab === 1 ? "Wellness" : tab === 2 ? "Announcement" : "Chatbot FAQ"
+          tab === 0 ? "Resource" : tab === 1 ? "Wellness" : tab === 2 ? "Announcement" : tab === 3 ? "Chatbot FAQ" : "Chatbot Trigger"
         }`}
         actionButtons={
         <>
@@ -583,6 +611,73 @@ export default function ContentDialog({
                 multiline
                 rows={4}
                 value={newItem.answer || ""}
+                onChange={handleInputChange}
+                margin="dense"
+                disabled={!editMode && !isAdd}
+                sx={{
+                  borderWidth: "2px",
+                  borderColor: "gray",
+                  borderRadius: "12px",
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": {
+                      borderWidth: "2px",
+                      borderColor: "gray",
+                      borderRadius: "12px",
+                    },
+                    "&:hover fieldset": { borderColor: "darkgray" },
+                    "&.Mui-focused fieldset": { borderColor: "black" },
+                  },
+                }}
+              />
+
+              <FormControl fullWidth margin="dense">
+                <h1 className="text-3xl text-[#737373] font-normal">Category</h1>
+                <h1 className="text-lg text-gray-400 mb-4">
+                  Select a category where the FAQ falls under
+                </h1>
+                <Select
+                  name="category"
+                  value={newItem.category || ""}
+                  onChange={handleCategoryChange}
+                  displayEmpty
+                  disabled={!editMode && !isAdd}
+                  sx={{
+                    borderWidth: "2px",
+                    borderColor: "gray",
+                    borderRadius: "12px",
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderWidth: "2px",
+                        borderColor: "gray",
+                        borderRadius: "12px",
+                      },
+                      "&:hover fieldset": { borderColor: "darkgray" },
+                      "&.Mui-focused fieldset": { borderColor: "black" },
+                    },
+                  }}
+                >
+                  <MenuItem value="" disabled>
+                    <p className="text-gray-400">Select Category</p>
+                  </MenuItem>
+                  {categoryOptions.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </>
+          ) : tab === 4 ? (
+            <>
+              <h1 className="text-3xl text-[#737373] font-normal">Trigger</h1>
+              <TextField
+                name="chatTriggers"
+                placeholder="Type here..."
+                fullWidth
+                variant="outlined"
+                multiline
+                rows={2}
+                value={newItem.chatTriggers || ""}
                 onChange={handleInputChange}
                 margin="dense"
                 disabled={!editMode && !isAdd}

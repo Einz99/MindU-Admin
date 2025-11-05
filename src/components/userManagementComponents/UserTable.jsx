@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   TableContainer,
   Table,
@@ -13,7 +13,7 @@ import {
   Button,
   Tooltip,
 } from "@mui/material";
-import { Edit, Delete, Summarize } from "@mui/icons-material";
+import { Edit, Delete, Summarize, ArrowUpward, ArrowDownward } from "@mui/icons-material";
 
 export default function UserTable({
   tab,
@@ -31,6 +31,8 @@ export default function UserTable({
   
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(1);
+  const [sortField, setSortField] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
   
   const filteredAdvisers = staffs.filter((staff) => staff.position === "Adviser");
   const filteredGuidanceStaffs = staffs.filter(
@@ -38,17 +40,66 @@ export default function UserTable({
   );
 
   const filteredStudents =
-  staff.position === "Adviser"
-    ? students.filter((s) => s.section === staff.section)
-    : students;
+    staff.position === "Adviser"
+      ? students.filter((s) => s.section === staff.section)
+      : students;
 
   const data = tab === 0
-  ? filteredStudents
-  : tab === 1
-  ? filteredAdvisers
-  : filteredGuidanceStaffs;
+    ? filteredStudents
+    : tab === 1
+    ? filteredAdvisers
+    : filteredGuidanceStaffs;
 
-  const totalPages = Math.ceil(data.length / rowsPerPage);
+  useEffect(() => {
+    setPage(1);
+    setSortField(null);
+    setSortDirection('asc');
+  }, [tab]);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortedData = () => {
+    if (!sortField) return data;
+
+    return [...data].sort((a, b) => {
+      let aVal, bVal;
+
+      // Handle name field specially
+      if (sortField === 'name') {
+        aVal = tab === 0 
+          ? `${a.firstName || ''} ${a.lastName || ''}`.trim()
+          : a.name || '';
+        bVal = tab === 0 
+          ? `${b.firstName || ''} ${b.lastName || ''}`.trim()
+          : b.name || '';
+      } else {
+        aVal = a[sortField];
+        bVal = b[sortField];
+      }
+
+      // Handle null/undefined values
+      if (aVal == null) aVal = '';
+      if (bVal == null) bVal = '';
+
+      // Convert to lowercase for string comparison
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const sortedData = getSortedData();
+  const totalPages = Math.ceil(sortedData.length / rowsPerPage);
 
   const handlePreviousPage = () => {
     if (page > 1) setPage(page - 1);
@@ -77,36 +128,74 @@ export default function UserTable({
     }[action];
   };
 
+  const SortHeader = ({ field, label }) => {
+    const isActive = sortField === field;
+    
+    return (
+      <div 
+        className={`flex items-center gap-2 cursor-pointer ${field === 'name' ? "justify-between" : "justify-center" } `}
+        onClick={() => handleSort(field)}
+      >
+        <p className="font-roboto font-bold text-center">{label}</p>
+        <div className="flex flex-col">
+          <ArrowUpward 
+            sx={{ fontSize: 14 }} 
+            className={isActive && sortDirection === 'asc' ? 'text-black' : 'text-gray-300'} 
+          />
+          <ArrowDownward 
+            sx={{ fontSize: 14, marginTop: '-4px' }} 
+            className={isActive && sortDirection === 'desc' ? 'text-black' : 'text-gray-300'} 
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
       <TableContainer className="border-y border-black">
-        <Table
-        sx={{ borderCollapse: "collapse" }}>
+        <Table sx={{ borderCollapse: "collapse" }}>
           <TableHead>
             <TableRow className="bg-[#f8fbfd] border-y border-black">
               <TableCell className="p-3 font-bold w-[40px]">
                 <Checkbox checked={allChecked} onChange={handleCheckAll} />
               </TableCell>
-              <TableCell className="p-3 font-bold text-center"><p className="mx-auto font-roboto font-bold">Name</p></TableCell>
+              <TableCell className="p-3 font-bold text-center">
+                <SortHeader field="name" label="Name" />
+              </TableCell>
               {tab === 0 ? (
                 <>
-                  <TableCell className="p-3 font-bold text-center"><p className="mx-auto font-roboto font-bold text-center">Section</p></TableCell>
-                  <TableCell className="p-3 font-bold text-center"><p className="mx-auto font-roboto font-bold text-center">Adviser</p></TableCell>
+                  <TableCell className="p-3 font-bold text-center">
+                    <SortHeader field="section" label="Section" />
+                  </TableCell>
+                  <TableCell className="p-3 font-bold text-center">
+                    <SortHeader field="adviser" label="Adviser" />
+                  </TableCell>
+                </>
+              ) : tab === 1 ? (
+                <>
+                  <TableCell className="p-3 font-bold text-center">
+                    <p className="mx-auto font-roboto font-bold text-center">Position</p>
+                  </TableCell>
+                  <TableCell className="p-3 font-bold text-center">
+                    <SortHeader field="section" label="Section" />
+                  </TableCell>
                 </>
               ) : (
-                <>
-                  <TableCell className="p-3 font-bold text-center"><p className="mx-auto font-roboto font-bold text-center">Position</p></TableCell>
-                  {tab === 1 && (
-                    <TableCell className="p-3 font-bold text-center"><p className="mx-auto font-roboto font-bold text-center">Section</p></TableCell>
-                  )}
-                </>
+                <TableCell className="p-3 font-bold text-center">
+                  <SortHeader field="position" label="Position" />
+                </TableCell>
               )}
-              <TableCell className="p-3 font-bold text-center"><p className="mx-auto font-roboto font-bold text-center">Email</p></TableCell>
-              <TableCell className="p-1 text-center w-[15%]"><p className="mx-auto font-roboto font-bold text-center">Actions</p></TableCell>
+              <TableCell className="p-3 font-bold text-center">
+                <p className="mx-auto font-roboto font-bold text-center">Email</p>
+              </TableCell>
+              <TableCell className="p-1 text-center w-[15%]">
+                <p className="mx-auto font-roboto font-bold text-center">Actions</p>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((item, index) => (
+            {sortedData.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((item, index) => (
               <TableRow key={item.id || item.ID}>
                 <TableCell 
                   className="p-3 font-bold w-[40px]"
@@ -122,19 +211,29 @@ export default function UserTable({
                 </TableCell>
                 {tab === 0 ? (
                   <>
-                    <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.section}</p></TableCell>
-                    <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.adviser}</p></TableCell>
+                    <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
+                      <p className="text-center">{item.section}</p>
+                    </TableCell>
+                    <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
+                      <p className="text-center">{item.adviser}</p>
+                    </TableCell>
                   </>
                 ) : (
                   <>
-                    <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.position}</p></TableCell>
+                    <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
+                      <p className="text-center">{item.position}</p>
+                    </TableCell>
                     {tab === 1 && (
-                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.section}</p></TableCell>
+                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
+                        <p className="text-center">{item.section}</p>
+                      </TableCell>
                     )}
                   </>
                 )}
-                <TableCell className="p-3 text-center"  sx={{ borderBottom: "none" }}><p className="text-center">{item.email}</p></TableCell>
-                <TableCell className="p-3 text-center"  sx={{ borderBottom: "none" }}>
+                <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
+                  <p className="text-center">{item.email}</p>
+                </TableCell>
+                <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
                   <div className="flex justify-center">
                     <Tooltip title={getLabel("view")} arrow>
                       <IconButton onClick={() => handleEditButtonClick(item.id, false)}>
@@ -170,11 +269,15 @@ export default function UserTable({
               </MenuItem>
             ))}
           </Select>
-            <div className="flex justify-center items-center p-2">
-              <Button onClick={handlePreviousPage} disabled={page === 1}><p className={`${page === 1 ? "text-gray-500" : "text-black"} text-2xl font-extrabold`}>{"<"}</p></Button>
-              <span className="mx-2">Page {page} of {totalPages}</span>
-              <Button onClick={handleNextPage} disabled={page === totalPages}><p className={`${page === totalPages ? "text-gray-500" : "text-black"} text-2xl font-extrabold`}>{">"}</p></Button>
-            </div>
+          <div className="flex justify-center items-center p-2">
+            <Button onClick={handlePreviousPage} disabled={page === 1}>
+              <p className={`${page === 1 ? "text-gray-500" : "text-black"} text-2xl font-extrabold`}>{"<"}</p>
+            </Button>
+            <span className="mx-2">Page {page} of {totalPages}</span>
+            <Button onClick={handleNextPage} disabled={page === totalPages}>
+              <p className={`${page === totalPages ? "text-gray-500" : "text-black"} text-2xl font-extrabold`}>{">"}</p>
+            </Button>
+          </div>
         </div>
       )}
     </div>

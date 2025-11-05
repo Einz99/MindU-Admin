@@ -30,7 +30,12 @@ export default function DeleteDialog({ open, onClose, onConfirm, deleteTarget, s
                     <>
                       <p className="font-bold mb-4 text-lg">{dataDetails.question}</p>
                       <p className="font-semibold">{dataDetails.answer}</p> 
-                    </>) : (
+                    </>) :  tab === 4 ? (
+                    <>
+                      <p className="font-bold text-lg">{dataDetails.chatTriggers}</p>
+                      <p className="font-semibold text-gray-500">{dataDetails.category}</p>
+                    </>
+                    ) :(
                   <p className="font-bold">{dataDetails.title}</p> 
                   )}
                 </div>
@@ -42,7 +47,9 @@ export default function DeleteDialog({ open, onClose, onConfirm, deleteTarget, s
                     return (
                       tab === 3 ? (
                         <p key={item} className="font-bold">{itemDetails.question}</p>
-                      ) : (
+                      ) : tab === 4 ? (
+                        <p key={item} className="font-bold">{itemDetails.chatTriggers}</p>
+                      ):(
                         <p key={item} className="font-bold">{itemDetails.title}</p>
                       )
                     );
