@@ -44,26 +44,22 @@ export default function Calendar({ initial }) {
   const [dateFlags, setDateFlags] = useState({});
   const [selectedDay, setSelectedDay] = useState(null);
   const [filterBacklogs, setFilterBacklogs] = useState({});
-  /**
-   * This variables and functions is to initialized the calendar and for formatting the table
-   */
+
+  // Calculate the number of days in the month and the starting weekday of the month
   const daysInMonth = getDaysInMonth(currentDate);
   const startDate = startOfMonth(currentDate);
-  const startWeekday = getDay(startDate);
+  const startWeekday = getDay(startDate); // Sunday=0, Monday=1, etc.
 
-  useEffect(() => {
-    const today = format(new Date(), "yyyy-MM-dd");
-    setSelectedDay(today);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
   // Generate all days, including previous & next month's placeholders
   const daysArray = [];
   for (let i = 0; i < startWeekday; i++) daysArray.push(null);
   for (let i = 1; i <= daysInMonth; i++) daysArray.push(i);
-  while (daysArray.length < 42) daysArray.push(null);
-  /**
-   * up to this part for initializing the calendar
-   */
+  while (daysArray.length < 42) daysArray.push(null); // To ensure 6 or 7 rows, 42 days is max for calendar grid
+
+  useEffect(() => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    setSelectedDay(today);
+  }, []);
 
   const handlePrevMonth = () => setCurrentDate(sub(currentDate, { months: 1 }));
   const handleNextMonth = () => setCurrentDate(add(currentDate, { months: 1 }));
@@ -74,16 +70,13 @@ export default function Calendar({ initial }) {
 
     const filteredEvents = initial.filter((e) => {
       try {
-        // Ensure sched_date is a valid ISO string
         const eventDate = parseISO(e.sched_date);
-        if (isNaN(eventDate)) {
-          return false; // Skip invalid dates
-        }
+        if (isNaN(eventDate)) return false;
         const formattedEventDate = format(eventDate, "yyyy-MM-dd");
         return formattedEventDate === selectedDay && e.status === "Scheduled";
       } catch (err) {
         console.error("Error parsing date:", e.sched_date, err);
-        return false; // Skip invalid date
+        return false;
       }
     });
 
@@ -100,14 +93,16 @@ export default function Calendar({ initial }) {
       });
 
     setDateFlags(map);
-  }, [initial, selectedDay, setDateFlags]);
+  }, [initial, selectedDay]);
 
   const handleDateClick = (day) => {
     if (!day) return;
     const fullDate = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), day), "yyyy-MM-dd");
     setSelectedDay(fullDate);
   };
-  
+
+  const totalRows = Math.ceil((daysInMonth + startWeekday) / 7) + 1;// Dynamically adjust the row count based on the number of days
+  console.log("totalRows:", totalRows);
   return (
     <div className="flex flex-col w-full bg-[#b7cde3] p-2 flex-1 flex-grow relative">
       {/* Year */}
@@ -126,13 +121,13 @@ export default function Calendar({ initial }) {
 
       {/* Weekdays */}
       <div className="grid grid-cols-7 text-center font-semibold text-sm">
-        {["SUN","MON","TUE","WED","THU","FRI","SAT"].map(day => (
+        {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(day => (
           <div key={day} className={`${day === "SUN" ? "text-[#b91c1c]" : ""} py-1`}>{day}</div>
         ))}
       </div>
 
       {/* Days Grid */}
-      <div className="grid grid-cols-7 grid-rows-6 flex-1 gap-[4px]">
+      <div className="grid grid-cols-7 flex-1 gap-[4px]" style={{ gridTemplateRows: `repeat(${totalRows}, 1fr)` }}>
         {daysArray.map((day, idx) => {
           if (!day) return <div key={idx} className="flex items-center justify-center opacity-50"></div>;
 
@@ -173,6 +168,8 @@ export default function Calendar({ initial }) {
           );
         })}
       </div>
+
+      {/* Event Schedule Section */}
       <div className="w-[95%] bg-white h-[25%] rounded-xl mx-[2.5%] -mt-5 mb-3 px-4 overflow-auto">
         {selectedDay && filterBacklogs.length > 0 ? (
           filterBacklogs.map((event, index) => (

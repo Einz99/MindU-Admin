@@ -18,7 +18,7 @@ import * as mammoth from "mammoth/mammoth.browser";
 import * as pdfjsLib from "pdfjs-dist";
 import { getDocument } from "pdfjs-dist";
 import axios from "axios";
-import { API } from "../../../api";
+import { API, RootAPI } from "../../../api";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
@@ -45,8 +45,12 @@ export default function SchedulerActionModals({
   setIsSuccessful,
   setAlertMessage,
   setOpenError,
+  setIsProposal,
+  isProposal
 }) {
   const [students, setStudents] = useState({});
+  const [editorData, setEditorData] = useState(null);
+  const [proposalBlob, setProposalBlob] = useState(null);
 
   useEffect(() => {
     async function getAllStudents() {
@@ -59,6 +63,29 @@ export default function SchedulerActionModals({
     }
     getAllStudents();
   }, [])
+
+  useEffect(() => {
+    const loadProposalContent = async () => {
+      if (isProposal && selectedData && selectedData.proposal) {
+        try {
+          const response = await axios.get(`${RootAPI}/public/${selectedData.proposal}`, {
+            responseType: 'text',
+          });
+          setEditorData(response.data);
+        } catch (error) {
+          console.error("Error loading proposal:", error);
+        }
+      }
+    };
+    
+    if (open && isProposal) {
+      loadProposalContent();
+    } else {
+      setEditorData(null);
+      setProposalBlob(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProposal])
 
   const fileInputRef = useRef();
 
@@ -178,13 +205,48 @@ export default function SchedulerActionModals({
 
   const initialSchedDate = getInitialDateTime();
 
+  const formatScheduleDate = (rawDate) => {
+    const date = new Date(rawDate);
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'short' }); // e.g., "Mon"
+    const formattedDate = date.toLocaleDateString('en-US'); // e.g., "5/22/2025"
+    const formattedTime = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true, // 24-hour format
+    }); // e.g., "14:30"
+
+    return `${weekday}, ${formattedDate} at ${formattedTime}`;
+  };
+
+  useEffect(() => {
+    if (!open) {
+      setProposalBlob(null);
+      setEditorData(null);
+      setNewName('');
+      setNewMessage('');
+      setIsProposal(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!openConfirmTrash) {
+      setIsProposal(false);
+      setEditorData(null);
+      setNewName('');
+      setNewMessage('');
+      setIsProposal(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openConfirmTrash]);
+
   return (
     <>
       {/* Modal for actions */}
       <Dialog 
         open={open} 
         onClose={() => setOpen(false)} 
-        maxWidth={`${actionState !== 4 ? "sm" : isRequest ? "md" : "sm"}`} 
+        maxWidth={`${((isRequest && actionState === 4) || isProposal) ? "md" : "sm"}`} 
         fullWidth 
         sx={{
           "& .MuiPaper-root": {
@@ -193,6 +255,7 @@ export default function SchedulerActionModals({
             borderRadius: "25px",
           },
         }}
+        key={editorData ? editorData : 'empty'}
       >
         {actionState === 4 ? (
           // Modal for adding a new event (admin-created)
@@ -400,7 +463,7 @@ export default function SchedulerActionModals({
           // View-only mode: show details with a Close button
           <>
             <DialogTitle className="bg-[#b7e3cc] relative">
-              Event Details
+              {isProposal ? "Event Details" : "Schedule Details"}
               <DialogActions className="absolute -top-1 right-0">
                 <IconButton onClick={() => setOpen(false)} className="rounded-full ">
                   <Close sx={{ fontSize: 40, color: 'black' }}></Close>
@@ -408,8 +471,40 @@ export default function SchedulerActionModals({
               </DialogActions>
             </DialogTitle>
             <div className="bg-white w-[95%] mx-auto my-1 rounded-xl">
-              <DialogContent className="text-center">
-                {selectedData && (
+              <DialogContent className={`${!isProposal && "text-center"}`}>
+                {isProposal ? (
+                  <>
+                    <p className="mt-3 font-roboto font-bold">Proposal Name: {selectedData.name}</p>
+                    <p className="mt-3 font-roboto font-bold">Proposed Schedule: {formatScheduleDate(selectedData.sched_date)}</p>
+                    <RichTextEditor editorData={editorData} readOnly={true}/>
+                    {selectedData.comment && (
+                      <>
+                        <p className="mt-3 font-roboto font-bold">Comment</p>
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={4}
+                          value={selectedData.comment}
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              padding: 0, 
+                              "& fieldset": {
+                                borderRadius: "20px", 
+                              },
+                            },
+                            "& textarea": {
+                              color: "#000",
+                              backgroundColor: "#e8e9eb", 
+                              borderRadius: "20px", 
+                              padding: "16px", 
+                            },
+                          }}
+                          disabled={true}
+                        />
+                      </>
+                    )}
+                  </>
+                ) : (
                   <div className="font-roboto" style={{ fontSize: "1.2rem", padding: "10px" }}>
                     <p><strong>Name/Event:</strong> {selectedData.name}</p>
                     <p>
@@ -436,12 +531,103 @@ export default function SchedulerActionModals({
               ${actionState === 6 ? "bg-[#b7e3cc]" : "bg-[#e3b7b7]"}
               relative`}
             >
-              {actionState === 6 ? "Restore Event" : "Delete Permanently"}
+              {isProposal && actionState === 6 ? "Repropose Event" : isProposal && actionState !== 6 ? "Delete Event Permanently" : actionState === 6 ? "Restore Appointment" : "Delete Appointment Permanently"}
             </DialogTitle>
-            <DialogContent className="text-center">
-              <div className="font-roboto" style={{ fontSize: "1.2rem", padding: "10px" }}>
-                <p>Are you sure you want to {actionState === 6 ? "restore event" : "delete permanently"} this event?</p>
-              </div>
+            <DialogContent className={`${!isProposal && "text-center"}`}>
+              {isProposal ? (
+                <>
+                  <p className="mt-3 font-roboto font-bold">Proposal Name: {selectedData.name}</p>
+                  <p className="mt-3 font-roboto font-bold">Proposed Schedule: {formatScheduleDate(selectedData.sched_date)}</p>
+                  <RichTextEditor setBlob={actionState === 6 && isProposal ? setProposalBlob : null} editorData={editorData} readOnly={true}/>
+                  {selectedData.comment && (
+                    <>
+                      <p className="mt-3 font-roboto font-bold">Comment</p>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        value={selectedData.comment}
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            padding: 0, 
+                            "& fieldset": {
+                              borderRadius: "20px", 
+                            },
+                          },
+                          "& textarea": {
+                            color: "#000",
+                            backgroundColor: "#e8e9eb", 
+                            borderRadius: "20px", 
+                            padding: "16px", 
+                          },
+                        }}
+                        disabled={true}
+                      />
+                    </>
+                  )}
+                  <div className="w-[95%] m-auto">
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                      <DateTimePicker
+                        label="Select New Date & Time"
+                        value={selectedDate || initialSchedDate}
+                        onChange={handleDateChange}
+                        shouldDisableDate={(date) => {
+                          const day = date.getDay();
+                          return day === 0 || day === 6; // Disable Sundays (0) & Saturdays (6)
+                        }}
+                        minDate={new Date()}
+                        minTime={(() => {
+                          const now = new Date();
+                          const selected = new Date(newSchedDate);
+
+                          // Create 7:00 AM on selected date
+                          const sevenAM = new Date(selected);
+                          sevenAM.setHours(7, 0, 0, 0);
+
+                          // Create "now" time but on the selected date
+                          const nowOnSelectedDate = new Date(selected);
+                          nowOnSelectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+
+                          // Check if selected date is today
+                          const isToday = now.toDateString() === selected.toDateString();
+
+                          if (isToday) {
+                            // If now is after 7 AM, minTime = now (on today's date)
+                            return nowOnSelectedDate > sevenAM ? nowOnSelectedDate : sevenAM;
+                          } else {
+                            // For future dates minTime is 7 AM of selected date
+                            return sevenAM;
+                          }
+                        })()}  // Set minimum time to 7 AM
+                        maxTime={new Date(new Date().setHours(18, 0, 0, 0))} // Set maximum time to 6 PM
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            onKeyDown={(e) => e.preventDefault()}         // Block all key presses
+                            onPaste={(e) => e.preventDefault()}           // Block pasting
+                            inputProps={{
+                              ...params.inputProps,
+                              readOnly: true,                             // Prevent direct typing
+                              style: { cursor: 'pointer' },               // Show pointer cursor
+                            }}
+                          />
+                        )}
+                        slots={{ textField: TextField }}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            margin: "normal",
+                          },
+                        }}
+                      />
+                    </LocalizationProvider>
+                  </div>
+                </>
+              ) : (
+                <div className="font-roboto" style={{ fontSize: "1.2rem", padding: "10px" }}>
+                  <p>Are you sure you want to {actionState === 6 ? "restore event" : "delete permanently"} this appointment?</p>
+                </div>
+              )}
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpen(false)}>
@@ -473,6 +659,10 @@ export default function SchedulerActionModals({
             >
               {actionState === 0
                 ? "Cancelling Schedule"
+                : (actionState === 1 && isProposal) ? 
+                  "Reproposing Event"  
+                :  (actionState === 2 && isProposal) ?
+                  "Marking Event Complete" 
                 : actionState === 1
                 ? "Rescheduling"
                 : "Mark Complete"}
@@ -484,7 +674,39 @@ export default function SchedulerActionModals({
             </DialogTitle>
             <div className="bg-white w-[95%] mx-auto my-1 rounded-xl">
               <DialogContent className="text-center">
-                {selectedData && (
+                {isProposal ? (
+                  <>
+                    <p className="mt-3 font-roboto font-bold">Proposal Name: {selectedData.name}</p>
+                    <p className="mt-3 font-roboto font-bold">Proposed Schedule: {formatScheduleDate(selectedData.sched_date)}</p>
+                    <RichTextEditor setBlob={actionState !== 1 ?  null : setProposalBlob} editorData={editorData} readOnly={actionState !== 1}/>
+                    {selectedData.comment && (
+                      <>
+                        <p className="mt-3 font-roboto font-bold">Comment</p>
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={4}
+                          value={selectedData.comment}
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              padding: 0, 
+                              "& fieldset": {
+                                borderRadius: "20px", 
+                              },
+                            },
+                            "& textarea": {
+                              color: "#000",
+                              backgroundColor: "#e8e9eb", 
+                              borderRadius: "20px", 
+                              padding: "16px", 
+                            },
+                          }}
+                          disabled={true}
+                        />
+                      </>
+                    )}
+                  </>
+                ) : (
                   <div className="font-roboto"style={{ fontSize: "1.2rem", padding: "10px" }}>
                     <p className="mb-4 text-gray-500">Are you sure you want to cancel this Name/Event Schedule</p>
                     <p><strong>Name/Event:</strong> {selectedData.name}</p>
@@ -568,6 +790,12 @@ export default function SchedulerActionModals({
                       setOpenError(true);
                       return;
                     }
+                    if (isProposal && actionState === 1 && !proposalBlob) {
+                      setIsSuccessful(false);
+                      setAlertMessage("Please insert the proposal document.");
+                      setOpenError(true);
+                      return;
+                    }
                     handleSave();
                   }}
                   sx={{
@@ -601,7 +829,7 @@ export default function SchedulerActionModals({
       <Dialog 
         open={openConfirmTrash} 
         onClose={() => setOpenConfirmTrash(false)} 
-        maxWidth="sm" 
+        maxWidth={isProposal ? "md" :"sm"}
         fullWidth 
         sx={{
           "& .MuiPaper-root": {
@@ -621,13 +849,49 @@ export default function SchedulerActionModals({
         </DialogTitle>
         <div className="bg-white w-[95%] mx-auto my-1 rounded-xl">
           <DialogContent className="text-center font-roboto" style={{ fontSize: '1.2rem'}}>
-            <p className="mb-2 text-gray-500">Are you sure you want to move this event to trash?</p>
-            <p><strong>Name/Event:</strong> {selectedData.name}</p>
-            <p>
-              <strong>Date & Time:</strong> {selectedData.sched_date ? format(new Date(String(selectedData.sched_date)), "MM/dd/yyyy h:mm a") : "N/A"}
-            </p>
-            <p><strong>Message:</strong> {selectedData.message}</p>
-            <p><strong>Status:</strong> {selectedData.status}</p>
+            {isProposal ? (
+              <>
+                <p className="mt-3 font-roboto font-bold">Proposal Name: {selectedData.name}</p>
+                <p className="mt-3 font-roboto font-bold">Proposed Schedule: {formatScheduleDate(selectedData.sched_date)}</p>
+                <RichTextEditor editorData={editorData} readOnly={true}/>
+                {selectedData.comment && (
+                  <>
+                    <p className="mt-3 font-roboto font-bold">Comment</p>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={4}
+                      value={selectedData.comment}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          padding: 0, 
+                          "& fieldset": {
+                            borderRadius: "20px", 
+                          },
+                        },
+                        "& textarea": {
+                          color: "#000",
+                          backgroundColor: "#e8e9eb", 
+                          borderRadius: "20px", 
+                          padding: "16px", 
+                        },
+                      }}
+                      disabled={true}
+                    />
+                  </>
+                )}
+              </>
+            ) : (
+              <div>
+                <p className="mb-2 text-gray-500">Are you sure you want to move this event to trash?</p>
+                <p><strong>Name/Event:</strong> {selectedData.name}</p>
+                <p>
+                  <strong>Date & Time:</strong> {selectedData.sched_date ? format(new Date(String(selectedData.sched_date)), "MM/dd/yyyy h:mm a") : "N/A"}
+                </p>
+                <p><strong>Message:</strong> {selectedData.message}</p>
+                <p><strong>Status:</strong> {selectedData.status}</p>
+              </div>
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenConfirmTrash(false)}>

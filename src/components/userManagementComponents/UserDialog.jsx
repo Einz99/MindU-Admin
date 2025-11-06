@@ -372,9 +372,11 @@ const UserDialog = ({
         }}
       >
         <DialogTitle className="bg-[#b7cde3] relative">
-          {`${isEditMode ? "Edit" : isViewMode ? "View" : "Add"} ${
-            tab === 0 ? "Student" : tab === 1 ? "Adviser" : "Guidance Staff"
-          }`}
+          <p className="font-bold">
+            {`${isEditMode ? "Edit" : isViewMode ? "View" : "Add"} ${
+              tab === 0 ? "Student" : tab === 1 ? "Adviser" : "Guidance Staff"
+            }`}
+          </p>
           <DialogActions className="absolute -top-1 right-0">
             <IconButton onClick={handleModalClose} className="rounded-full">
               <Close sx={{ fontSize: 40, color: "black" }} />
@@ -730,7 +732,7 @@ const UserDialog = ({
         } }} 
       >
         <DialogTitle className="bg-[#b7cde3] relative">
-          Bulk Creation
+          <p className="font-bold">Bulk Creation</p>
           <DialogActions className="absolute -top-1 right-0">
             <IconButton onClick={() => setBulkUploadOpen(false)} className="rounded-full ">
               <Close sx={{fontSize: 40, color: 'black'}}/>
@@ -893,7 +895,7 @@ const UserDialog = ({
         }}
       >
         <DialogTitle className="bg-[#e3b7b7] relative">
-          Bulk Delete
+          <p className="font-bold">Bulk Delete</p>
           <DialogActions className="absolute -top-1 right-0">
             <IconButton onClick={() => setOpenBulkDelete(false)} className="rounded-full ">
               <Close sx={{fontSize: 40, color: 'black'}}/>

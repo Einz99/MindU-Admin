@@ -42,7 +42,7 @@ import { Close } from "@mui/icons-material";
  * - [Any important notes for future developers or groupmates]
  * ===========================================
  */
-export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortType, filterType, onTabChange }) {
+export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortType, filterType, onTabChange, tab, setTab }) {
   const [open, setOpen] = useState(false);
   /**
    * actionState Dictionary
@@ -66,7 +66,7 @@ export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortTy
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState(0);
+  const [isProposal, setIsProposal] = useState(false);
 
   const handleTabChange = (newTab) => {
     setTab(newTab);
@@ -231,9 +231,10 @@ export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortTy
   };
 
   // Open modal for other actions (view, cancel, edit, mark complete)
-  const handleOpen = (data, type) => {
+  const handleOpen = (data, type, isProposal = false) => {
     // If event is Completed or Cancelled, open in view-only mode.
     setActionState(type);
+    setIsProposal(isProposal)
     if (type === 5) {
       setOpenConfirmTrash(true)
     } 
@@ -349,6 +350,8 @@ export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortTy
         setIsSuccessful={setIsSuccessful}
         setAlertMessage={setAlertMessage}
         setOpenError={setOpenError}
+        setIsProposal={setIsProposal}
+        isProposal={isProposal}
       />
 
       <Dialog

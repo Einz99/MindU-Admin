@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { 
     Table, 
     TableBody, 
@@ -31,8 +31,8 @@ export default function SchedulerTable({ initial, handleOpen, searchTerm, tab, f
     // Filtering: Compare the date portion only.
     const filteredData = (initial || [])
       .filter((data) => {
-        if (searchTerm && !data.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-        if (!data.sched_date || data.status === "Pending") return false;
+        if (searchTerm && data.name && !data.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+        if (!data.sched_date || (tab === 0 && data.status === "Pending")) return false;
 
         if (tab === 0 && data.student_id == null) return false;
         if (tab === 1 && data.student_id != null) return false;
@@ -98,8 +98,17 @@ export default function SchedulerTable({ initial, handleOpen, searchTerm, tab, f
         trash: "Move to Trash",
         restore: "Restore to Cancelled",
         delete: "Permanently Delete Appointment",
+        proposal: "View Proposal Details",
+        editproposal: "Edit Proposal",
+        deleteproposal: "Permanently Delete Proposal",
+        completeevent: "Mark Event as Complete",
+        repropose: "Repropose Event",
       }[action];
     };
+
+    useEffect(() => {
+      setPage(1);
+    }, [searchTerm, tab, filterType, sortType]);
 
 
     return (
@@ -144,6 +153,8 @@ export default function SchedulerTable({ initial, handleOpen, searchTerm, tab, f
                         ${data.status === "Cancelled" && "bg-[#ef4444]"}
                         ${data.status === "Missed" && "bg-[#ef4444]"}
                         ${data.status === "Trash" && "bg-red-900"}
+                        ${data.status === "Pending" && "bg-yellow-400"}
+                        ${data.status === "Denied" && "bg-gray-600 text-white"}
                         `}>{data.status}</p>
                     </TableCell>
                     {staffPosition !== "Adviser" && (
@@ -151,68 +162,70 @@ export default function SchedulerTable({ initial, handleOpen, searchTerm, tab, f
                         {/* Action buttons based on status */}
                         {data.status === "Scheduled" ? (
                           <div className="flex gap-2 justify-center">
-                            <Tooltip title={getLabel("view")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full z-0">
+                            <Tooltip title={tab === 0 ? getLabel("view") : getLabel('proposal')} arrow>
+                              <IconButton onClick={() => handleOpen(data, 3, tab === 1)} className="rounded-full z-0">
                                 <Summarize className="text-[#4F46E5] bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
+                            {tab === 0 && (
                             <Tooltip title={getLabel("cancel")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 0)} className="rounded-full z-0">
+                              <IconButton onClick={() => handleOpen(data, 0, false)} className="rounded-full z-0">
                                 <Cancel className="text-red-400 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
+                            )} 
 
-                            <Tooltip title={getLabel("reschedule")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 1)} className="rounded-full z-0">
+                            <Tooltip title={tab === 0 ? getLabel("reschedule") : getLabel('editproposal')} arrow>
+                              <IconButton onClick={() => handleOpen(data, 1, tab === 1)} className="rounded-full z-0">
                                 <Edit className="text-yellow-400 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
-                            <Tooltip title={getLabel("complete")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 2)} className="rounded-full z-0">
+                            <Tooltip title={tab === 0 ? getLabel("complete") : getLabel("completeevent")} arrow>
+                              <IconButton onClick={() => handleOpen(data, 2, tab === 1)} className="rounded-full z-0">
                                 <CheckCircle className="text-green-500 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
                           </div>
                         ) : data.status === "Completed" ? (
                           <div className="flex justify-center">
-                            <Tooltip title={getLabel("view")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full z-0">
+                            <Tooltip title={tab === 0 ? getLabel("view") : getLabel('proposal')} arrow>
+                              <IconButton onClick={() => handleOpen(data, 3, tab === 1)} className="rounded-full z-0">
                                 <Summarize className="text-[#4F46E5] bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
                           </div>
-                        ) : (data.status === "Cancelled" || data.status === "Missed") ? (
+                        ) : (data.status === "Cancelled" || data.status === "Missed" || data.status === "Pending" || data.status === "Denied") ? (
                           <div className="flex justify-center">
-                            <Tooltip title={getLabel("view")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 3)} className="rounded-full z-0">
+                            <Tooltip title={tab === 0 ? getLabel("view") : getLabel('proposal')} arrow>
+                              <IconButton onClick={() => handleOpen(data, 3, tab === 1)} className="rounded-full z-0">
                                 <Summarize className="text-[#4F46E5] bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
-                            <Tooltip title={getLabel("reschedule")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 1)} className="rounded-full z-0">
+                            <Tooltip title={tab === 0 ? getLabel("reschedule") : getLabel('editproposal')} arrow>
+                              <IconButton onClick={() => handleOpen(data, 1, tab === 1)} className="rounded-full z-0">
                                 <Edit className="text-yellow-400 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
-                            <Tooltip title={getLabel("trash")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 5)} className="rounded-full z-0">
+                            <Tooltip title={tab === 0 ? getLabel("trash") : getLabel('deleteproposal')} arrow>
+                              <IconButton onClick={() => handleOpen(data, 5, tab === 1)} className="rounded-full z-0">
                                 <Delete className="text-red-400 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
                           </div>
                         ) : (
                           <div className="flex gap-2 justify-center">
-                            <Tooltip title={getLabel("restore")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 6)} className="rounded-full z-0">
+                            <Tooltip title={tab === 0 ? getLabel("restore") : getLabel('repropose')} arrow>
+                              <IconButton onClick={() => handleOpen(data, 6, tab === 1)} className="rounded-full z-0">
                                 <Restore className="text-green-500 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>
 
-                            <Tooltip title={getLabel("delete")} arrow>
-                              <IconButton onClick={() => handleOpen(data, 7)} className="rounded-full z-0">
+                            <Tooltip title={tab === 0 ? getLabel("trash") : getLabel('deleteproposal')} arrow>
+                              <IconButton onClick={() => handleOpen(data, 7, tab === 1)} className="rounded-full z-0">
                                 <Delete className="text-red-500 bg-white rounded-full" />
                               </IconButton>
                             </Tooltip>

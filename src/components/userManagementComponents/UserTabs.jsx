@@ -9,7 +9,10 @@ export default function UserTabs({
   checked,
   handleSearchChange,  // <-- receive the handler as a prop
   setBulkUploadOpen,
-  staff
+  staff,
+  setOpenError,
+  setAlertMessage,
+  setIsSuccessful,
 }) {
   const isAdviser = staff?.position === "Adviser";
   const isStaff = staff?.position === "Guidance Staff";
@@ -93,7 +96,10 @@ export default function UserTabs({
           className="text-white flex items-center bg-gradient-to-r from-[#EF4444] to-[#B91C1C] rounded-3xl px-7 py-1 my-2 border border-black text-nowrap" 
           onClick={() => {
             if (checked.length === 0) {
-              return alert("No users selected for deletion.");
+              setOpenError(true);
+              setAlertMessage("Please select at least one user to delete.");
+              setIsSuccessful(false);
+              return;
             }
             setOpenBulkDelete(true)}}>
             Delete Selected

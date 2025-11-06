@@ -57,6 +57,7 @@ export default function Landingpage() {
   const [editorData, setEditorData] = useState(null);
   const [proposedSchedule, setProposedSchedule] = useState('');
   const [proposalId, setProposalId] = useState(0);
+  const [proposalName, setProposalName] = useState('');
 
   const staff = JSON.parse(localStorage.getItem("staff"));
   
@@ -100,6 +101,7 @@ export default function Landingpage() {
       console.log(item.id);
       setOpenProposal(true);
       setProposedSchedule(formatScheduleDate(item.sched_date));
+      setProposalName(item.name);
     } catch (error) {
       console.error("Error loading file:", error);
     }
@@ -176,6 +178,7 @@ export default function Landingpage() {
             </DialogTitle>
           
             <DialogContent>
+              <p className="mt-3 font-roboto font-bold">Proposal Name: {proposalName}</p>
               <p className="mt-3 font-roboto font-bold">Proposed Schedule: {proposedSchedule}</p>
               <RichTextEditor editorData={editorData} readOnly={true}/>
               <p className="mt-3 font-roboto font-bold">Comment</p>

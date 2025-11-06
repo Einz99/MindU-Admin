@@ -15,7 +15,7 @@ export default function DeleteDialog({ open, onClose, onConfirm, deleteTarget, s
       }}
     >
       <DialogTitle className="bg-[#e3b7b7] relative">
-        Event Details
+        <p className="font-bold">Event Details Deletion</p>
         <DialogActions className="absolute -top-1 right-0">
           <IconButton onClick={onClose} className="rounded-full ">
             <Close  sx={{fontSize: 40, color: 'black'}}></Close>

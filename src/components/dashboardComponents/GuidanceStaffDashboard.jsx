@@ -321,8 +321,8 @@ export default function StaffDashboard() {
           <div />
           <UsageUtilization filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
           <ActiveStudentsPieChart width={100} padding={10} marginTop={false} circleWidth={45} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
-          <AlertsOvertime alerts={alerts} />
-          <CompSchedules backlog={backlog} />
+          <AlertsOvertime alerts={alerts} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
+          <CompSchedules backlog={backlog} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
         </div>
         
         <div 

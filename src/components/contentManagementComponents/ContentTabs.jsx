@@ -5,7 +5,6 @@ import '../../handsontable.css'
 
 export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDeleteOpen, setIsVideo, setVideoDialog, setIsArticle, handleSearchChange, setEditMode}) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
   const staff = JSON.parse(localStorage.getItem("staff"));
 
   const searchPlaceholder = () => {
@@ -111,8 +110,38 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
           </button>
           <div className="relative">
             <div className="relative text-white flex items-center bg-gradient-to-r from-[#60a5fa] to-[#4f46e5] rounded-3xl px-9 py-1 my-2 border border-black z-20"
-                onMouseEnter={() => setIsDropdownOpen(true)}
-                onMouseLeave={() => setIsDropdownOpen(false)}>
+                onMouseEnter={() => {
+                  if(tab !== 0) return;
+                  setIsDropdownOpen(true)}}
+                onMouseLeave={() => setIsDropdownOpen(false)}
+                onClick={() => {
+                  switch(tab) {
+                    case 0:
+                      return;
+                    case 1:
+                      setVideoDialog(true);
+                      setIsVideo(true);
+                      setEditMode(false);
+                      return;
+                    case 2:
+                      setIsDialogOpen(true);
+                      setIsVideo(false);
+                      setEditMode(false);
+                      return;
+                    case 3:
+                      setIsDialogOpen(true);
+                      setIsVideo(false);
+                      setEditMode(false);
+                      return;
+                    case 4:
+                      setIsDialogOpen(true);
+                      setIsVideo(false);
+                      setEditMode(false);
+                      return;
+                    default:
+                      return;
+                }}}
+            >
                 Create
                 <Add sx={{
                   fontSize: 15,
@@ -124,16 +153,15 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
             </div>
             {isDropdownOpen && (
               <div 
-                className={`absolute top-5 right-0 mt-2 w-full ${isSubmenuOpen === true ? "h-58" : "h-46"} bg-[#b7cde3] shadow-lg rounded-md z-10`}
+                className={`absolute top-5 right-0 mt-2 w-full bg-[#b7cde3] shadow-lg rounded-md z-10`}
                 onMouseEnter={() => setIsDropdownOpen(true)}
                 onMouseLeave={() => setIsDropdownOpen(false)}
               >
-                <ul className="py-2 text-start">
+                <ul className="py-2 text-start mt-2">
                   <li
                     className={`group p-2 hover:text-[#334155] ${
                       tab === 0 ? "text-[#334155]" : "text-[#64748b]"
                     }`}
-                    onClick={() => setIsSubmenuOpen(!isSubmenuOpen)}
                   >
                     <button
                       sx={{
@@ -145,168 +173,36 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
                         padding: 0,
                       }}
                       className="group-hover:text-gray-600 group-hover:border-gray-600 flex items-center gap-1"
+                      onClick={() => {setTab(0); setIsArticle(true); setVideoDialog(false); setEditMode(false);}}
                     >
-                      <Add sx={{
+                      <DescriptionOutlined 
+                        sx={{
                         fontSize: 17,
                         color: '#334155',
-                        backgroundColor: 'transparent',
-                        borderColor: '#334155',
-                        borderWidth: 1,
-                        borderRadius: 9999,
                         marginLeft: '8px',
                       }}/>
-                      <p className="text-[1rem]">Resource Library</p>
+                      <p className="text-[1rem] ml-2">Article</p>
                     </button>
-                      {isSubmenuOpen && (
-                        <ul className=""
-                          onMouseEnter={() => {setIsSubmenuOpen(true); setIsDropdownOpen(true)}}
-                          onMouseLeave={() => {setIsSubmenuOpen(false);}}
-                        >
-                          <li className="group px-4 hover:text-gray-600 text-white flex items-center gap-5"
-                            onClick={() => {setTab(0); setIsArticle(true); setVideoDialog(false); setEditMode(false);}}
-                          >
-                            <button 
-                             className="group-hover:text-gray-600">
-                              <DescriptionOutlined 
-                                sx={{
-                                fontSize: 17,
-                                color: '#334155',
-                                marginLeft: '8px',
-                              }}/>
-                            </button>
-                            Article
-                          </li>
-                          <li className="group px-4 hover:text-gray-600 text-white flex items-center gap-5"
-                            onClick={() => {setTab(0); setVideoDialog(true); setIsVideo(true); setEditMode(false);}}
-                          >
-                            <button 
-                             className="group-hover:text-gray-600">
-                              <VideoCallOutlined 
-                                sx={{
-                                fontSize: 17,
-                                color: '#334155',
-                                marginLeft: '8px',
-                              }}/>
-                            </button>
-                            Video
-                          </li>
-                        </ul>
-                      )}
-                  </li>
-                  <li
-                    className={`group p-2 hover:text-[#334155] ${
-                      tab === 1 ? "text-[#334155]" : "text-[#64748b]"
-                    }`}
-                    onClick={() => {setTab(1); setVideoDialog(true); setIsVideo(true); setEditMode(false);}}
-                  >
+
                     <button
                       sx={{
-                        borderColor: `${tab === 1 ? "rbg(75 85 99)" : "white" }`,
+                        borderColor: `${tab === 0 ? "rbg(75 85 99)" : "white" }`,
                         borderWidth: 1,
                         borderStyle: "solid",
-                        color: `${tab === 1 ? "rbg(75 85 99)" : "white" }`,
+                        color: `${tab === 0 ? "rbg(75 85 99)" : "white" }`,
                         marginRight: "10px",
                         padding: 0,
                       }}
-                      className="group-hover:text-[#334155] flex items-center gap-1"
+                      className="group-hover:text-gray-600 group-hover:border-gray-600 flex items-center gap-1"
+                      onClick={() => {setTab(0); setVideoDialog(true); setIsVideo(true); setEditMode(false);}}
                     >
-                      <Add sx={{
+                      <VideoCallOutlined 
+                        sx={{
                         fontSize: 17,
                         color: '#334155',
-                        backgroundColor: 'transparent',
-                        borderColor: '#334155',
-                        borderWidth: 1,
-                        borderRadius: 9999,
                         marginLeft: '8px',
                       }}/>
-                      <p className="text-[1rem]">Wellness Library</p>
-                    </button>
-                  </li>
-                  <li
-                    className={`group p-2 hover:text-[#334155] ${
-                      tab === 2 ? "text-[#334155]" : "text-[#64748b]"
-                    }`}
-                    onClick={() => {setTab(2); setIsDialogOpen(true); setIsVideo(false); setEditMode(false);}}
-                  >
-                    <button
-                      sx={{
-                        borderColor: `${tab === 2 ? "rbg(75 85 99)" : "white" }`,
-                        borderWidth: 1,
-                        borderStyle: "solid",
-                        color: `${tab === 2 ? "rbg(75 85 99)" : "white" }`,
-                        marginRight: "10px",
-                        padding: 0,
-                      }}
-                      className="group-hover:text-[#334155] flex items-center gap-1"
-                    >
-                      <Add sx={{
-                        fontSize: 17,
-                        color: '#334155',
-                        backgroundColor: 'transparent',
-                        borderColor: '#334155',
-                        borderWidth: 1,
-                        borderRadius: 9999,
-                        marginLeft: '8px',
-                      }}/>
-                      <p className="text-[1rem]">Annoucement</p>
-                    </button>
-                  </li>
-                  <li
-                    className={`group p-2 hover:text-[#334155] ${
-                      tab === 3 ? "text-[#334155]" : "text-[#64748b]"
-                    }`}
-                    onClick={() => {setTab(3); setIsDialogOpen(true); setIsVideo(false); setEditMode(false);}}
-                  >
-                    <button
-                      sx={{
-                        borderColor: `${tab === 3 ? "rbg(75 85 99)" : "white" }`,
-                        borderWidth: 1,
-                        borderStyle: "solid",
-                        color: `${tab === 3 ? "rbg(75 85 99)" : "white" }`,
-                        marginRight: "10px",
-                        padding: 0,
-                      }}
-                      className="group-hover:text-[#334155] flex items-center gap-1"
-                    >
-                      <Add sx={{
-                        fontSize: 17,
-                        color: '#334155',
-                        backgroundColor: 'transparent',
-                        borderColor: '#334155',
-                        borderWidth: 1,
-                        borderRadius: 9999,
-                        marginLeft: '8px',
-                      }}/>
-                      <p className="text-[1rem]">FAQ</p>
-                    </button>
-                  </li>
-                  <li
-                    className={`group p-2 hover:text-[#334155] ${
-                      tab === 4 ? "text-[#334155]" : "text-[#64748b]"
-                    }`}
-                    onClick={() => {setTab(4); setIsDialogOpen(true); setIsVideo(false); setEditMode(false);}}
-                  >
-                    <button
-                      sx={{
-                        borderColor: `${tab === 4 ? "rbg(75 85 99)" : "white" }`,
-                        borderWidth: 1,
-                        borderStyle: "solid",
-                        color: `${tab === 4 ? "rbg(75 85 99)" : "white" }`,
-                        marginRight: "10px",
-                        padding: 0,
-                      }}
-                      className="group-hover:text-[#334155] flex items-center gap-1"
-                    >
-                      <Add sx={{
-                        fontSize: 17,
-                        color: '#334155',
-                        backgroundColor: 'transparent',
-                        borderColor: '#334155',
-                        borderWidth: 1,
-                        borderRadius: 9999,
-                        marginLeft: '8px',
-                      }}/>
-                      <p className="text-[1rem]">Trigger</p>
+                      <p className="text-[1rem] ml-2">Video</p>
                     </button>
                   </li>
                 </ul>

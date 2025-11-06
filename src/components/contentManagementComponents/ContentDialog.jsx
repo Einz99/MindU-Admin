@@ -62,6 +62,7 @@ export default function ContentDialog({
   const [editorData, setEditorData] = useState(null);
   const [isDraft, setIsDraft] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const handleDialogClose = () => {
     setDialogOpen(false);
@@ -78,9 +79,13 @@ export default function ContentDialog({
     setNewItem({});
     setIsRichText(false);
     setShowSaveDialog(false);
+    setIsSaving(false); // Reset this too
   };
 
   const hasUnsavedChanges = () => {
+    // Don't show save dialog if we're in the middle of saving
+    if (isSaving) return false;
+    
     if (editMode || viewMode || tab === 2) return false;
 
     if (tab === 4) {
@@ -89,7 +94,7 @@ export default function ContentDialog({
         newItem.category?.trim()
       );
     }
-    
+
     if (tab === 3) {
       return (
         newItem.question?.trim() ||
@@ -97,7 +102,7 @@ export default function ContentDialog({
         newItem.category?.trim()
       );
     }
-    
+
     return (
       newItem.title?.trim() ||
       newItem.description?.trim() ||
@@ -243,6 +248,8 @@ export default function ContentDialog({
 
   const handleSave = async (isDraft) => { 
     setLoading(true);
+    setIsSaving(true);
+
     try {
       let response;
       let requestBody;
@@ -341,17 +348,19 @@ export default function ContentDialog({
       setAlertMessage(alertMessage)
       setIsSuccessful(true)
       setOpenError(true)
-    
+      
       setTimeout(() => {
+        setIsSaving(false); // Reset after dialog closes
         handleDialogClose();
         updateContent();
       }, 2000);
     
     } catch (error) {
       console.error("Error saving data:", error.response ? error.response.data : error);
-      setAlertMessage("Failed to save data.")
-      setIsSuccessful(false)
-      setOpenError(true)
+      setAlertMessage("Failed to save data.");
+      setIsSuccessful(false);
+      setIsSaving(false);
+      setOpenError(true);
     } finally {
       setLoading(false);
     }
@@ -466,7 +475,7 @@ export default function ContentDialog({
         }}
       >
         <DialogTitle className="bg-[#b7cde3] relative">
-          Unsaved Changes
+          <p className="font-bold">Unsaved Changes</p>
           <DialogActions className="absolute -top-1 right-0">
             <IconButton onClick={() => setShowSaveDialog(false)} className="rounded-full">
               <Close sx={{ fontSize: 40, color: 'black' }} />
@@ -503,7 +512,7 @@ export default function ContentDialog({
         open={isArticle || open}
         onClose={tab === 2 ? handleDialogClose : handleCloseAttempt}
         title={`${editMode ? "Edit " : isAdd === false ? "View ": "Add "} ${
-          tab === 0 ? "Resource" : tab === 1 ? "Wellness" : tab === 2 ? "Announcement" : tab === 3 ? "Chatbot FAQ" : "Chatbot Trigger"
+          tab === 0 ? "Resource" : tab === 1 ? "Wellness" : tab === 2 ? "Announcement" : tab === 3 ? "FAQ" : "Trigger"
         }`}
         actionButtons={
         <>
@@ -1085,7 +1094,7 @@ export default function ContentDialog({
         }
       >
         <div>
-          <RichTextEditor setBlob={setBlob} editorData={editorData} readOnly={(!editMode && !isAdd) || viewMode}/>
+          <RichTextEditor setBlob={(!editMode && !isAdd) || viewMode ? null : setBlob} editorData={editorData} readOnly={(!editMode && !isAdd) || viewMode}/>
         </div>
       </DialogWrapper>
 

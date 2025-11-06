@@ -164,6 +164,17 @@ export default function ContentManagement() {
     setSelectedItems([]);
     setSelectedRows([]);
   }
+
+  useEffect(() => {
+    if (openError) return;
+
+    const timer = setTimeout(() => {
+      setAlertMessage('');
+      setIsSuccessful(false);
+    }, 1000); // 1 second
+
+    return () => clearTimeout(timer);
+  }, [openError]);
   
   return (
     <div className="flex bg-[#f8fafc] flex-1 overflow-hidden">
@@ -272,7 +283,7 @@ export default function ContentManagement() {
 
       <Dialog
         open={openError}
-        onClose={() => {setOpenError(false); setAlertMessage(''); setIsSuccessful(false)}}
+        onClose={() => {setOpenError(false);}}
         fullWidth
         sx={{
           "& .MuiPaper-root": {
@@ -281,21 +292,22 @@ export default function ContentManagement() {
             borderRadius: "25px",
           },
         }}
+        maxWidth="xs"
       >
-        <DialogTitle className={`${isSuccessful ? "bg-[#b7e3cc]" : "bg-[#e3b7b7]"} relative`}>
-          {isSuccessful ? "Successful" : "Error"}
+        <DialogTitle className={`${!isSuccessful ? "bg-[#e3b7b7]" : "bg-[#b7e3cc]"} relative`}>
+          <p className="font-bold">{isSuccessful ? "Successful" : "Error"}</p>
           <DialogActions className="absolute -top-1 right-0">
-            <IconButton onClick={() => {setOpenError(false); setAlertMessage(''); setIsSuccessful(false);}} className="rounded-full">
+            <IconButton onClick={() => {setOpenError(false);}} className="rounded-full">
               <Close sx={{ fontSize: 40, color: "black" }} />
             </IconButton>
           </DialogActions>
         </DialogTitle>
         
-        <DialogContent>
-          {alertMessage}
+        <DialogContent className="text-center text-base py-6 px-10 mt-2">
+          <p className="font-roboto font-medium text-xl">{alertMessage}</p>
         </DialogContent>
         <DialogActions>
-          <button onClick={() => {setOpenError(false); setAlertMessage(''); setIsSuccessful(false);}}>
+          <button onClick={() => {setOpenError(false);}}>
             <p className="text-base font-roboto font-bold text-[#64748b] p-2 px-6">OK</p>
           </button>
         </DialogActions>

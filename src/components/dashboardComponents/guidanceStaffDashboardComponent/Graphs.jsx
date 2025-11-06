@@ -19,19 +19,17 @@ import { useNavigate } from "react-router-dom";
 import { Badge, Button, Select, MenuItem, TableContainer, TableBody, TableCell, TableRow, Table, TableHead } from "@mui/material";
 import axios from "axios";
 import { API } from "../../../api";
-import * as XLSX from 'xlsx';
 
 export function UsageUtilization({ filteringDateType, filteringSection }) {
   const [dateRange, setDateRange] = useState(filteringDateType || 'today');
   const [section, setSection] = useState(filteringSection || 'All');
-  const [rawData, setRawData] = useState([]); // Cache all data from backend
+  const [rawData, setRawData] = useState([]);
   const [chartData, setChartData] = useState([]);
 
   // Fetch all data from backend once and cache it
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch data for the last year (maximum range)
         const today = new Date();
         const lastYear = new Date();
         lastYear.setFullYear(today.getFullYear() - 1);
@@ -51,17 +49,13 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
     };
 
     fetchData();
-
-    // Repeat every 10 minutes to refresh cache
     const interval = setInterval(fetchData, 10 * 60 * 1000);
-
     return () => clearInterval(interval);
   }, []);
 
   // Filter and process cached data on the frontend
   useEffect(() => {
     if (rawData.length === 0) {
-      // Initialize with zeros if no data
       const modules = ["Resource", "Wellness", "Chatbot", "Mood", "Scheduler", "Pet"];
       const emptyData = modules.map((module) => ({
         label: module,
@@ -72,17 +66,14 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
       return;
     }
 
-    // Calculate date range for filtering
     const { start } = getDateRange(dateRange);
     const startDate = new Date(start);
     const endDate = new Date();
 
-    // Filter data based on date range and section
     const filtered = rawData.filter((row) => {
       const rowDate = new Date(row.date);
       const dateMatch = rowDate >= startDate && rowDate <= endDate;
       
-      // Section filter - use includes() to match anywhere in the string
       let sectionMatch = true;
       if (section !== 'All') {
         sectionMatch = row.section && row.section.toUpperCase().includes(section.toUpperCase());
@@ -91,7 +82,6 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
       return dateMatch && sectionMatch;
     });
 
-    // Aggregate by module
     const modules = ["Resource", "Wellness", "Chatbot", "Mood", "Scheduler", "Pet"];
     const moduleMap = {};
     
@@ -102,7 +92,6 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
       moduleMap[row.module] += row.visits;
     });
 
-    // Transform to chart format
     const transformed = modules.map((module) => ({
       label: module,
       value: moduleMap[module] || 0,
@@ -112,7 +101,6 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
     setChartData(transformed);
   }, [rawData, dateRange, section]);
 
-  // Sync with parent component props
   useEffect(() => {
     if (filteringDateType) setDateRange(filteringDateType);
   }, [filteringDateType]);
@@ -121,7 +109,6 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
     if (filteringSection) setSection(filteringSection);
   }, [filteringSection]);
 
-  // Helper: Get color for module
   const getModuleColor = (module) => {
     switch (module) {
       case "Resource": return "#6ce5e8";
@@ -134,7 +121,6 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
     }
   };
 
-  // Helper: Calculate date range
   const getDateRange = (range) => {
     const today = new Date();
     let startDate = new Date();
@@ -168,7 +154,6 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
     };
   };
 
-  // Helper: Get display text
   const getDisplayText = (range) => {
     switch(range) {
       case 'today': return 'Today';
@@ -181,19 +166,49 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
     }
   };
 
+  // Helper function to convert array to CSV string
+  const convertToCSV = (data, headers) => {
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    data.forEach(row => {
+      const values = headers.map(header => {
+        const value = row[header] || '';
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+  };
+
+  // Helper function to download CSV
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleExportToExcel = () => {
     const formattedData = chartData.map((data) => ({
       Module: data.label,
       Visits: data.value,
     }));
 
-    const ws = XLSX.utils.json_to_sheet(formattedData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Usage Data");
-
     const sectionLabel = section === 'All' ? 'All_Sections' : section;
     const dateLabel = getDisplayText(dateRange).replace(/\s+/g, '_');
-    XLSX.writeFile(wb, `Usage_${sectionLabel}_${dateLabel}.xlsx`);
+    
+    const csvContent = convertToCSV(formattedData, ['Module', 'Visits']);
+    downloadCSV(csvContent, `Usage_${sectionLabel}_${dateLabel}.csv`);
   };
 
   return (
@@ -218,7 +233,6 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
         </div>
       </div>
 
-      {/* Chart */}
       <div className="w-full h-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
@@ -254,72 +268,194 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
   );
 }
 
-export function AlertsOvertime({ alerts }) {
-  const getStartOfWeek = (date) => {
-    const d = new Date(date);
-    const day = d.getDay(); // Sunday=0, Monday=1...
-    const diff = (day === 0 ? -6 : 1 - day); // Monday as start
-    d.setDate(d.getDate() + diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  };
+export function AlertsOvertime({ alerts, filteringDateType, filteringSection }) {
+  const [dateRange, setDateRange] = useState(filteringDateType || 'today');
+  const [section, setSection] = useState(filteringSection || 'All');
+  const [rawData, setRawData] = useState([]);
+  const [chartData, setChartData] = useState([]);
 
-  const AlertData = useMemo(() => {
-    const today = new Date();
-    const result = [];
+  useEffect(() => {
+    if (filteringDateType) setDateRange(filteringDateType);
+  }, [filteringDateType]);
 
-    // Loop to get the past 4 weeks
-    for (let i = 0; i < 4; i++) {
-      const currentMonday = getStartOfWeek(
-        new Date(today.getFullYear(), today.getMonth(), today.getDate() - i * 7)
-      );
-      
-      // Set the end of the week (Friday)
-      const weekEnd = new Date(currentMonday);
-      weekEnd.setDate(weekEnd.getDate() + 4); // Friday
-      weekEnd.setHours(23, 59, 59, 999);
+  useEffect(() => {
+    if (filteringSection) setSection(filteringSection);
+  }, [filteringSection]);
 
-      // Count all alerts within the week range (resolved or not)
-      const count = alerts.filter(
-        (alert) =>
-          alert.date &&
-          new Date(alert.date) >= currentMonday &&
-          new Date(alert.date) <= weekEnd
-      ).length;
-
-      // Push data with formatted week ending date and count
-      result.push({
-        date: weekEnd.toLocaleDateString(), // format to get the date of the Friday
-        value: count || 0 // Ensure value is 0 if no alerts
-      });
+  useEffect(() => {
+    if (alerts && alerts.length > 0) {
+      setRawData(alerts);
     }
-
-    return result.reverse();
   }, [alerts]);
 
+  const getDateRange = (range) => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    let startDate = new Date();
+    
+    switch(range) {
+      case 'today':
+        startDate = new Date(today);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'last7days':
+        startDate.setDate(today.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'lastMonth':
+        startDate.setDate(today.getDate() - 29);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'last3Months':
+        startDate.setMonth(today.getMonth() - 3);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'last6Months':
+        startDate.setMonth(today.getMonth() - 6);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'lastYear':
+        startDate.setFullYear(today.getFullYear() - 1);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      default:
+        startDate = new Date(today);
+        startDate.setHours(0, 0, 0, 0);
+    }
+    
+    return { start: startDate, end: today };
+  };
+
+  useEffect(() => {
+    if (!rawData || rawData.length === 0) {
+      setChartData([]);
+      return;
+    }
+
+    const { start, end } = getDateRange(dateRange);
+
+    const filtered = rawData.filter((alert) => {
+      if (!alert.date) return false;
+      
+      const alertDate = new Date(alert.date);
+      const dateMatch = alertDate >= start && alertDate <= end;
+      
+      let sectionMatch = true;
+      if (section !== 'All') {
+        sectionMatch = alert.section && alert.section.toUpperCase().includes(section.toUpperCase());
+      }
+      
+      return dateMatch && sectionMatch;
+    });
+
+    const getMostRecentFriday = (date) => {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = day >= 5 ? day - 5 : day + 2;
+      d.setDate(d.getDate() - diff);
+      d.setHours(23, 59, 59, 999);
+      return d;
+    };
+
+    const timeSpan = end - start;
+    const daySpan = Math.ceil(timeSpan / (1000 * 60 * 60 * 24));
+    
+    let intervalDays;
+    let numPoints;
+    
+    if (daySpan <= 31) {
+      intervalDays = 7;
+      numPoints = 4;
+    } else if (daySpan <= 93) {
+      intervalDays = 14;
+      numPoints = 6;
+    } else if (daySpan <= 186) {
+      intervalDays = 14;
+      numPoints = 6;
+    } else {
+      intervalDays = 30;
+      numPoints = 6;
+    }
+
+    const result = [];
+    let currentFriday = getMostRecentFriday(end);
+
+    for (let i = 0; i < numPoints; i++) {
+      const periodEnd = new Date(currentFriday);
+      const periodStart = new Date(currentFriday);
+      periodStart.setDate(periodStart.getDate() - intervalDays + 1);
+      periodStart.setHours(0, 0, 0, 0);
+
+      const count = filtered.filter((alert) => {
+        const alertDate = new Date(alert.date);
+        return alertDate >= periodStart && alertDate <= periodEnd;
+      }).length;
+
+      result.unshift({
+        date: periodEnd.toLocaleDateString('en-US', { 
+          month: '2-digit', 
+          day: '2-digit', 
+          year: '2-digit' 
+        }),
+        value: count || 0
+      });
+
+      currentFriday.setDate(currentFriday.getDate() - intervalDays);
+    }
+
+    setChartData(result);
+  }, [rawData, dateRange, section]);
+
   const generateDateRangeString = () => {
-    const firstDate = new Date(AlertData[0]?.date);
-    const lastDate = new Date(AlertData[AlertData.length - 1]?.date);
+    if (chartData.length === 0) return '';
+    const firstDate = chartData[0]?.date;
+    const lastDate = chartData[chartData.length - 1]?.date;
+    return `${firstDate}_to_${lastDate}`.replace(/\//g, '-');
+  };
 
-    const startMonth = firstDate.getMonth() + 1; // Month is 0-based
-    const startYear = firstDate.getFullYear();
-    const endMonth = lastDate.getMonth() + 1;
+  // Helper function to convert array to CSV string
+  const convertToCSV = (data, headers) => {
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    data.forEach(row => {
+      const values = headers.map(header => {
+        const value = row[header] || '';
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+  };
 
-    return `${startMonth}-${endMonth} (${startYear})`;
+  // Helper function to download CSV
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleExportToExcel = () => {
-    const formattedData = AlertData.map((data) => ({
+    const formattedData = chartData.map((data) => ({
       Date: data.date,
       Alerts: data.value,
     }));
 
-    const ws = XLSX.utils.json_to_sheet(formattedData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Alert Data");
-
     const dateRange = generateDateRangeString();
-    XLSX.writeFile(wb, `alerts_${dateRange}.xlsx`);
+    const sectionLabel = section === 'All' ? 'All_Sections' : section;
+    
+    const csvContent = convertToCSV(formattedData, ['Date', 'Alerts']);
+    downloadCSV(csvContent, `alerts_${sectionLabel}_${dateRange}.csv`);
   };
 
   return (
@@ -334,18 +470,21 @@ export function AlertsOvertime({ alerts }) {
             justifyItems: 'center',
             color: '#64748b',
           }}
-          onClick={handleExportToExcel} // Export when clicked
+          onClick={handleExportToExcel}
         />
       </div>
       
       <div className="w-full h-[100%] px-2">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={AlertData}>
+          <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
               dataKey="date" 
               domain={['auto', 'auto']}
               padding={{ left: 20, right: 20 }}
+              angle={-45}
+              textAnchor="end"
+              height={60}
             />
             <YAxis domain={['auto', 'auto']} />
             <Tooltip />
@@ -363,72 +502,194 @@ export function AlertsOvertime({ alerts }) {
   );
 }
 
-export function CompSchedules({ backlog, isAdviser }) {
-  const getStartOfWeek = (date) => {
-    const d = new Date(date);
-    const day = d.getDay(); // Sunday=0, Monday=1...
-    const diff = (day === 0 ? -6 : 1 - day); // Monday as start
-    d.setDate(d.getDate() + diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  };
+export function CompSchedules({ backlog, filteringDateType, filteringSection }) {
+  const [dateRange, setDateRange] = useState(filteringDateType || 'today');
+  const [section, setSection] = useState(filteringSection || 'All');
+  const [rawData, setRawData] = useState([]);
+  const [chartData, setChartData] = useState([]);
 
-  const Scheduledata = useMemo(() => {
-    const today = new Date();
-    const result = [];
+  useEffect(() => {
+    if (filteringDateType) setDateRange(filteringDateType);
+  }, [filteringDateType]);
 
-    // Loop to get the past 4 weeks
-    for (let i = 0; i < 4; i++) {
-      const currentMonday = getStartOfWeek(new Date(today.getFullYear(), today.getMonth(), today.getDate() - i * 7));
-      
-      // Set the end of the week (Friday)
-      const weekEnd = new Date(currentMonday);
-      weekEnd.setDate(weekEnd.getDate() + 4); // Friday
-      weekEnd.setHours(23, 59, 59, 999);
+  useEffect(() => {
+    if (filteringSection) setSection(filteringSection);
+  }, [filteringSection]);
 
-      // Count completed backlogs within the week range
-      const count = backlog.filter(
-        (b) =>
-          b.status === "Completed" &&
-          b.completed_at &&
-          new Date(b.completed_at) >= currentMonday &&
-          new Date(b.completed_at) <= weekEnd
-      ).length;
-
-      // Push data with formatted week ending date and count (0 if no completed backlogs)
-      result.push({
-        date: weekEnd.toLocaleDateString(), // format to get the date of the Friday
-        value: count || 0 // Ensure value is 0 if no "Completed" backlogs
-      });
+  useEffect(() => {
+    if (backlog && backlog.length > 0) {
+      setRawData(backlog);
     }
-
-    return result.reverse();
   }, [backlog]);
 
-  // Generate Date Range for File Name (e.g., 6-31 for 4 months)
+  const getDateRange = (range) => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    let startDate = new Date();
+    
+    switch(range) {
+      case 'today':
+        startDate = new Date(today);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'last7days':
+        startDate.setDate(today.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'lastMonth':
+        startDate.setDate(today.getDate() - 29);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'last3Months':
+        startDate.setMonth(today.getMonth() - 3);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'last6Months':
+        startDate.setMonth(today.getMonth() - 6);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'lastYear':
+        startDate.setFullYear(today.getFullYear() - 1);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      default:
+        startDate = new Date(today);
+        startDate.setHours(0, 0, 0, 0);
+    }
+    
+    return { start: startDate, end: today };
+  };
+
+  useEffect(() => {
+    if (!rawData || rawData.length === 0) {
+      setChartData([]);
+      return;
+    }
+
+    const { start, end } = getDateRange(dateRange);
+
+    const filtered = rawData.filter((b) => {
+      if (b.status !== "Completed" || !b.completed_at) return false;
+      
+      const completedDate = new Date(b.completed_at);
+      const dateMatch = completedDate >= start && completedDate <= end;
+      
+      let sectionMatch = true;
+      if (section !== 'All') {
+        sectionMatch = b.section && b.section.toUpperCase().includes(section.toUpperCase());
+      }
+      
+      return dateMatch && sectionMatch;
+    });
+
+    const getMostRecentFriday = (date) => {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = day >= 5 ? day - 5 : day + 2;
+      d.setDate(d.getDate() - diff);
+      d.setHours(23, 59, 59, 999);
+      return d;
+    };
+
+    const timeSpan = end - start;
+    const daySpan = Math.ceil(timeSpan / (1000 * 60 * 60 * 24));
+    
+    let intervalDays;
+    let numPoints;
+    
+    if (daySpan <= 31) {
+      intervalDays = 7;
+      numPoints = 4;
+    } else if (daySpan <= 93) {
+      intervalDays = 14;
+      numPoints = 6;
+    } else if (daySpan <= 186) {
+      intervalDays = 14;
+      numPoints = 6;
+    } else {
+      intervalDays = 30;
+      numPoints = 6;
+    }
+
+    const result = [];
+    let currentFriday = getMostRecentFriday(end);
+
+    for (let i = 0; i < numPoints; i++) {
+      const periodEnd = new Date(currentFriday);
+      const periodStart = new Date(currentFriday);
+      periodStart.setDate(periodStart.getDate() - intervalDays + 1);
+      periodStart.setHours(0, 0, 0, 0);
+
+      const count = filtered.filter((b) => {
+        const completedDate = new Date(b.completed_at);
+        return completedDate >= periodStart && completedDate <= periodEnd;
+      }).length;
+
+      result.unshift({
+        date: periodEnd.toLocaleDateString('en-US', { 
+          month: '2-digit', 
+          day: '2-digit', 
+          year: '2-digit' 
+        }),
+        value: count || 0
+      });
+
+      currentFriday.setDate(currentFriday.getDate() - intervalDays);
+    }
+
+    setChartData(result);
+  }, [rawData, dateRange, section]);
+
   const generateDateRangeString = () => {
-    const firstDate = new Date(Scheduledata[0]?.date);
-    const lastDate = new Date(Scheduledata[Scheduledata.length - 1]?.date);
+    if (chartData.length === 0) return '';
+    const firstDate = chartData[0]?.date;
+    const lastDate = chartData[chartData.length - 1]?.date;
+    return `${firstDate}_to_${lastDate}`.replace(/\//g, '-');
+  };
 
-    const startMonth = firstDate.getMonth() + 1; // Month is 0-based
-    const startYear = firstDate.getFullYear();
-    const endMonth = lastDate.getMonth() + 1;
+  // Helper function to convert array to CSV string
+  const convertToCSV = (data, headers) => {
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    data.forEach(row => {
+      const values = headers.map(header => {
+        const value = row[header] || '';
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+  };
 
-    return `${startMonth}-${endMonth} (${startYear})`;
+  // Helper function to download CSV
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleExportToExcel = () => {
-    const formattedData = Scheduledata.map((data) => ({
+    const formattedData = chartData.map((data) => ({
       Date: data.date,
       CompletedSchedules: data.value,
     }));
 
-    const ws = XLSX.utils.json_to_sheet(formattedData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Schedule Data");
-
     const dateRange = generateDateRangeString();
-    XLSX.writeFile(wb, `schedules_${dateRange}.xlsx`);
+    const sectionLabel = section === 'All' ? 'All_Sections' : section;
+    
+    const csvContent = convertToCSV(formattedData, ['Date', 'CompletedSchedules']);
+    downloadCSV(csvContent, `schedules_${sectionLabel}_${dateRange}.csv`);
   };
 
   return (
@@ -443,22 +704,31 @@ export function CompSchedules({ backlog, isAdviser }) {
             justifyItems: 'center',
             color: '#64748b',
           }}
-          onClick={handleExportToExcel} // Export when clicked
+          onClick={handleExportToExcel}
         />
       </div>
       
       <div className="w-full h-[100%] px-2">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={Scheduledata}>
+          <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
               dataKey="date" 
-              domain={['auto', 'auto']}  // Automatically scale the X-axis but with padding
-              padding={{ left: 20, right: 20 }}  // Add space at the start and end of the X-axis
+              domain={['auto', 'auto']}
+              padding={{ left: 20, right: 20 }}
+              angle={-45}
+              textAnchor="end"
+              height={60}
             />
             <YAxis domain={['auto', 'auto']} />
             <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#2d8bba" strokeWidth={3} dot={true} />
+            <Line 
+              type="monotone" 
+              dataKey="value" 
+              stroke="#2d8bba" 
+              strokeWidth={3} 
+              dot={true} 
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
