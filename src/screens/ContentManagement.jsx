@@ -61,6 +61,7 @@ export default function ContentManagement() {
   const filterData = data?.filter((item) => (
     (item?.title && item.title.toLowerCase().includes(searchTerm?.toLowerCase() || "")) ||
     (item?.question && item.question.toLowerCase().includes(searchTerm?.toLowerCase() || "")) ||
+    (item?.chatTriggers && item.chatTriggers.toLowerCase().includes(searchTerm?.toLowerCase() || "")) ||
     (item?.category && item.category.toLowerCase().includes(searchTerm?.toLowerCase() || "")) ||
     (item?.resourceType && item.resourceType.toLowerCase().includes(searchTerm?.toLowerCase() || ""))
   )) || [];
@@ -175,6 +176,10 @@ export default function ContentManagement() {
 
     return () => clearTimeout(timer);
   }, [openError]);
+
+  useEffect(() => {
+    setSearchTerm('')
+  }, [tab])
   
   return (
     <div className="flex bg-[#f8fafc] flex-1 overflow-hidden">
@@ -218,6 +223,7 @@ export default function ContentManagement() {
                 setIsArticle={setIsArticle}
                 handleSearchChange={handleSearchChange}
                 setEditMode={setEditMode}
+                searchTerm={searchTerm}
               />
               <ContentTable
                 tab={tab}

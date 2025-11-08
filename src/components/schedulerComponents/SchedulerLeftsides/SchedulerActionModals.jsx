@@ -50,7 +50,6 @@ export default function SchedulerActionModals({
 }) {
   const [students, setStudents] = useState({});
   const [editorData, setEditorData] = useState(null);
-  const [proposalBlob, setProposalBlob] = useState(null);
 
   useEffect(() => {
     async function getAllStudents() {
@@ -82,7 +81,7 @@ export default function SchedulerActionModals({
       loadProposalContent();
     } else {
       setEditorData(null);
-      setProposalBlob(null);
+      setBlob(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isProposal])
@@ -220,7 +219,6 @@ export default function SchedulerActionModals({
 
   useEffect(() => {
     if (!open) {
-      setProposalBlob(null);
       setEditorData(null);
       setNewName('');
       setNewMessage('');
@@ -231,7 +229,6 @@ export default function SchedulerActionModals({
 
   useEffect(() => {
     if (!openConfirmTrash) {
-      setIsProposal(false);
       setEditorData(null);
       setNewName('');
       setNewMessage('');
@@ -538,7 +535,7 @@ export default function SchedulerActionModals({
                 <>
                   <p className="mt-3 font-roboto font-bold">Proposal Name: {selectedData.name}</p>
                   <p className="mt-3 font-roboto font-bold">Proposed Schedule: {formatScheduleDate(selectedData.sched_date)}</p>
-                  <RichTextEditor setBlob={actionState === 6 && isProposal ? setProposalBlob : null} editorData={editorData} readOnly={true}/>
+                  <RichTextEditor setBlob={actionState === 6 && isProposal ? setBlob : null} editorData={editorData} readOnly={true}/>
                   {selectedData.comment && (
                     <>
                       <p className="mt-3 font-roboto font-bold">Comment</p>
@@ -678,7 +675,11 @@ export default function SchedulerActionModals({
                   <>
                     <p className="mt-3 font-roboto font-bold">Proposal Name: {selectedData.name}</p>
                     <p className="mt-3 font-roboto font-bold">Proposed Schedule: {formatScheduleDate(selectedData.sched_date)}</p>
-                    <RichTextEditor setBlob={actionState !== 1 ?  null : setProposalBlob} editorData={editorData} readOnly={actionState !== 1}/>
+                    <RichTextEditor 
+                      setBlob={(actionState === 1 && selectedData.status !== 'Scheduled') ? setBlob : null} 
+                      editorData={editorData} 
+                      readOnly={actionState !== 1 || selectedData.status === 'Scheduled'}
+                    />
                     {selectedData.comment && (
                       <>
                         <p className="mt-3 font-roboto font-bold">Comment</p>
@@ -790,7 +791,7 @@ export default function SchedulerActionModals({
                       setOpenError(true);
                       return;
                     }
-                    if (isProposal && actionState === 1 && !proposalBlob) {
+                    if (isProposal && actionState === 1 && !blob) {
                       setIsSuccessful(false);
                       setAlertMessage("Please insert the proposal document.");
                       setOpenError(true);

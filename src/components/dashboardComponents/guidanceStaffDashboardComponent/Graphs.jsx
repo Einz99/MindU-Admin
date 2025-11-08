@@ -285,6 +285,7 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection }) 
   useEffect(() => {
     if (alerts && alerts.length > 0) {
       setRawData(alerts);
+      console.log("Alerts data set:", alerts);
     }
   }, [alerts]);
 
@@ -326,15 +327,10 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection }) 
     return { start: startDate, end: today };
   };
 
-  useEffect(() => {
-    if (!rawData || rawData.length === 0) {
-      setChartData([]);
-      return;
-    }
-
+    useEffect(() => {
     const { start, end } = getDateRange(dateRange);
 
-    const filtered = rawData.filter((alert) => {
+    const filtered = (rawData || []).filter((alert) => {
       if (!alert.date) return false;
       
       const alertDate = new Date(alert.date);
@@ -348,42 +344,41 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection }) 
       return dateMatch && sectionMatch;
     });
 
-    const getMostRecentFriday = (date) => {
+    const getMostRecentSaturday = (date) => {
       const d = new Date(date);
       const day = d.getDay();
-      const diff = day >= 5 ? day - 5 : day + 2;
+      // Saturday is day 6
+      const diff = day === 6 ? 0 : (day + 1);
       d.setDate(d.getDate() - diff);
-      d.setHours(23, 59, 59, 999);
+      d.setHours(0, 0, 0, 0);
       return d;
     };
 
     const timeSpan = end - start;
     const daySpan = Math.ceil(timeSpan / (1000 * 60 * 60 * 24));
     
-    let intervalDays;
     let numPoints;
     
-    if (daySpan <= 31) {
-      intervalDays = 7;
+    if (daySpan <= 7) {
+      // Last 7 days - show daily data starting from most recent Saturday
+      numPoints = 7;
+    } else if (daySpan <= 31) {
       numPoints = 4;
     } else if (daySpan <= 93) {
-      intervalDays = 14;
       numPoints = 6;
     } else if (daySpan <= 186) {
-      intervalDays = 14;
       numPoints = 6;
     } else {
-      intervalDays = 30;
       numPoints = 6;
     }
 
     const result = [];
-    let currentFriday = getMostRecentFriday(end);
+    let currentDate = getMostRecentSaturday(end);
 
     for (let i = 0; i < numPoints; i++) {
-      const periodEnd = new Date(currentFriday);
-      const periodStart = new Date(currentFriday);
-      periodStart.setDate(periodStart.getDate() - intervalDays + 1);
+      const periodEnd = new Date(currentDate);
+      periodEnd.setHours(23, 59, 59, 999);
+      const periodStart = new Date(currentDate);
       periodStart.setHours(0, 0, 0, 0);
 
       const count = filtered.filter((alert) => {
@@ -400,7 +395,7 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection }) 
         value: count || 0
       });
 
-      currentFriday.setDate(currentFriday.getDate() - intervalDays);
+      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     setChartData(result);
@@ -560,69 +555,62 @@ export function CompSchedules({ backlog, filteringDateType, filteringSection }) 
     return { start: startDate, end: today };
   };
 
-  useEffect(() => {
-    if (!rawData || rawData.length === 0) {
-      setChartData([]);
-      return;
-    }
-
+    useEffect(() => {
     const { start, end } = getDateRange(dateRange);
 
-    const filtered = rawData.filter((b) => {
-      if (b.status !== "Completed" || !b.completed_at) return false;
+    const filtered = (rawData || []).filter((alert) => {
+      if (!alert.date) return false;
       
-      const completedDate = new Date(b.completed_at);
-      const dateMatch = completedDate >= start && completedDate <= end;
+      const alertDate = new Date(alert.date);
+      const dateMatch = alertDate >= start && alertDate <= end;
       
       let sectionMatch = true;
       if (section !== 'All') {
-        sectionMatch = b.section && b.section.toUpperCase().includes(section.toUpperCase());
+        sectionMatch = alert.section && alert.section.toUpperCase().includes(section.toUpperCase());
       }
       
       return dateMatch && sectionMatch;
     });
 
-    const getMostRecentFriday = (date) => {
+    const getMostRecentSaturday = (date) => {
       const d = new Date(date);
       const day = d.getDay();
-      const diff = day >= 5 ? day - 5 : day + 2;
+      // Saturday is day 6
+      const diff = day === 6 ? 0 : (day + 1);
       d.setDate(d.getDate() - diff);
-      d.setHours(23, 59, 59, 999);
+      d.setHours(0, 0, 0, 0);
       return d;
     };
 
     const timeSpan = end - start;
     const daySpan = Math.ceil(timeSpan / (1000 * 60 * 60 * 24));
-    
-    let intervalDays;
     let numPoints;
     
-    if (daySpan <= 31) {
-      intervalDays = 7;
+    if (daySpan <= 7) {
+      // Last 7 days - show daily data starting from most recent Saturday
+      numPoints = 7;
+    } else if (daySpan <= 31) {
       numPoints = 4;
     } else if (daySpan <= 93) {
-      intervalDays = 14;
       numPoints = 6;
     } else if (daySpan <= 186) {
-      intervalDays = 14;
       numPoints = 6;
     } else {
-      intervalDays = 30;
       numPoints = 6;
     }
 
     const result = [];
-    let currentFriday = getMostRecentFriday(end);
+    let currentDate = getMostRecentSaturday(end);
 
     for (let i = 0; i < numPoints; i++) {
-      const periodEnd = new Date(currentFriday);
-      const periodStart = new Date(currentFriday);
-      periodStart.setDate(periodStart.getDate() - intervalDays + 1);
+      const periodEnd = new Date(currentDate);
+      periodEnd.setHours(23, 59, 59, 999);
+      const periodStart = new Date(currentDate);
       periodStart.setHours(0, 0, 0, 0);
 
-      const count = filtered.filter((b) => {
-        const completedDate = new Date(b.completed_at);
-        return completedDate >= periodStart && completedDate <= periodEnd;
+      const count = filtered.filter((alert) => {
+        const alertDate = new Date(alert.date);
+        return alertDate >= periodStart && alertDate <= periodEnd;
       }).length;
 
       result.unshift({
@@ -634,7 +622,7 @@ export function CompSchedules({ backlog, filteringDateType, filteringSection }) 
         value: count || 0
       });
 
-      currentFriday.setDate(currentFriday.getDate() - intervalDays);
+      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     setChartData(result);

@@ -3,7 +3,7 @@ import { Tabs, Tab, TextField } from "@mui/material";
 import { Search, Add, DescriptionOutlined, VideoCallOutlined, Delete } from "@mui/icons-material";
 import '../../handsontable.css'
 
-export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDeleteOpen, setIsVideo, setVideoDialog, setIsArticle, handleSearchChange, setEditMode}) {
+export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDeleteOpen, setIsVideo, setVideoDialog, setIsArticle, handleSearchChange, setEditMode, searchTerm}) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const staff = JSON.parse(localStorage.getItem("staff"));
 
@@ -91,6 +91,7 @@ export default function ContentTabs({ tab, setTab, setIsDialogOpen, handleDelete
           InputProps={{ endAdornment: <Search className="text-gray-500" /> }}
           sx={{ maxWidth: "50%" }} // Smaller width
           onChange={handleSearchChange}
+          value={searchTerm}
         />
 
         {/* Right-aligned Buttons */}

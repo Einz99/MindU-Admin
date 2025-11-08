@@ -38,7 +38,11 @@ export default function SchedulerTable({ initial, handleOpen, searchTerm, tab, f
         if (tab === 1 && data.student_id != null) return false;
         if (filterType === 1 && data.status !== "Scheduled") return false;
         if (filterType === 2 && data.status !== "Cancelled") return false;
-        if (filterType === 3 && data.status !== "Completed") return false;
+        if (filterType === 3 && data.status !== "Missed") return false;
+        if (filterType === 4 && data.status !== "Completed") return false;
+        if (filterType === 5 && data.status !== "Trash") return false;
+        if (filterType === 6 && data.status !== "Pending") return false;
+        if (filterType === 7 && data.status !== "Denied") return false;
         return true;
       })
       .sort((a, b) => {
@@ -67,7 +71,7 @@ export default function SchedulerTable({ initial, handleOpen, searchTerm, tab, f
           // Sort by scheduled date
           const dateA = new Date(a.sched_date);
           const dateB = new Date(b.sched_date);
-          return dateA - dateB;
+          return  dateB - dateA;
         }
       
         // Default: Sort alphabetically by name (this is for the case if `sortType` isn't set)

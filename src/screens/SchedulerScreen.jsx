@@ -159,6 +159,17 @@ export default function Scheduler() {
     document.body.removeChild(link);
   };
 
+  const filterNames = {
+      0: 'All',
+      1: 'Scheduled',
+      2: 'Cancelled',
+      3: 'Missed',
+      4: 'Completed',
+      5: 'Trash',
+      6: 'Pending',
+      7: 'Denied',
+    };
+
   // Add this function inside your Scheduler component
   const handleDownload = () => {
     // Get the filtered and sorted data from the table
@@ -210,13 +221,6 @@ export default function Scheduler() {
       'Status': data.status,
       'Message': data.message || 'N/A',
     }));
-
-    const filterNames = {
-      0: 'All',
-      1: 'Scheduled',
-      2: 'Cancelled',
-      3: 'Completed'
-    };
 
     const tabName = currentTab === 0 ? 'Appointments' : 'Events';
     const filterName = filterNames[filterType] || 'All';
@@ -289,14 +293,29 @@ export default function Scheduler() {
                         <div className="z-50">
                           <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
                             <ul className="text-right">
-                              <li className={`px-4 py-2 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-tl-xl ${filterType === 0 && "text-black"}`} onClick={() => handleFilter(0)}>All</li>
-                              <li className={`px-4 py-2 text-[#64748b] hover:text-[#334155] cursor-pointer ${filterType === 1 && "text-black"}`} onClick={() => handleFilter(1)}>Scheduled</li>
-                              <li className={`px-4 py-2 text-[#64748b] hover:text-[#334155] cursor-pointer ${filterType === 2 && "text-black"}`} onClick={() => handleFilter(2)}>Cancelled</li>
-                              <li className={`px-4 py-2 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-bl-xl ${filterType === 3 && "text-black"}`} onClick={() => handleFilter(3)}>Completed</li>
+                              {Object.entries(filterNames).map(([key, value]) => {
+                                // Apply conditions for filters based on the tab
+                                if (
+                                  ((key === '3' || key === '2') && tab !== 0) || // "Missed" should only show when tab === 0
+                                  ((key === '6' || key === '7') && tab !== 1) // "Pending" and "Denied" should only show when tab === 1
+                                ) {
+                                  return null; // Skip this filter if conditions aren't met
+                                }
+                              
+                                return (
+                                  <li
+                                    key={key}
+                                    className={`px-4 py-2 text-[#64748b] hover:text-[#334155] cursor-pointer ${filterType === Number(key) && "text-black"} ${key === '0' && "rounded-tl-xl"} ${key === '3' && "rounded-bl-xl"}`}
+                                    onClick={() => handleFilter(Number(key))}
+                                  >
+                                    {value}
+                                  </li>
+                                );
+                              })}
                             </ul>
                           </div>
-                          <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
-                          <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-50" />
+                          <div className="absolute right-2 top-[-0.5px] w-4 h-10 border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
+                          <div className="absolute right-2 top-[12px] w-4 h-8 border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-50" />
                         </div>
                       )}
                     </div>

@@ -482,6 +482,10 @@ export default function DashboardLayout() {
   
     return () => clearTimeout(timer);
   }, [openError]);
+
+  useEffect(() => {
+    setSearchTerm('')
+  }, [tab]);
   
   return (
     <div className="flex bg-[#f8fafc] flex-1 overflow-hidden">
@@ -528,6 +532,7 @@ export default function DashboardLayout() {
                 setOpenError={setOpenError}
                 setAlertMessage={setAlertMessage}
                 setIsSuccessful={setIsSuccessful}
+                searchTerm={searchTerm}
               />
               <UserTable
                 tab={tab}

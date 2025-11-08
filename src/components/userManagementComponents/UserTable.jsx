@@ -36,7 +36,7 @@ export default function UserTable({
   
   const filteredAdvisers = staffs.filter((staff) => staff.position === "Adviser");
   const filteredGuidanceStaffs = staffs.filter(
-    (staff) => staff.position !== "Adviser" && staff.name !== "Mind-U"
+    (staff) => !(staff.name === "Mind-U" && staff.position !== "Admin") && staff.position !== "Adviser"
   );
 
   const filteredStudents =

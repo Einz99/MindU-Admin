@@ -594,7 +594,6 @@ useEffect(() => {
                           </div>
                         </div>
                       ))}
-                      <div ref={messagesEndRef} />
                     </>
                   ) : (
                     <p>No messages available.</p>
@@ -618,6 +617,7 @@ useEffect(() => {
                       </button>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
 
                 {/* Input Form - Fixed at bottom */}

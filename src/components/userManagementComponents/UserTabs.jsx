@@ -13,6 +13,7 @@ export default function UserTabs({
   setOpenError,
   setAlertMessage,
   setIsSuccessful,
+  searchTerm,
 }) {
   const isAdviser = staff?.position === "Adviser";
   const isStaff = staff?.position === "Guidance Staff";
@@ -90,6 +91,7 @@ export default function UserTabs({
           InputProps={{ endAdornment: <Search className="text-gray-500" /> }}
           sx={{ maxWidth: "30%", minWidth: "30%"}}
           onChange={handleSearchChange}
+          value={searchTerm}
         />
         <div className="ml-4 flex gap-5">
           <button 
