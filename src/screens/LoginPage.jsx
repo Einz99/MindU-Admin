@@ -1,27 +1,28 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { API } from "../api";
-import { useGoogleLogin } from '@react-oauth/google';
+// import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode';
+// import { jwtDecode } from 'jwt-decode';
 import { Button } from "@mui/material";
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 // Array of Image and Text that rotates within the Login page.
 const slides = [
   {
     src: "/17.png",
     subtitle:
-      "“At MIND-U, every student’s voice is heard and every step toward wellness is valued.”",
+      "“At MIND-U, every student's voice is heard and every step toward wellness is valued.“",
   },
   {
     src: "/18.png",
     subtitle:
-      "“With MIND-U, staff are equipped to support, guide, and uplift every student’s mental well-being.”",
+      "“With MIND-U, staff are equipped to support, guide, and uplift every student's mental well-being.“",
   },
   {
     src: "/19.png",
     subtitle:
-      "“At MIND-U, every student’s voice is heard and every step toward wellness is valued.”",
+      "“At MIND-U, every student's voice is heard and every step toward wellness is valued.“",
   },
 ];
 
@@ -49,10 +50,12 @@ const slides = [
  * - email (string): Stores the email input from the user.
  * - password (string): Stores the password input from the user.
  * - emailError (bool): Tracks whether email field have correct string patterns
+ * - showPassword (bool): Toggles password visibility
+ * - showNewPassword (bool): Toggles new password visibility
+ * - showConfirmPassword (bool): Toggles confirm password visibility
  * 
  * Functions:
  * - handleSubmit: Prevents default form behavior and sends the credentials to backend API
- * - 
  * 
  * API Calls:
  * - Backend API - To compare and gives the users informations to front end.
@@ -62,7 +65,7 @@ const slides = [
  * - Prevents user login with incorrect format
  * 
  * Notes:
- * - [Any important notes for future developers or groupmates]
+ * - Added password visibility toggles for better UX
  * ===========================================
  */
 export default function LoginScreen() {
@@ -71,6 +74,7 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState(false);
   const [forgotEmailError, setForgotEmailError] = useState(false);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [forgotComponent, setForgotComponent] = useState(false);
   const [codeSended, setCodeSended] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
@@ -78,7 +82,10 @@ export default function LoginScreen() {
   const [codeConfirmed, setCodeConfirm] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+
   /**
    * handleSubmit
    * 
@@ -202,49 +209,49 @@ export default function LoginScreen() {
     setPassword(e.target.value);
   };
 
-  const login = useGoogleLogin({
-    onSuccess: async (response) => {
-      try {
-        console.log("Auth Code:", response.code);  // now you'll get code
-        const tokenResponse = await axios.post(`${API}/staffs/exchange-code`, { code: response.code });
+  // const login = useGoogleLogin({
+  //   onSuccess: async (response) => {
+  //     try {
+  //       console.log("Auth Code:", response.code);  // now you'll get code
+  //       const tokenResponse = await axios.post(`${API}/staffs/exchange-code`, { code: response.code });
 
-        const { id_token } = tokenResponse.data; // Get the ID token from the backend response
+  //       const { id_token } = tokenResponse.data; // Get the ID token from the backend response
 
-        if (!id_token) {
-          throw new Error('ID Token is missing');
-        }
+  //       if (!id_token) {
+  //         throw new Error('ID Token is missing');
+  //       }
 
-        // Step 2: Decode the ID token to get the user's email
-        const decoded = jwtDecode(id_token);
-        const email = decoded.email;  // Extract email from the
-        // Step 3: Send the email to the backend to check if the user exists in the database
-        const userCheckResponse = await axios.post(`${API}/staffs/check-user`, { email });
+  //       // Step 2: Decode the ID token to get the user's email
+  //       const decoded = jwtDecode(id_token);
+  //       const email = decoded.email;  // Extract email from the
+  //       // Step 3: Send the email to the backend to check if the user exists in the database
+  //       const userCheckResponse = await axios.post(`${API}/staffs/check-user`, { email });
 
-        if (userCheckResponse.data.exists) {
-          // User exists, store their ID and position in localStorage as part of the staff object
-          const { id, position, name, section, email, picture } = userCheckResponse.data;
-          const staffData = { id, position, name, section, email, picture };
-          localStorage.setItem("staff", JSON.stringify(staffData));
+  //       if (userCheckResponse.data.exists) {
+  //         // User exists, store their ID and position in localStorage as part of the staff object
+  //         const { id, position, name, section, email, picture } = userCheckResponse.data;
+  //         const staffData = { id, position, name, section, email, picture };
+  //         localStorage.setItem("staff", JSON.stringify(staffData));
 
-          // Step 4: Save the staff data object in localStorage
-          localStorage.setItem("authToken", id_token); // or just a flag for now
-          localStorage.setItem("staff", JSON.stringify(staffData));
+  //         // Step 4: Save the staff data object in localStorage
+  //         localStorage.setItem("authToken", id_token); // or just a flag for now
+  //         localStorage.setItem("staff", JSON.stringify(staffData));
 
-          navigate("/landing-page", { replace: true });  // Redirect to the Home page
-          const message = `${staffData.position}: ${staffData.name} logged in to Mind-U Guidance Management`
-          await axios.post(`${API}/activity-logs/insert`, { message });
-        } else {
-          console.log('User does not exist');
-        }
-      } catch (err) {
-        console.error('Login error:', err);  // Handle token-related or user check errors
-      }
-    },
-    onError: (err) => {
-      console.error('Login Failed', err);  // Handle failed login attempt
-    },
-    flow: 'auth-code', // Use popup window instead of opening a new window
-  });
+  //         navigate("/landing-page", { replace: true });  // Redirect to the Home page
+  //         const message = `${staffData.position}: ${staffData.name} logged in to Mind-U Guidance Management`
+  //         await axios.post(`${API}/activity-logs/insert`, { message });
+  //       } else {
+  //         console.log('User does not exist');
+  //       }
+  //     } catch (err) {
+  //       console.error('Login error:', err);  // Handle token-related or user check errors
+  //     }
+  //   },
+  //   onError: (err) => {
+  //     console.error('Login Failed', err);  // Handle failed login attempt
+  //   },
+  //   flow: 'auth-code', // Use popup window instead of opening a new window
+  // });
 
   const handleSendCode = async () => {
     try {
@@ -337,6 +344,7 @@ export default function LoginScreen() {
     setForgotCode('');
     setNewPassword('');
     setConfirmNewPassword('');
+    setCodeSended(false);
   }
 
   return (
@@ -384,7 +392,8 @@ export default function LoginScreen() {
           </div>
 
           {/* Right Side */}
-          <div className="bg-white w-1/2 h-full rounded-r-lg p-32">
+          <div className="bg-white w-1/2 h-1/2 rounded-r-lg my-auto px-28">
+            <div>
               <p className="font-dancing text-7xl text-center text-[#334155]">Welcome to</p>
               <p className="font-extrabold text-7xl text-center text-[#1e3a8a] mb-10">MIND-U</p>
               <div className="w-full flex items-center justify-center">
@@ -398,33 +407,36 @@ export default function LoginScreen() {
                     placeholder="Enter your email"
                     required
                   />
-                  <input
-                    type="password"
-                    id="password"
-                    value={password}
-                    onChange={handlePasswordChange}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSubmit(e);
-                      }
-                    }}
-                    className="w-full py-2 px-4  border-2 border-black rounded mt-4"
-                    placeholder="Enter your password"
-                    required
-                  />
+                  
+                  {/* Password Input with Visibility Toggle */}
+                  <div className="relative mt-4">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      id="password"
+                      value={password}
+                      onChange={handlePasswordChange}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSubmit(e);
+                        }
+                      }}
+                      className="w-full py-2 px-4 pr-12 border-2 border-black rounded"
+                      placeholder="Enter your password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <p className="text-sm text-end px-16" onClick={() => setForgotComponent(true)}>Forgot Password?</p>
-              <p className="test-lg text-center mt-8 bg-[#60a5fa] w-fit py-2 px-20 rounded-full font-roboto font-bold text-white mx-auto" onClick={handleSubmit}>LOG IN</p>
-              <div className="flex justify-center items-center flex-row mt-4">
-                <hr className="border-t border-gray-500 w-1/3" />
-                <p className="mx-2 text-gray-800">OR</p>
-                <hr className="border-t border-gray-500 w-1/3" />
-              </div>
-              <div className="flex justify-center items-center flex-row mt-4" onClick={login}>
-                <img src="/Google Logo.png" alt="Google" className="w-8 h-8 object-contain" />
-                <p className="text-center ml-2">Sign in with Google</p>
-              </div>
+              <p className="text-sm text-end px-16 cursor-pointer hover:text-blue-600" onClick={() => setForgotComponent(true)}>Forgot Password?</p>
+              <p className="test-lg text-center mt-8 bg-[#60a5fa] w-fit py-2 px-20 rounded-full font-roboto font-bold text-white mx-auto cursor-pointer hover:bg-[#3b82f6]" onClick={handleSubmit}>LOG IN</p>
+            </div>
           </div>
         </div>
       ) : (
@@ -456,30 +468,51 @@ export default function LoginScreen() {
                     placeholder="Enter code from email"
                     required
                   />
-                  <p className="text-center">An email with a verification code was just send to {forgotEmail}</p>
+                  <p className="text-center mt-2 text-sm">An email with a verification code was just sent to {forgotEmail}</p>
                 </>
               )}
             </div>
               ) : (
                 <div className="w-3/4">
-                <input
-                  type="password"
-                  id="newPassword"
-                  value={newPassword}
-                  onChange={handleNewPasswordChange}
-                  className={`w-full py-2 px-4 border-2 border-black rounded mt-2`}
-                  placeholder="Enter new password"
-                  required
-                />
-                <input
-                  type="password"
-                  id="confirmNewPassword"
-                  value={confirmNewPassword}
-                  onChange={handleConfirmNewPasswordChange}
-                  className={`w-full py-2 px-4 border-2 border-black rounded mt-6`}
-                  placeholder="Confirm new password"
-                  required 
-                />
+                  {/* New Password with Visibility Toggle */}
+                  <div className="relative mt-2">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      id="newPassword"
+                      value={newPassword}
+                      onChange={handleNewPasswordChange}
+                      className="w-full py-2 px-4 pr-12 border-2 border-black rounded"
+                      placeholder="Enter new password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800"
+                    >
+                      {showNewPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    </button>
+                  </div>
+
+                  {/* Confirm Password with Visibility Toggle */}
+                  <div className="relative mt-6">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      id="confirmNewPassword"
+                      value={confirmNewPassword}
+                      onChange={handleConfirmNewPasswordChange}
+                      className="w-full py-2 px-4 pr-12 border-2 border-black rounded"
+                      placeholder="Confirm new password"
+                      required 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800"
+                    >
+                      {showConfirmPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    </button>
+                  </div>
                 </div> 
               )}
             <div className="absolute bottom-10 right-0 px-[15%]">
