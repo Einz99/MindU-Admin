@@ -3,7 +3,8 @@ import axios from 'axios';
 import { API, RootAPI } from '../../api';
 import { UsageUtilization, CompSchedules, ActiveStudentsPieChart, AlertsOvertime, CalmiTriggerAlert, Resource, Wellness } from "./guidanceStaffDashboardComponent/Graphs";
 import io from "socket.io-client";
-import { FilterAlt } from "@mui/icons-material";
+import { FilterAlt, Close } from "@mui/icons-material";
+import { Dialog, DialogActions, DialogContent, DialogTitle, IconButton } from "@mui/material";
 
 export default function StaffDashboard() {
   const [backlog, setBacklogs] = useState([]);
@@ -19,6 +20,10 @@ export default function StaffDashboard() {
   const [filterSectionOpen, setFilterSectionOpen] = useState(false);
   const [sendFilterDate, setSendFilterDate] = useState('today');
   const [sendFilterSection, setSendFilterSection] = useState('all');
+
+  const [isSuccessful, setIsSuccessful] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [openError, setOpenError] = useState(false);
 
   const fetchAlerts = async () => {
     try {
@@ -319,10 +324,10 @@ export default function StaffDashboard() {
             <FilterAlt />
           </div>
           <div />
-          <UsageUtilization filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
-          <ActiveStudentsPieChart width={100} padding={10} marginTop={false} circleWidth={45} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
-          <AlertsOvertime alerts={alerts} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
-          <CompSchedules backlog={backlog} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
+          <UsageUtilization filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
+          <ActiveStudentsPieChart width={100} padding={10} marginTop={false} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
+          <AlertsOvertime alerts={alerts} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
+          <CompSchedules backlog={backlog} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
         </div>
         
         <div 
@@ -337,6 +342,37 @@ export default function StaffDashboard() {
             <Wellness exportWellnessToExcel={exportWellnessToCSV} topWellness={topWellness} />
           </div>
         </div>
+        <Dialog
+          open={openError}
+          onClose={() => {setOpenError(false);}}
+          fullWidth
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: "white",
+              color: "#000",
+              borderRadius: "25px",
+            },
+          }}
+          maxWidth="xs"
+        >
+          <DialogTitle className={`${!isSuccessful ? "bg-[#e3b7b7]" : "bg-[#b7e3cc]"} relative`}>
+            <p className="font-bold">{isSuccessful ? "Successful" : "Error"}</p>
+            <DialogActions className="absolute -top-1 right-0">
+              <IconButton onClick={() => {setOpenError(false);}} className="rounded-full">
+                <Close sx={{ fontSize: 40, color: "black" }} />
+              </IconButton>
+            </DialogActions>
+          </DialogTitle>
+          
+          <DialogContent className="text-center text-base py-6 px-10 mt-2">
+            <p className="font-roboto font-medium text-xl">{alertMessage}</p>
+          </DialogContent>
+          <DialogActions>
+            <button onClick={() => {setOpenError(false);}}>
+              <p className="text-base font-roboto font-bold text-[#64748b] p-2 px-6">OK</p>
+            </button>
+          </DialogActions>
+        </Dialog>
       </div>
     )
 }

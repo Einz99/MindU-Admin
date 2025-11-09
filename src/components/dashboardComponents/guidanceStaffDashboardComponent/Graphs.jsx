@@ -20,7 +20,7 @@ import { Badge, Button, Select, MenuItem, TableContainer, TableBody, TableCell, 
 import axios from "axios";
 import { API } from "../../../api";
 
-export function UsageUtilization({ filteringDateType, filteringSection }) {
+export function UsageUtilization({ filteringDateType, filteringSection, setOpenError, setAlertMessage, setIsSuccessful }) {
   const [dateRange, setDateRange] = useState(filteringDateType || 'today');
   const [section, setSection] = useState(filteringSection || 'All');
   const [rawData, setRawData] = useState([]);
@@ -209,6 +209,9 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
     
     const csvContent = convertToCSV(formattedData, ['Module', 'Visits']);
     downloadCSV(csvContent, `Usage_${sectionLabel}_${dateLabel}.csv`);
+    setOpenError(true);
+    setIsSuccessful(true);
+    setAlertMessage('The file is download successfully please check your download.');
   };
 
   return (
@@ -220,7 +223,9 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
             fontSize: 25,
             justifyItems: 'center',
             color: '#64748b',
-            marginRight: 2,
+            '&:hover': {
+              color: 'black',  // Change the color to black on hover
+            },
           }}
           onClick={handleExportToExcel}
         />
@@ -268,7 +273,7 @@ export function UsageUtilization({ filteringDateType, filteringSection }) {
   );
 }
 
-export function AlertsOvertime({ alerts, filteringDateType, filteringSection }) {
+export function AlertsOvertime({ alerts, filteringDateType, filteringSection, setOpenError, setAlertMessage, setIsSuccessful }) {
   const [dateRange, setDateRange] = useState(filteringDateType || 'today');
   const [section, setSection] = useState(filteringSection || 'All');
   const [rawData, setRawData] = useState([]);
@@ -451,6 +456,9 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection }) 
     
     const csvContent = convertToCSV(formattedData, ['Date', 'Alerts']);
     downloadCSV(csvContent, `alerts_${sectionLabel}_${dateRange}.csv`);
+    setOpenError(true);
+    setIsSuccessful(true);
+    setAlertMessage('The file is download successfully please check your download.');
   };
 
   return (
@@ -464,9 +472,15 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection }) 
             fontSize: 25,
             justifyItems: 'center',
             color: '#64748b',
+            '&:hover': {
+              color: 'black',  // Change the color to black on hover
+            },
           }}
           onClick={handleExportToExcel}
         />
+      </div>
+      <div>
+        <p className="text-gray-400 text-sm">Strand: {section}</p>
       </div>
       
       <div className="w-full h-[100%] px-2">
@@ -497,11 +511,12 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection }) 
   );
 }
 
-export function CompSchedules({ backlog, filteringDateType, filteringSection }) {
+export function CompSchedules({ backlog, filteringDateType, filteringSection, setOpenError, setAlertMessage, setIsSuccessful }) {
   const [dateRange, setDateRange] = useState(filteringDateType || 'today');
   const [section, setSection] = useState(filteringSection || 'All');
   const [rawData, setRawData] = useState([]);
   const [chartData, setChartData] = useState([]);
+  const staff = JSON.parse(localStorage.getItem("staff"));
 
   useEffect(() => {
     if (filteringDateType) setDateRange(filteringDateType);
@@ -678,6 +693,9 @@ export function CompSchedules({ backlog, filteringDateType, filteringSection }) 
     
     const csvContent = convertToCSV(formattedData, ['Date', 'CompletedSchedules']);
     downloadCSV(csvContent, `schedules_${sectionLabel}_${dateRange}.csv`);
+    setOpenError(true);
+    setIsSuccessful(true);
+    setAlertMessage('The file is download successfully please check your download.');
   };
 
   return (
@@ -686,16 +704,26 @@ export function CompSchedules({ backlog, filteringDateType, filteringSection }) 
         <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">
           Schedules Completed Overtime
         </p>
+        {staff.position !== 'Adviser' &&
         <FileDownload
           sx={{
             fontSize: 25,
             justifyItems: 'center',
             color: '#64748b',
+            '&:hover': {
+              color: 'black',  // Change the color to black on hover
+            },
           }}
           onClick={handleExportToExcel}
         />
+        }
       </div>
-      
+      {staff.position !== 'Adviser' &&
+        <div>
+          <p className="text-gray-400 text-sm">Strand: {section}</p>
+        </div>
+      }
+
       <div className="w-full h-[100%] px-2">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
@@ -892,14 +920,14 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
       <div className={`w-full h-[90%] border-4 ${tab === 0 ? "border-[#b91c1c]" : tab === 1 ? "border-[#f57c00]" : "border-[#bc3f8d]"} rounded-xl px-2 flex flex-col`}>
         <div className={`${tab === 0 ? "border-[#b91c1c]" : tab === 1 ? "border-[#f57c00]" : "border-[#bc3f8d]"} border-b-4 flex flex-row gap-5 justify-center mt-2 `}>
             <div 
-              className="flex flex-row mb-2 gap-2"
+              className="flex flex-row mb-2 gap-2 cursor-pointer"
               onClick={() => setTab(0)}
             >
               <p className={`${tab === 0 && "bg-[#b91c1c] text-white font-bold"} font-roboto text-lg py-1 px-2 rounded-2xl`}>Calmi Trigger</p>
               <p className="bg-[#b91c1c] px-2 rounded-full my-auto text-white font-roboto font-bold">{filteredAlerts.length}</p>
             </div>
             <div 
-              className="flex flex-row mb-2 gap-2"
+              className="flex flex-row mb-2 gap-2 cursor-pointer"
               onClick={() => setTab(1)}
             >
               <p className={`${tab === 1 && "bg-[#f57c00] text-white font-bold"} font-roboto text-lg py-1 px-2 rounded-2xl`}>Student Request</p>
@@ -907,7 +935,7 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
             </div>
             {staff.position === "Admin" && (
               <div 
-                className="flex flex-row mb-2 gap-2"
+                className="flex flex-row mb-2 gap-2 cursor-pointer"
                 onClick={() => setTab(2)}
               >
                 <p className={`${tab === 2 && "bg-[#bc3f8d] text-white font-bold"} font-roboto text-lg py-1 px-2 rounded-2xl`}>Event Proposal</p>
@@ -945,7 +973,8 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
               ))
             )
           : tab === 1 ?
-          (<>
+          (filterBacklog.length > 0 ? (
+            <>
             {filterBacklog.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((item, index) => (
               <div
                 key={index}
@@ -970,10 +999,15 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
                 <p className="bg-[#1e3a8a] py-1 px-3 text-white text-lg rounded-lg">View Request</p>
               </Button>
             </div>
+          </>) : (<>
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-500 text-3xl">No Student Request any Appointment</p>
+            </div>
           </>)
-          : 
-          (<div className="flex flex-col gap-3 overflow-y-auto">
-            {filterBacklogs.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((item) => (
+          ) : (
+          <div className={`${filterBacklogs.length > 0 ? "flex flex-col gap-3 overflow-y-auto" : "flex items-center justify-center h-full my-auto"}`}>
+            {filterBacklogs.length > 0 ? (
+            filterBacklogs.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((item) => (
               <div key={item.id} className="flex flex-row justify-between border-b-2 border-[#94a3b8] items-center">
                 <p>
                   {item.name} Proposal
@@ -982,7 +1016,9 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
                     <p className="bg-[#1e3a8a] text-white px-3 py-0.5 rounded-lg mb-0.5">View</p>
                 </Button>
               </div>
-            ))}
+            ))) : (
+              <p className="text-gray-500 text-3xl">No Event is Being Proposed</p>
+            )}
           </div>)
           }
         </div>
@@ -1008,13 +1044,14 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
   );
 }
 
-export function ActiveStudentsPieChart({width, padding, marginTop, circleWidth, filteringDateType, filteringSection }) {
+export function ActiveStudentsPieChart({width, padding, marginTop, filteringDateType, filteringSection, setOpenError, setAlertMessage, setIsSuccessful  }) {
   const [dateRange, setDateRange] = useState(filteringDateType || 'today');
   const [section, setSection] = useState(filteringSection || 'All');
   const [rawData, setRawData] = useState(null); // Cache all login data
   const [totalStudents, setTotalStudents] = useState(0);
   const [piePercentage, setPiePercentage] = useState(0);
   const [barPercentage, setBarPercentage] = useState(0);
+  const staff = JSON.parse(localStorage.getItem("staff"));
 
   // Sync with parent component props
   useEffect(() => {
@@ -1189,16 +1226,164 @@ export function ActiveStudentsPieChart({width, padding, marginTop, circleWidth, 
 
   const barLabel = dateRange === 'today' ? 'Yesterday' : 'Today';
 
+  // Helper function to convert array to CSV string
+  const convertToCSV = (data, headers) => {
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    data.forEach(row => {
+      const values = headers.map(header => {
+        const value = row[header] || '';
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+  };
+  
+  // Helper function to download CSV
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  // Export function for PieChart data
+  const handleExportToExcel = () => {
+    // Get actual student counts (not percentages)
+    const { start } = getDateRange(dateRange);
+    const startDate = new Date(start);
+    const todayDate = new Date();
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(todayDate.getDate() - 1);
+  
+    if (!rawData || totalStudents === 0) {
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage('No Available Data to Export.');
+      return;
+    }
+  
+    // Filter data based on section
+    const filteredData = rawData.filter((row) => {
+      if (section === 'All') return true;
+      return row.section && row.section.toUpperCase().includes(section.toUpperCase());
+    });
+  
+    // Get unique students count based on section filter
+    const sectionStudentsCount = section === 'All' 
+      ? totalStudents 
+      : new Set(filteredData.map(row => row.student_id)).size;
+  
+    // PIE CHART DATA
+    let pieCount = 0;
+    
+    if (dateRange === 'today') {
+      pieCount = new Set(
+        filteredData
+          .filter(row => {
+            const loginDate = new Date(row.login_date);
+            return loginDate.toDateString() === todayDate.toDateString();
+          })
+          .map(row => row.student_id)
+      ).size;
+    } else {
+      pieCount = new Set(
+        filteredData
+          .filter(row => {
+            const loginDate = new Date(row.login_date);
+            return loginDate >= startDate && loginDate <= todayDate;
+          })
+          .map(row => row.student_id)
+      ).size;
+    }
+  
+    // BAR CHART DATA
+    let barCount = 0;
+    
+    if (dateRange === 'today') {
+      barCount = new Set(
+        filteredData
+          .filter(row => {
+            const loginDate = new Date(row.login_date);
+            return loginDate.toDateString() === yesterdayDate.toDateString();
+          })
+          .map(row => row.student_id)
+      ).size;
+    } else {
+      barCount = new Set(
+        filteredData
+          .filter(row => {
+            const loginDate = new Date(row.login_date);
+            return loginDate.toDateString() === todayDate.toDateString();
+          })
+          .map(row => row.student_id)
+      ).size;
+    }
+  
+    const barLabel = dateRange === 'today' ? 'Yesterday' : 'Today';
+    const pieLabel = getDisplayText(dateRange);
+  
+    // Format data for export
+    const formattedData = [
+      {
+        Period: pieLabel,
+        'Active Students': pieCount,
+        'Total Students': sectionStudentsCount,
+        'Percentage': `${piePercentage}%`
+      },
+      {
+        Period: barLabel,
+        'Active Students': barCount,
+        'Total Students': sectionStudentsCount,
+        'Percentage': `${barPercentage}%`
+      }
+    ];
+  
+    const sectionLabel = section === 'All' ? 'All_Sections' : section.replace(/\s+/g, '_');
+    const dateLabel = getDisplayText(dateRange).replace(/\s+/g, '_');
+    
+    const csvContent = convertToCSV(formattedData, ['Period', 'Active Students', 'Total Students', 'Percentage']);
+    downloadCSV(csvContent, `Student_Login_${sectionLabel}_${dateLabel}.csv`);
+    setOpenError(true);
+    setIsSuccessful(true);
+    setAlertMessage('The file is download successfully please check your download.');
+  };
+
   return (
     <div className={`flex flex-col w-[${width}%] h-full p-${padding}`}>
       <div className="flex w-full flex-row justify-between items-center">
         <p className="text-[#1e3a8a] font-bold font-roboto text-2xl">In-app Student Login</p>
-        <p className="text-gray-400 text-sm">Strand: {filteringSection}</p>
+        {staff.position !== 'Adviser' && 
+          <FileDownload 
+              sx={{
+                fontSize: 25,
+                justifyItems: 'center',
+                color: '#64748b',
+                '&:hover': {
+                  color: 'black',  // Change the color to black on hover
+                },
+              }}
+              onClick={handleExportToExcel}
+            />
+        }
       </div>
+      {staff.position !== 'Adviser' && 
+        <p className="text-gray-400 text-sm">Strand: {filteringSection}</p>
+      }
 
-      <div className="w-full h-full flex flex-col items-center justify-center relative">
-        <p className="-mb-7 text-[#10b981] text-lg font-bold">{getDisplayText(dateRange)}</p>
-        <div className={`${circleWidth ? `w-[${circleWidth}%]` : 'w-[60%]'} max-w-xs aspect-square relative`}>
+      <div className="w-full h-full flex flex-col items-center justify-center relative -mt-10">
+        <div className={`w-[45%] max-w-xs aspect-square relative`}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -1207,7 +1392,7 @@ export function ActiveStudentsPieChart({width, padding, marginTop, circleWidth, 
                   { name: "inactive", value: 100 - piePercentage }
                 ]}
                 innerRadius="60%"
-                outerRadius="80%"
+                outerRadius="70%"
                 startAngle={90}
                 endAngle={-270}
                 dataKey="value"
@@ -1218,13 +1403,14 @@ export function ActiveStudentsPieChart({width, padding, marginTop, circleWidth, 
             </PieChart>
           </ResponsiveContainer>
           
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center flex-col">
+            <p className="text-[#10b981] text-lg font-bold ">{getDisplayText(dateRange)}</p>
             <p className="text-xl font-bold text-green-600">{piePercentage}%</p>
           </div>
         </div>
       </div>
 
-      <div className={`flex flex-col w-full ${marginTop ? "-mt-[20%]" : "-mt-[10%]"} px-4`}>
+      <div className={`flex flex-col w-full ${marginTop ? "-mt-[20%]" : "-mt-[7.5%]"} px-4`}>
         <div className="flex flex-col mb-1">
           <p className="font-bold text-lg text-black">{barPercentage}%</p>
           <p className="text-sm text-gray-600">{barLabel}</p>
@@ -1333,15 +1519,18 @@ export function Resource({ exportResourcesToExcel, topResources }) {
   return (
     <>
       <div className="flex w-full flex-row justify-between p-4">
-        <p className="font-roboto font-bold text-[#41b8d5] text-2xl">Resource Library</p>
+        <p className="font-roboto font-bold text-[#41b8d5] text-2xl">Resource Library Overview</p>
       </div>
-      <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col overflow-y-auto px-2 mb-4">
+      <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col overflow-y-auto px-2 mb-4 min-h-[50%]">
         <div className="flex w-full flex-row justify-end p-4 gap-4">
           <FileDownload 
             sx={{
               fontSize: 25,
               justifyItems: 'center',
               color: '#64748b',
+              '&:hover': {
+                color: 'black',  // Change the color to black on hover
+              },
             }}
             onClick={exportResourcesToExcel}
           />
@@ -1351,6 +1540,9 @@ export function Resource({ exportResourcesToExcel, topResources }) {
                 fontSize: 25,
                 justifyItems: 'center',
                 color: '#64748b',
+                '&:hover': {
+                  color: 'black',  // Change the color to black on hover
+                },
               }}
               onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
             />
@@ -1379,6 +1571,9 @@ export function Resource({ exportResourcesToExcel, topResources }) {
                 fontSize: 25,
                 justifyItems: 'center',
                 color: '#64748b',
+                '&:hover': {
+                  color: 'black',  // Change the color to black on hover
+                },
               }}
               onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
             />
@@ -1416,28 +1611,36 @@ export function Resource({ exportResourcesToExcel, topResources }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredAndSortedResources.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((row, index) => (
-                  <TableRow key={index} className="h-4">
-                    <TableCell 
-                      className="px-2 text-sm w-[65%]"
-                      sx={{paddingY: 1}}
-                    >
-                      <p className="leading-none">{row.title}</p>
-                    </TableCell>
-                    <TableCell 
-                      className="px-2 text-sm w-[25%] text-center"
-                      sx={{paddingY: 1}}
-                    >
-                      <p className="text-center">{row.category}</p>
-                    </TableCell>
-                    <TableCell 
-                      className="px-2 text-sm w-[10%] text-center"
-                      sx={{paddingY: 1}}
-                    >
-                      <p className="text-center">{row.views}</p>
+                {filteredAndSortedResources.length > 0 ? (
+                  filteredAndSortedResources.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((row, index) => (
+                    <TableRow key={index} className="h-4">
+                      <TableCell 
+                        className="px-2 text-sm w-[65%]"
+                        sx={{paddingY: 1}}
+                      >
+                        <p className="leading-none">{row.title}</p>
+                      </TableCell>
+                      <TableCell 
+                        className="px-2 text-sm w-[25%] text-center"
+                        sx={{paddingY: 1}}
+                      >
+                        <p className="text-center">{row.category}</p>
+                      </TableCell>
+                      <TableCell 
+                        className="px-2 text-sm w-[10%] text-center"
+                        sx={{paddingY: 1}}
+                      >
+                        <p className="text-center">{row.views}</p>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8">
+                      <p className="text-gray-500 text-lg">No Resource Added. Please Add Resource via Content Management</p>
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </TableContainer>
@@ -1542,15 +1745,18 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
   return (
     <>
       <div className="flex w-full flex-row justify-between p-4">
-        <p className="font-roboto font-bold text-[#41b8d5] text-2xl">Wellness Tools</p>
+        <p className="font-roboto font-bold text-[#41b8d5] text-2xl">Wellness Tools Overview</p>
       </div>
-      <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col overflow-y-auto px-2">
+      <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col overflow-y-auto px-2 min-h-[50%]">
         <div className="flex w-full flex-row justify-end p-4 gap-4">
           <FileDownload 
             sx={{
               fontSize: 25,
               justifyItems: 'center',
               color: '#64748b',
+              '&:hover': {
+                color: 'black',  // Change the color to black on hover
+              },
             }}
             onClick={exportWellnessToExcel}
           />
@@ -1560,6 +1766,9 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
                 fontSize: 25,
                 justifyItems: 'center',
                 color: '#64748b',
+                '&:hover': {
+                  color: 'black',  // Change the color to black on hover
+                },
               }}
               onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
             />
@@ -1583,6 +1792,9 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
                 fontSize: 25,
                 justifyItems: 'center',
                 color: '#64748b',
+                '&:hover': {
+                  color: 'black',  // Change the color to black on hover
+                },
               }}
               onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
             />
@@ -1620,28 +1832,36 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredAndSortedWellness.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((row, index) => (
-                  <TableRow key={index} className="h-4">
-                    <TableCell
-                      className="py-0 px-2 text-sm w-[75%]"
-                      sx={{paddingY: 1}}
-                    >
-                      <p className="leading-none">{row.title}</p>
-                    </TableCell>
-                    <TableCell
-                      className="py-0 px-2 text-sm w-[15%] text-center"
-                      sx={{paddingY: 1}}
-                    >
-                      <p className="text-center">{row.category}</p>
-                    </TableCell>
-                    <TableCell
-                      className="py-0 px-2 text-sm w-[10%] text-center"
-                      sx={{paddingY: 1}}
-                    >
-                      <p className="text-center">{row.views}</p>
+                {filteredAndSortedWellness.length > 0 ? (
+                  filteredAndSortedWellness.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((row, index) => (
+                    <TableRow key={index} className="h-4">
+                      <TableCell
+                        className="py-0 px-2 text-sm w-[75%]"
+                        sx={{paddingY: 1}}
+                      >
+                        <p className="leading-none">{row.title}</p>
+                      </TableCell>
+                      <TableCell
+                        className="py-0 px-2 text-sm w-[15%] text-center"
+                        sx={{paddingY: 1}}
+                      >
+                        <p className="text-center">{row.category}</p>
+                      </TableCell>
+                      <TableCell
+                        className="py-0 px-2 text-sm w-[10%] text-center"
+                        sx={{paddingY: 1}}
+                      >
+                        <p className="text-center">{row.views}</p>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8">
+                      <p className="text-gray-500 text-lg">No Wellness Tools Added. Please Add via Content Management</p>
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </TableContainer>

@@ -281,12 +281,24 @@ export default function Scheduler() {
                   <div className="flex gap-4">
                     <div className="cursor-pointer" onClick={handleDownload}>
                       <Download 
-                        style={{ fontSize: '2rem' }}
+                        style={{ fontSize: '2rem', }}
+                        sx={{
+                          color: '#64748b',
+                          '&:hover': {
+                            color: 'black',  // Change the color to black on hover
+                          },
+                        }}
                       />
                     </div>
                     <div className="relative">
                       <FilterAlt 
                         style={{ fontSize: '2rem' }}
+                        sx={{
+                          color: '#64748b',
+                          '&:hover': {
+                            color: 'black',  // Change the color to black on hover
+                          },
+                        }}
                         onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
                       />
                       {filterOpen && (
@@ -322,6 +334,12 @@ export default function Scheduler() {
                     <div className="relative">
                       <Sort 
                         style={{ fontSize: '2rem' }} 
+                        sx={{
+                          color: '#64748b',
+                          '&:hover': {
+                            color: 'black',  // Change the color to black on hover
+                          },
+                        }}
                         onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
                       />
                       {sortOpen && (

@@ -632,7 +632,9 @@ const UserDialog = ({
                   >
                     <MenuItem value="" disabled hidden>Select position</MenuItem>
                     <MenuItem value="Guidance Staff">Guidance Staff</MenuItem>
-                    <MenuItem value="Guidance Counselor">Guidance Counselor</MenuItem>
+                    {staff.position === "Admin" && 
+                      <MenuItem value="Guidance Counselor">Guidance Counselor</MenuItem>
+                    }
                   </Select>
                   
                   {!isViewMode && formSubmitted && !newStaff.position && (

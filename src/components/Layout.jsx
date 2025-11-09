@@ -571,7 +571,7 @@ export default function Layout({ open, onMenuClick }) {
             </div>
           </div>
           <div className="w-full absolute bottom-10 flex items-center justify-between px-20 mt-8">
-            <p className="font-bold text-lg text-white" onClick={handleCloseDrawer}>BACK</p>
+            <p className="font-bold text-lg text-white cursor-pointer" onClick={handleCloseDrawer}>BACK</p>
             <button
               className="bg-[#ef4444] text-white px-4 py-2 rounded-full flex flex-row items-center gap-x-2"
               onClick={() => setOpenLogoutDialog(true)}

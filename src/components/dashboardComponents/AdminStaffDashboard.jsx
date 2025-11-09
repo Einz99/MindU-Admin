@@ -3,7 +3,8 @@ import axios from 'axios';
 import { API, RootAPI } from '../../api';
 import { UsageUtilization, CompSchedules, ActiveStudentsPieChart, AlertsOvertime, CalmiTriggerAlert, Resource, Wellness } from "./guidanceStaffDashboardComponent/Graphs";
 import io from "socket.io-client";
-import { FilterAlt } from "@mui/icons-material";
+import { FilterAlt, Close } from "@mui/icons-material";
+import { Dialog, DialogActions, DialogContent, DialogTitle, IconButton } from "@mui/material";
 
 export default function AdminStaffDashboard({filterBacklogs, handleViewingRequest}) {
   const [backlog, setBacklogs] = useState([]);
@@ -19,6 +20,10 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
   const [filterSectionOpen, setFilterSectionOpen] = useState(false);
   const [sendFilterDate, setSendFilterDate] = useState('today');
   const [sendFilterSection, setSendFilterSection] = useState('all');
+
+  const [isSuccessful, setIsSuccessful] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [openError, setOpenError] = useState(false);
 
   const fetchAlerts = async () => {
     try {
@@ -140,7 +145,12 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
 
   // 🔹 Export Resources to CSV
   const exportResourcesToCSV = () => {
-    if (!topResources.length) return alert("No Resource Library data to export.");
+    if (!topResources.length) {
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage("No Resource Library data to export.");
+      return;
+    };
     
     const data = topResources.map(row => ({
       Title: row.title,
@@ -156,7 +166,12 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
   
   // 🔹 Export Wellness Tools to CSV
   const exportWellnessToCSV = () => {
-    if (!topWellness.length) return alert("No Wellness Tools data to export.");
+    if (!topWellness.length) {
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage("No Wellness Tools data to export.");
+      return;
+    };
   
     const data = topWellness.map(row => ({
       Title: row.title,
@@ -175,6 +190,17 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
     setSendFilterSection(filteringSection);
     setFilterOpen(false);
   };
+
+  useEffect(() => {
+    if (openError) return;
+
+    const timer = setTimeout(() => {
+      setAlertMessage('');
+      setIsSuccessful(false);
+    }, 1000); // 1 second
+
+    return () => clearTimeout(timer);
+  }, [openError]);
 
   return (
       <div 
@@ -312,17 +338,17 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
             </div>
           )}
           <div 
-            className="absolute w-fit h-fit bg-white rounded-full z-50 border-2 border-[#1e3a8a] top-0 right-2 flex flex-row items-center justify-center py-1 px-3 gap-2 text-[#1e3a8a]"
+            className="absolute w-fit h-fit bg-white rounded-full z-50 border-2 border-[#1e3a8a] top-0 right-2 flex flex-row items-center justify-center py-1 px-3 gap-2 text-[#1e3a8a] cursor-pointer"
             onClick={() => setFilterOpen(!filterOpen)}
           >
             <p className="italic">Filter Options</p>
             <FilterAlt />
           </div>
           <div />
-          <UsageUtilization filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
-          <ActiveStudentsPieChart width={100} padding={10} marginTop={false} circleWidth={45} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
-          <AlertsOvertime alerts={alerts} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
-          <CompSchedules backlog={backlog} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} />
+          <UsageUtilization filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
+          <ActiveStudentsPieChart width={100} padding={5} marginTop={false} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
+          <AlertsOvertime alerts={alerts} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
+          <CompSchedules backlog={backlog} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
         </div>
         <div 
           className="grid gap-4" 
@@ -331,11 +357,43 @@ export default function AdminStaffDashboard({filterBacklogs, handleViewingReques
           <div className="flex flex-col flex-grow">
             <CalmiTriggerAlert alerts={alerts} padding={true} filterBacklog={filterBacklog} filterBacklogs={filterBacklogs} handleViewingRequest={handleViewingRequest}/>
           </div>
-          <div className="flex items-center justify-center p-5 flex-col">
-            <Resource exportResourcesToExcel={exportResourcesToCSV} topResources={topResources} />
-            <Wellness exportWellnessToExcel={exportWellnessToCSV} topWellness={topWellness} />
+          <div className="flex items-center justify-center p-5 flex-col mt-10">
+            <Resource exportResourcesToExcel={exportResourcesToCSV} topResources={topResources}/>
+            <Wellness exportWellnessToExcel={exportWellnessToCSV} topWellness={topWellness}/>
           </div>
         </div>
+
+        <Dialog
+          open={openError}
+          onClose={() => {setOpenError(false);}}
+          fullWidth
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: "white",
+              color: "#000",
+              borderRadius: "25px",
+            },
+          }}
+          maxWidth="xs"
+        >
+          <DialogTitle className={`${!isSuccessful ? "bg-[#e3b7b7]" : "bg-[#b7e3cc]"} relative`}>
+            <p className="font-bold">{isSuccessful ? "Successful" : "Error"}</p>
+            <DialogActions className="absolute -top-1 right-0">
+              <IconButton onClick={() => {setOpenError(false);}} className="rounded-full">
+                <Close sx={{ fontSize: 40, color: "black" }} />
+              </IconButton>
+            </DialogActions>
+          </DialogTitle>
+          
+          <DialogContent className="text-center text-base py-6 px-10 mt-2">
+            <p className="font-roboto font-medium text-xl">{alertMessage}</p>
+          </DialogContent>
+          <DialogActions>
+            <button onClick={() => {setOpenError(false);}}>
+              <p className="text-base font-roboto font-bold text-[#64748b] p-2 px-6">OK</p>
+            </button>
+          </DialogActions>
+        </Dialog>
       </div>
     )
 }
