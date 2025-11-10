@@ -374,7 +374,7 @@ export default function Layout({ open, onMenuClick }) {
               <p className="text-base text-[#f8fafc] font-bold">{staff.position}{staff.section && ` - ${staff.section}`}</p>
             </div>
             <div className="w-0.5 h-8 bg-white my-auto"></div>
-            <img src={staff.picture ? `${RootAPI}/resources/profile_pics/${staff.picture}` : "/defaultProfile.png"}   alt="Profile" className="w-10 h-10 rounded-full my-auto" onClick={() => setOpenProfile(true)}/>
+            <img src={staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"}   alt="Profile" className="w-10 h-10 rounded-full my-auto" onClick={() => setOpenProfile(true)}/>
           </div>
         </Toolbar>
       </AppBar>
@@ -485,7 +485,7 @@ export default function Layout({ open, onMenuClick }) {
             <p className="text-center">PROFILE SETTINGS</p>
           </div>
           <div className="w-60 h-60 rounded-full border-4 border-[#60a5fa] relative mb-14 max-w-[40%] max-h-[21%] ">
-            <img src={previewImage ? previewImage : staff.picture ? `${RootAPI}/resources/profile_pics/${staff.picture}` : "/defaultProfile.png"} alt="Profile" className="w-full h-full rounded-full" />
+            <img src={previewImage ? previewImage : staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"} alt="Profile" className="w-full h-full rounded-full" />
             <IconButton className="absolute bottom-6 left-1/2 -translate-x-1/2" onClick={handlePictureChange}>
               <PhotoCamera className="text-white bg-[#60a5fa] rounded-full p-2" sx={{fontSize: 40}} />
             </IconButton>

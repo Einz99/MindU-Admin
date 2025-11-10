@@ -518,7 +518,7 @@ useEffect(() => {
                   onClick={() => { setSelected(index); setStudentId(chat.id); }}
                 >
                   <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-4">
-                    <img src={chat.id === student_id && profilePath ? `${RootAPI}/${profilePath}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
+                    <img src={chat.id === student_id && profilePath ? `${RootAPI}${profilePath}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
                   </div>
                   <div className="flex flex-col justify-between w-full relative">
                     <h3 className="text-lg font-semibold">{chat.name}</h3>
