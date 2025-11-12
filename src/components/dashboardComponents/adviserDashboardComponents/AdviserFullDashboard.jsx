@@ -120,7 +120,7 @@ export default function AdviserFullDashboard({ backlogs }) {
         <div className="w-full h-full flex flex-col gap-4 p-5">
           <div className="grid grid-rows-2 gap-4">  {/* Divide the left side into 2 rows */}
               <CompSchedules backlog={filteredBacklogs} isAdviser={true} />
-              <ActiveStudentsPieChart width={100} padding={10} marginTop={false} />
+              <ActiveStudentsPieChart width={100} padding={5} marginTop={false} />
           </div>
         </div>
 
@@ -131,7 +131,7 @@ export default function AdviserFullDashboard({ backlogs }) {
             {/* You can add more content here */}
             <AdviserCalendar />
           </div>
-          <div className="h-[25%]">
+          <div className="h-fit">
             {/* You can add more content here */}
             <div className='border-8 border-[#da2f47] h-full rounded-2xl py-4 px-8'>
                 <h1 className='text-3xl text-[#317873] font-bold'>Your student is in need of guidance office services?</h1>

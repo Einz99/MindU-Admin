@@ -36,6 +36,7 @@ import PropTypes from "prop-types";
 import { API, RootAPI } from "../api"; // Import the API URL from the api.js file
 import axios from "axios";
 import io from "socket.io-client";
+import { useNavigate } from 'react-router-dom';
 
 // Sidebar menu items
 const menuItems = [
@@ -67,6 +68,7 @@ const menuItems = [
  */
 
 export default function Layout({ open, onMenuClick }) {
+  const navigate = useNavigate();
   const location = useLocation();
   const staffData = JSON.parse(localStorage.getItem("staff"));
   const [staff, setStaff] = useState({});
@@ -136,7 +138,7 @@ export default function Layout({ open, onMenuClick }) {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
         });
-
+      
         const data = response.data;
         const hashedPassword = '#'.repeat(data.passwordLength);
         setStaff(data);
@@ -146,28 +148,30 @@ export default function Layout({ open, onMenuClick }) {
         setTempPassword(hashedPassword);
       } catch (error) {
         console.error("Error fetching staff data:", error);
-        alert("Failed to fetch staff data. Please log in again.");
+        
+        // Clear authentication data
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("staff");
+        
+        // Redirect to login page using React Router
+        navigate("/", { replace: true });
       }
     };
+    
     const fetchLength = async () => {
       try {
         const res = await axios.get(`${API}/students`);
-      
-        // Check if isAskingHelp is truthy (1) and chatStatus is 'Pending'
         const filteredStudents = res.data.filter(student => student.isAskingHelp && student.chatStatus === 'Pending');
-      
-        // Get the length of filtered students
         const length = filteredStudents.length;
-        
         setRobitBadge(length);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     }
-
+  
     fetchStaffData();
     fetchLength();
-  }, [staffData.id]);
+  }, [staffData.id, navigate]);
         
   
   const handleCloseDrawer = () => {

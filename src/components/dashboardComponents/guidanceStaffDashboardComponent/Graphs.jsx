@@ -1044,7 +1044,7 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
   );
 }
 
-export function ActiveStudentsPieChart({width, padding, marginTop, filteringDateType, filteringSection, setOpenError, setAlertMessage, setIsSuccessful  }) {
+export function ActiveStudentsPieChart({width, padding, marginTop, filteringDateType, filteringSection, setOpenError, setAlertMessage, setIsSuccessful }) {
   const [dateRange, setDateRange] = useState(filteringDateType || 'today');
   const [section, setSection] = useState(filteringSection || 'All');
   const [rawData, setRawData] = useState(null); // Cache all login data
@@ -1382,7 +1382,7 @@ export function ActiveStudentsPieChart({width, padding, marginTop, filteringDate
         <p className="text-gray-400 text-sm">Strand: {filteringSection}</p>
       }
 
-      <div className="w-full h-full flex flex-col items-center justify-center relative -mt-10">
+      <div className={`w-full h-full flex flex-col items-center justify-center relative ${marginTop ? "-mt-10" : "-mt-5"}`}>
         <div className={`w-[45%] max-w-xs aspect-square relative`}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -1523,19 +1523,11 @@ export function Resource({ exportResourcesToExcel, topResources }) {
       </div>
       <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col overflow-y-auto px-2 mb-4 min-h-[50%]">
         <div className="flex w-full flex-row justify-end p-4 gap-4">
-          <FileDownload 
-            sx={{
-              fontSize: 25,
-              justifyItems: 'center',
-              color: '#64748b',
-              '&:hover': {
-                color: 'black',  // Change the color to black on hover
-              },
-            }}
+          <div
+            className="flex items-center justify-center cursor-pointer inline-block p-0.5"
             onClick={exportResourcesToExcel}
-          />
-          <div className="relative">
-            <FilterAlt 
+          >
+            <FileDownload 
               sx={{
                 fontSize: 25,
                 justifyItems: 'center',
@@ -1544,8 +1536,25 @@ export function Resource({ exportResourcesToExcel, topResources }) {
                   color: 'black',  // Change the color to black on hover
                 },
               }}
-              onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
             />
+          </div>
+          <div className="relative">
+            <div
+              className="flex items-center justify-center cursor-pointer inline-block p-0.5"
+              onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
+            >
+              <FilterAlt 
+                sx={{
+                  fontSize: 25,
+                  justifyItems: 'center',
+                  color: '#64748b',
+                  '&:hover': {
+                    color: 'black',  // Change the color to black on hover
+                  },
+                }}
+              />
+            </div>
+            
             {filterOpen && (
               <div className="z-50">
                 <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
@@ -1566,17 +1575,22 @@ export function Resource({ exportResourcesToExcel, topResources }) {
             )}
           </div>
           <div className="relative">
-            <Sort 
-              sx={{
-                fontSize: 25,
-                justifyItems: 'center',
-                color: '#64748b',
-                '&:hover': {
-                  color: 'black',  // Change the color to black on hover
-                },
-              }}
+            <div
+              className="flex items-center justify-center cursor-pointer inline-block p-0.5"
               onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
-            />
+            >
+              <Sort 
+                sx={{
+                  fontSize: 25,
+                  justifyItems: 'center',
+                  color: '#64748b',
+                  '&:hover': {
+                    color: 'black',  // Change the color to black on hover
+                  },
+                }}
+              />
+            </div>
+            
             {sortOpen && (
               <div className="z-50">
                 <div className="absolute right-1 w-[7.85rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
@@ -1749,19 +1763,11 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
       </div>
       <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col overflow-y-auto px-2 min-h-[50%]">
         <div className="flex w-full flex-row justify-end p-4 gap-4">
-          <FileDownload 
-            sx={{
-              fontSize: 25,
-              justifyItems: 'center',
-              color: '#64748b',
-              '&:hover': {
-                color: 'black',  // Change the color to black on hover
-              },
-            }}
+          <div
+            className="flex items-center justify-center cursor-pointer inline-block p-0.5"
             onClick={exportWellnessToExcel}
-          />
-          <div className="relative">
-            <FilterAlt 
+          >
+            <FileDownload 
               sx={{
                 fontSize: 25,
                 justifyItems: 'center',
@@ -1770,8 +1776,26 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
                   color: 'black',  // Change the color to black on hover
                 },
               }}
-              onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
             />
+          </div>
+          
+          <div className="relative">
+            <div
+              className="flex items-center justify-center cursor-pointer inline-block p-0.5"
+              onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
+            >
+              <FilterAlt 
+                sx={{
+                  fontSize: 25,
+                  justifyItems: 'center',
+                  color: '#64748b',
+                  '&:hover': {
+                    color: 'black',  // Change the color to black on hover
+                  },
+                }}
+              />
+            </div>
+            
             {filterOpen && (
               <div className="z-50">
                 <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
@@ -1787,17 +1811,22 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
             )}
           </div>
           <div className="relative">
-            <Sort 
-              sx={{
-                fontSize: 25,
-                justifyItems: 'center',
-                color: '#64748b',
-                '&:hover': {
-                  color: 'black',  // Change the color to black on hover
-                },
-              }}
+            <div
+              className="flex items-center justify-center cursor-pointer inline-block p-0.5"
               onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
-            />
+            >
+              <Sort 
+                sx={{
+                  fontSize: 25,
+                  justifyItems: 'center',
+                  color: '#64748b',
+                  '&:hover': {
+                    color: 'black',  // Change the color to black on hover
+                  },
+                }}
+              />
+            </div>
+            
             {sortOpen && (
               <div className="z-50">
                 <div className="absolute right-1 w-[7.85rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">

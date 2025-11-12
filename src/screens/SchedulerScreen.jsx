@@ -291,7 +291,11 @@ export default function Scheduler() {
                       />
                     </div>
                     <div className="relative">
-                      <FilterAlt 
+                      <div
+                        className="flex items-center justify-center cursor-pointer inline-block p-0.5"
+                        onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
+                      >
+                        <FilterAlt 
                         style={{ fontSize: '2rem' }}
                         sx={{
                           color: '#64748b',
@@ -299,8 +303,9 @@ export default function Scheduler() {
                             color: 'black',  // Change the color to black on hover
                           },
                         }}
-                        onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
                       />
+                      </div>
+                      
                       {filterOpen && (
                         <div className="z-50">
                           <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
@@ -332,16 +337,21 @@ export default function Scheduler() {
                       )}
                     </div>
                     <div className="relative">
-                      <Sort 
-                        style={{ fontSize: '2rem' }} 
-                        sx={{
-                          color: '#64748b',
-                          '&:hover': {
-                            color: 'black',  // Change the color to black on hover
-                          },
-                        }}
+                      <div
+                        className="flex items-center justify-center cursor-pointer inline-block p-0.5"
                         onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
-                      />
+                      >
+                        <Sort 
+                          style={{ fontSize: '2rem' }} 
+                          sx={{
+                            color: '#64748b',
+                            '&:hover': {
+                              color: 'black',  // Change the color to black on hover
+                            },
+                          }}
+                        />
+                      </div>
+                      
                       {sortOpen && (
                         <div className="z-50">
                           <div className="absolute right-1 w-[5.903rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">

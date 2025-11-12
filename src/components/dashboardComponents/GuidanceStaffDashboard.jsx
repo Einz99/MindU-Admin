@@ -337,9 +337,9 @@ export default function StaffDashboard() {
           <div className="flex flex-col flex-grow">
             <CalmiTriggerAlert alerts={alerts} padding={true} filterBacklog={filterBacklog}/>
           </div>
-          <div className="flex items-center justify-center p-5 flex-col">
-            <Resource exportResourcesToExcel={exportResourcesToCSV} topResources={topResources} />
-            <Wellness exportWellnessToExcel={exportWellnessToCSV} topWellness={topWellness} />
+          <div className="flex items-center justify-center p-5 flex-col mt-10">
+            <Resource exportResourcesToExcel={exportResourcesToCSV} topResources={topResources}/>
+            <Wellness exportWellnessToExcel={exportWellnessToCSV} topWellness={topWellness}/>
           </div>
         </div>
         <Dialog
