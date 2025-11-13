@@ -245,6 +245,13 @@ export function UsageUtilization({
       Visits: data.value,
     }));
 
+    if (formattedData.length === 0) {
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage('No data available for export after applying the filters.');
+      return; // Exit the function if no data is available
+    }
+
     const sectionLabel = section === 'all' ? 'All_Sections' : section;
     const gradeLabel = grade === 'all' ? 'All_Grades' : `Grade_${grade}`;
     const dateLabel = getDisplayText(dateRange).replace(/\s+/g, '_');
@@ -504,6 +511,13 @@ export function AlertsOvertime({
       Alerts: data.value,
     }));
 
+    if (formattedData.length === 0) {
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage('No data available for export after applying the filters.');
+      return; // Exit the function if no data is available
+    }
+
     const dateRange = generateDateRangeString();
     const sectionLabel = section === 'all' ? 'All_Sections' : section;
     const gradeLabel = grade === 'all' ? 'All_Grades' : `Grade_${grade}`;
@@ -751,6 +765,13 @@ export function CompSchedules({
       Date: data.date,
       CompletedSchedules: data.value,
     }));
+
+    if (formattedData.length === 0) {
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage('No data available for export after applying the filters.');
+      return; // Exit the function if no data is available
+    }
 
     const dateRange = generateDateRangeString();
     const sectionLabel = section === 'all' ? 'All_Sections' : section;
@@ -1429,6 +1450,13 @@ export function ActiveStudentsPieChart({
         'Percentage': `${barPercentage}%`
       }
     ];
+
+    if (formattedData.length === 0) {
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage('No data available for export after applying the filters.');
+      return; // Exit the function if no data is available
+    }
   
     const sectionLabel = section === 'all' ? 'All_Sections' : section;
     const gradeLabel = grade === 'all' ? 'All_Grades' : `Grade_${grade}`;
