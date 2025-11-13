@@ -15,11 +15,14 @@ export default function StaffDashboard() {
 
   const [filteringDateType, setFilteringDateType] = useState('today');
   const [filteringSection, setFilteringSection] = useState('all');
+  const [filteringGrade, setFilteringGrade] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDateOpen, setFilterDateOpen] = useState(false);
   const [filterSectionOpen, setFilterSectionOpen] = useState(false);
+  const [filteringGradeOpen, setFilteringGradeOpen] = useState(false);
   const [sendFilterDate, setSendFilterDate] = useState('today');
   const [sendFilterSection, setSendFilterSection] = useState('all');
+  const [sendFilterGrade, setSendfilterGrade] = useState('all');
 
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -178,6 +181,7 @@ export default function StaffDashboard() {
   const handleApplyFilters = () => {
     setSendFilterDate(filteringDateType);
     setSendFilterSection(filteringSection);
+    setSendfilterGrade(filteringGrade);
     setFilterOpen(false);
   };
 
@@ -191,14 +195,18 @@ export default function StaffDashboard() {
           style={{ gridTemplateRows: '0.5% 35% 30% 30% 30%' }}
         >
           {filterOpen && (
-            <div className="absolute top-5 right-2 z-40 bg-white border-[1px] border-[#1e3a8a] rounded-md shadow-lg text-[#1e3a8a] w-60 pt-2">
+            <div className="absolute top-5 right-2 z-50 bg-white border-[1px] border-[#1e3a8a] rounded-md shadow-lg text-[#1e3a8a] w-60 pt-2">
               <p className="font-bold p-2">Filter Date</p>
               <div 
                 className="relative -mt-2"
-                onClick={() => {setFilterDateOpen(!filterDateOpen); setFilterSectionOpen(false);}}
+                onClick={() => {
+                  setFilterDateOpen(!filterDateOpen); 
+                  setFilterSectionOpen(false);
+                  setFilteringGradeOpen(false);
+                }}
               >
                 {filterDateOpen && (
-                  <div className="bg-white text-[#1e3a8a] border-[1px] border-[#1e3a8a] rounded-md shadow-lg absolute top-8 right-2 w-36 z-0">
+                  <div className="bg-white text-[#1e3a8a] border-[1px] border-[#1e3a8a] rounded-md shadow-lg absolute top-8 right-2 w-36 z-50">
                     <div
                       onClick={() => {setFilteringDateType("today");}}
                       className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer rounded-t-md"
@@ -249,18 +257,23 @@ export default function StaffDashboard() {
                   </p>
                 </div>
               </div>
-              <p className="font-bold p-2">Filter Section</p>
+                    
+              <p className="font-bold p-2">Filter Strand</p>
               <div 
-                className={`relative -mt-2 ${filterDateOpen ? '-z-50' : 'z-50'}`}
-                onClick={() => {setFilterDateOpen(false); setFilterSectionOpen(!filterSectionOpen);}}
+                className={`relative -mt-2 ${filterDateOpen || filteringGradeOpen ? '-z-50' : 'z-50'}`}
+                onClick={() => {
+                  setFilterDateOpen(false); 
+                  setFilterSectionOpen(!filterSectionOpen);
+                  setFilteringGradeOpen(false);
+                }}
               >
                 {filterSectionOpen && (
-                  <div className="bg-white text-[#1e3a8a] border-[1px] border-[#1e3a8a] rounded-md shadow-lg absolute top-8 right-2 w-36 -z-10">
+                  <div className="bg-white text-[#1e3a8a] border-[1px] border-[#1e3a8a] rounded-md shadow-lg absolute top-8 right-2 w-36 z-50">
                     <div
-                      onClick={() => {setFilteringSection("All");}}
+                      onClick={() => {setFilteringSection("all");}}
                       className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer rounded-t-md"
                     >
-                      All Sections
+                      All Strands
                     </div>
                     <div
                       onClick={() => {setFilteringSection("ABM");}}
@@ -294,12 +307,51 @@ export default function StaffDashboard() {
                     </div>
                   </div>
                 )}
-                <div className={`${filterDateOpen ? '-z-50' : 'z-50'}`}>
+                <div className={`${filterDateOpen || filteringGradeOpen ? '-z-50' : 'z-50'}`}>
                   <p className="bg-[#1e3a8a] text-white p-2 border-b-2 cursor-pointer rounded-md mx-2">
-                    {filteringSection === 'all' ? 'All Sections' : filteringSection}
+                    {filteringSection === 'all' ? 'All Strands' : filteringSection}
                   </p>
                 </div>
               </div>
+              
+              <p className="font-bold p-2">Filter Grade</p>
+              <div 
+                className={`relative -mt-2 ${filterDateOpen || filterSectionOpen ? '-z-50' : 'z-50'}`}
+                onClick={() => {
+                  setFilterDateOpen(false); 
+                  setFilterSectionOpen(false);
+                  setFilteringGradeOpen(!filteringGradeOpen);
+                }}
+              >
+                {filteringGradeOpen && (
+                  <div className="bg-white text-[#1e3a8a] border-[1px] border-[#1e3a8a] rounded-md shadow-lg absolute top-8 right-2 w-36 z-50">
+                    <div
+                      onClick={() => {setFilteringGrade("all");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer rounded-t-md"
+                    >
+                      All Grades
+                    </div>
+                    <div
+                      onClick={() => {setFilteringGrade("11");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      Grade 11
+                    </div>
+                    <div
+                      onClick={() => {setFilteringGrade("12");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer rounded-b-md"
+                    >
+                      Grade 12
+                    </div>
+                  </div>
+                )}
+                <div className={`${filterDateOpen || filterSectionOpen ? '-z-50' : 'z-50'}`}>
+                  <p className="bg-[#1e3a8a] text-white p-2 border-b-2 cursor-pointer rounded-md mx-2">
+                    {filteringGrade === 'all' ? 'All Grades' : `Grade ${filteringGrade}`}
+                  </p>
+                </div>
+              </div>
+              
               <div className="flex justify-end p-2">
                 <button
                   className="text-red-500"
@@ -324,10 +376,43 @@ export default function StaffDashboard() {
             <FilterAlt />
           </div>
           <div />
-          <UsageUtilization filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
-          <ActiveStudentsPieChart width={100} padding={10} marginTop={false} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
-          <AlertsOvertime alerts={alerts} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
-          <CompSchedules backlog={backlog} filteringDateType={sendFilterDate} filteringSection={sendFilterSection} setOpenError={setOpenError} setAlertMessage={setAlertMessage} setIsSuccessful={setIsSuccessful} />
+          <UsageUtilization 
+            filteringDateType={sendFilterDate} 
+            filteringSection={sendFilterSection}
+            filteringGrade={sendFilterGrade}
+            setOpenError={setOpenError} 
+            setAlertMessage={setAlertMessage} 
+            setIsSuccessful={setIsSuccessful} 
+          />
+          <ActiveStudentsPieChart 
+            width={100} 
+            padding={5} 
+            marginTop={false} 
+            filteringDateType={sendFilterDate} 
+            filteringSection={sendFilterSection}
+            filteringGrade={sendFilterGrade}
+            setOpenError={setOpenError} 
+            setAlertMessage={setAlertMessage} 
+            setIsSuccessful={setIsSuccessful} 
+          />
+          <AlertsOvertime 
+            alerts={alerts} 
+            filteringDateType={sendFilterDate} 
+            filteringSection={sendFilterSection}
+            filteringGrade={sendFilterGrade}
+            setOpenError={setOpenError} 
+            setAlertMessage={setAlertMessage} 
+            setIsSuccessful={setIsSuccessful} 
+          />
+          <CompSchedules 
+            backlog={backlog} 
+            filteringDateType={sendFilterDate} 
+            filteringSection={sendFilterSection}
+            filteringGrade={sendFilterGrade}
+            setOpenError={setOpenError} 
+            setAlertMessage={setAlertMessage} 
+            setIsSuccessful={setIsSuccessful} 
+          />
         </div>
         
         <div 

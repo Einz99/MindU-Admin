@@ -1460,10 +1460,13 @@ export function ActiveStudentsPieChart({
         }
       </div>
       {staff.position !== 'Adviser' && 
-        <p className="text-gray-400 text-sm">Strand: {filteringSection}</p>
+        <>
+          <p className="text-gray-400 text-sm">Strand: {filteringSection === "all" ? "All" : filteringSection}</p>
+          <p className="text-gray-400 text-sm">Grade: {grade  === "all" ? "All" : grade}</p>
+        </>
       }
 
-      <div className={`w-full h-full flex flex-col items-center justify-center relative ${marginTop ? "-mt-10" : "-mt-5"}`}>
+      <div className={`w-full h-full flex flex-col items-center justify-center relative ${marginTop ? "-mt-10" : "-mt-12"}`}>
         <div className={`w-[45%] max-w-xs aspect-square relative`}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
