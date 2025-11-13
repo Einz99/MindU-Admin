@@ -16,13 +16,55 @@ import {
   LineChart,
 } from "recharts";
 import { useNavigate } from "react-router-dom";
-import { Badge, Button, Select, MenuItem, TableContainer, TableBody, TableCell, TableRow, Table, TableHead } from "@mui/material";
+import { Badge, Button, Select, MenuItem, TableContainer, TableBody, TableCell, TableRow, Table, TableHead, IconButton } from "@mui/material";
 import axios from "axios";
 import { API } from "../../../api";
 
-export function UsageUtilization({ filteringDateType, filteringSection, setOpenError, setAlertMessage, setIsSuccessful }) {
+// Helper function to extract grade from section string
+const extractGradeFromSection = (sectionString) => {
+  if (!sectionString) return null;
+  const parts = sectionString.trim().split(' ');
+  if (parts.length < 2) return null;
+  const gradeSection = parts[1]; // "12-1"
+  const grade = gradeSection.split('-')[0]; // "12"
+  return grade;
+};
+
+// Helper function to extract strand from section string
+const extractStrandFromSection = (sectionString) => {
+  if (!sectionString) return null;
+  const parts = sectionString.trim().split(' ');
+  return parts[0]; // "STEM"
+};
+
+// Helper function to check if item matches filters
+const matchesFilters = (itemSection, filterSection, filterGrade) => {
+  if (!itemSection) return filterSection === 'all' && filterGrade === 'all';
+  
+  const strand = extractStrandFromSection(itemSection);
+  const grade = extractGradeFromSection(itemSection);
+  
+  // Check strand filter
+  const strandMatch = filterSection === 'all' || 
+                      strand?.toUpperCase() === filterSection.toUpperCase();
+  
+  // Check grade filter
+  const gradeMatch = filterGrade === 'all' || grade === filterGrade;
+  
+  return strandMatch && gradeMatch;
+};
+
+export function UsageUtilization({ 
+  filteringDateType, 
+  filteringSection, 
+  filteringGrade,
+  setOpenError, 
+  setAlertMessage, 
+  setIsSuccessful 
+}) {
   const [dateRange, setDateRange] = useState(filteringDateType || 'today');
-  const [section, setSection] = useState(filteringSection || 'All');
+  const [section, setSection] = useState(filteringSection || 'all');
+  const [grade, setGrade] = useState(filteringGrade || 'all');
   const [rawData, setRawData] = useState([]);
   const [chartData, setChartData] = useState([]);
 
@@ -74,12 +116,7 @@ export function UsageUtilization({ filteringDateType, filteringSection, setOpenE
       const rowDate = new Date(row.date);
       const dateMatch = rowDate >= startDate && rowDate <= endDate;
       
-      let sectionMatch = true;
-      if (section !== 'All') {
-        sectionMatch = row.section && row.section.toUpperCase().includes(section.toUpperCase());
-      }
-      
-      return dateMatch && sectionMatch;
+      return dateMatch && matchesFilters(row.section, section, grade);
     });
 
     const modules = ["Resource", "Wellness", "Chatbot", "Mood", "Scheduler", "Pet"];
@@ -99,7 +136,7 @@ export function UsageUtilization({ filteringDateType, filteringSection, setOpenE
     }));
 
     setChartData(transformed);
-  }, [rawData, dateRange, section]);
+  }, [rawData, dateRange, section, grade]);
 
   useEffect(() => {
     if (filteringDateType) setDateRange(filteringDateType);
@@ -108,6 +145,10 @@ export function UsageUtilization({ filteringDateType, filteringSection, setOpenE
   useEffect(() => {
     if (filteringSection) setSection(filteringSection);
   }, [filteringSection]);
+
+  useEffect(() => {
+    if (filteringGrade) setGrade(filteringGrade);
+  }, [filteringGrade]);
 
   const getModuleColor = (module) => {
     switch (module) {
@@ -204,11 +245,12 @@ export function UsageUtilization({ filteringDateType, filteringSection, setOpenE
       Visits: data.value,
     }));
 
-    const sectionLabel = section === 'All' ? 'All_Sections' : section;
+    const sectionLabel = section === 'all' ? 'All_Sections' : section;
+    const gradeLabel = grade === 'all' ? 'All_Grades' : `Grade_${grade}`;
     const dateLabel = getDisplayText(dateRange).replace(/\s+/g, '_');
     
     const csvContent = convertToCSV(formattedData, ['Module', 'Visits']);
-    downloadCSV(csvContent, `Usage_${sectionLabel}_${dateLabel}.csv`);
+    downloadCSV(csvContent, `Usage_${sectionLabel}_${gradeLabel}_${dateLabel}.csv`);
     setOpenError(true);
     setIsSuccessful(true);
     setAlertMessage('The file is download successfully please check your download.');
@@ -234,7 +276,10 @@ export function UsageUtilization({ filteringDateType, filteringSection, setOpenE
       <div className="flex w-full flex-col mb-2">
         <div className="flex flex-row justify-between  items-center  mr-2">
           <p className="font-bold text-lg">{getDisplayText(dateRange)}</p>
-          <p className="text-sm text-gray-600">Strand: {section}</p>
+          <div>
+            <p className="text-sm text-gray-600">Strand: {section === 'all' ? 'All' : section}</p>
+            <p className="text-sm text-gray-600">Grade Level: {grade === 'all' ? 'All' : grade}</p>
+          </div>
         </div>
       </div>
 
@@ -273,9 +318,18 @@ export function UsageUtilization({ filteringDateType, filteringSection, setOpenE
   );
 }
 
-export function AlertsOvertime({ alerts, filteringDateType, filteringSection, setOpenError, setAlertMessage, setIsSuccessful }) {
+export function AlertsOvertime({ 
+  alerts, 
+  filteringDateType, 
+  filteringSection, 
+  filteringGrade,
+  setOpenError, 
+  setAlertMessage, 
+  setIsSuccessful 
+}) {
   const [dateRange, setDateRange] = useState(filteringDateType || 'today');
-  const [section, setSection] = useState(filteringSection || 'All');
+  const [section, setSection] = useState(filteringSection || 'all');
+  const [grade, setGrade] = useState(filteringGrade || 'all');
   const [rawData, setRawData] = useState([]);
   const [chartData, setChartData] = useState([]);
 
@@ -286,6 +340,10 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection, se
   useEffect(() => {
     if (filteringSection) setSection(filteringSection);
   }, [filteringSection]);
+
+  useEffect(() => {
+    if (filteringGrade) setGrade(filteringGrade);
+  }, [filteringGrade]);
 
   useEffect(() => {
     if (alerts && alerts.length > 0) {
@@ -341,12 +399,7 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection, se
       const alertDate = new Date(alert.date);
       const dateMatch = alertDate >= start && alertDate <= end;
       
-      let sectionMatch = true;
-      if (section !== 'All') {
-        sectionMatch = alert.section && alert.section.toUpperCase().includes(section.toUpperCase());
-      }
-      
-      return dateMatch && sectionMatch;
+      return dateMatch && matchesFilters(alert.section, section, grade);
     });
 
     const getMostRecentSaturday = (date) => {
@@ -404,7 +457,7 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection, se
     }
 
     setChartData(result);
-  }, [rawData, dateRange, section]);
+  }, [rawData, dateRange, section, grade]);
 
   const generateDateRangeString = () => {
     if (chartData.length === 0) return '';
@@ -452,10 +505,11 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection, se
     }));
 
     const dateRange = generateDateRangeString();
-    const sectionLabel = section === 'All' ? 'All_Sections' : section;
+    const sectionLabel = section === 'all' ? 'All_Sections' : section;
+    const gradeLabel = grade === 'all' ? 'All_Grades' : `Grade_${grade}`;
     
     const csvContent = convertToCSV(formattedData, ['Date', 'Alerts']);
-    downloadCSV(csvContent, `alerts_${sectionLabel}_${dateRange}.csv`);
+    downloadCSV(csvContent, `alerts_${sectionLabel}_${gradeLabel}_${dateRange}.csv`);
     setOpenError(true);
     setIsSuccessful(true);
     setAlertMessage('The file is download successfully please check your download.');
@@ -480,7 +534,8 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection, se
         />
       </div>
       <div>
-        <p className="text-gray-400 text-sm">Strand: {section}</p>
+        <p className="text-gray-400 text-sm">Strand: {section === 'all' ? 'All' : section}</p>
+        <p className="text-gray-400 text-sm">Grade Level: {grade === 'all' ? 'All' : grade}</p>
       </div>
       
       <div className="w-full h-[100%] px-2">
@@ -511,9 +566,19 @@ export function AlertsOvertime({ alerts, filteringDateType, filteringSection, se
   );
 }
 
-export function CompSchedules({ backlog, filteringDateType, filteringSection, setOpenError, setAlertMessage, setIsSuccessful }) {
+// Updated CompSchedules Component  
+export function CompSchedules({ 
+  backlog, 
+  filteringDateType, 
+  filteringSection, 
+  filteringGrade,
+  setOpenError, 
+  setAlertMessage, 
+  setIsSuccessful 
+}) {
   const [dateRange, setDateRange] = useState(filteringDateType || 'today');
-  const [section, setSection] = useState(filteringSection || 'All');
+  const [section, setSection] = useState(filteringSection || 'all');
+  const [grade, setGrade] = useState(filteringGrade || 'all');
   const [rawData, setRawData] = useState([]);
   const [chartData, setChartData] = useState([]);
   const staff = JSON.parse(localStorage.getItem("staff"));
@@ -525,6 +590,10 @@ export function CompSchedules({ backlog, filteringDateType, filteringSection, se
   useEffect(() => {
     if (filteringSection) setSection(filteringSection);
   }, [filteringSection]);
+
+  useEffect(() => {
+    if (filteringGrade) setGrade(filteringGrade);
+  }, [filteringGrade]);
 
   useEffect(() => {
     if (backlog && backlog.length > 0) {
@@ -570,21 +639,16 @@ export function CompSchedules({ backlog, filteringDateType, filteringSection, se
     return { start: startDate, end: today };
   };
 
-    useEffect(() => {
+  useEffect(() => {
     const { start, end } = getDateRange(dateRange);
 
-    const filtered = (rawData || []).filter((alert) => {
-      if (!alert.date) return false;
+    const filtered = (rawData || []).filter((item) => {
+      if (!item.date) return false;
       
-      const alertDate = new Date(alert.date);
-      const dateMatch = alertDate >= start && alertDate <= end;
+      const itemDate = new Date(item.date);
+      const dateMatch = itemDate >= start && itemDate <= end;
       
-      let sectionMatch = true;
-      if (section !== 'All') {
-        sectionMatch = alert.section && alert.section.toUpperCase().includes(section.toUpperCase());
-      }
-      
-      return dateMatch && sectionMatch;
+      return dateMatch && matchesFilters(item.section, section, grade);
     });
 
     const getMostRecentSaturday = (date) => {
@@ -641,7 +705,7 @@ export function CompSchedules({ backlog, filteringDateType, filteringSection, se
     }
 
     setChartData(result);
-  }, [rawData, dateRange, section]);
+  }, [rawData, dateRange, section, grade]);
 
   const generateDateRangeString = () => {
     if (chartData.length === 0) return '';
@@ -689,10 +753,11 @@ export function CompSchedules({ backlog, filteringDateType, filteringSection, se
     }));
 
     const dateRange = generateDateRangeString();
-    const sectionLabel = section === 'All' ? 'All_Sections' : section;
+    const sectionLabel = section === 'all' ? 'All_Sections' : section;
+    const gradeLabel = grade === 'all' ? 'All_Grades' : `Grade_${grade}`;
     
     const csvContent = convertToCSV(formattedData, ['Date', 'CompletedSchedules']);
-    downloadCSV(csvContent, `schedules_${sectionLabel}_${dateRange}.csv`);
+    downloadCSV(csvContent, `schedules_${sectionLabel}_${gradeLabel}_${dateRange}.csv`);
     setOpenError(true);
     setIsSuccessful(true);
     setAlertMessage('The file is download successfully please check your download.');
@@ -720,7 +785,8 @@ export function CompSchedules({ backlog, filteringDateType, filteringSection, se
       </div>
       {staff.position !== 'Adviser' &&
         <div>
-          <p className="text-gray-400 text-sm">Strand: {section}</p>
+          <p className="text-gray-400 text-sm">Strand: {section === 'all' ? 'All' : section}</p>
+          <p className="text-gray-400 text-sm">Strand: {grade === 'all' ? 'All' : grade}</p>
         </div>
       }
 
@@ -1044,10 +1110,21 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
   );
 }
 
-export function ActiveStudentsPieChart({width, padding, marginTop, filteringDateType, filteringSection, setOpenError, setAlertMessage, setIsSuccessful }) {
+export function ActiveStudentsPieChart({
+  width, 
+  padding, 
+  marginTop, 
+  filteringDateType, 
+  filteringSection, 
+  filteringGrade,
+  setOpenError, 
+  setAlertMessage, 
+  setIsSuccessful 
+}) {
   const [dateRange, setDateRange] = useState(filteringDateType || 'today');
-  const [section, setSection] = useState(filteringSection || 'All');
-  const [rawData, setRawData] = useState(null); // Cache all login data
+  const [section, setSection] = useState(filteringSection || 'all');
+  const [grade, setGrade] = useState(filteringGrade || 'all');
+  const [rawData, setRawData] = useState(null);
   const [totalStudents, setTotalStudents] = useState(0);
   const [piePercentage, setPiePercentage] = useState(0);
   const [barPercentage, setBarPercentage] = useState(0);
@@ -1061,6 +1138,10 @@ export function ActiveStudentsPieChart({width, padding, marginTop, filteringDate
   useEffect(() => {
     if (filteringSection) setSection(filteringSection);
   }, [filteringSection]);
+
+  useEffect(() => {
+    if (filteringGrade) setGrade(filteringGrade);
+  }, [filteringGrade]);
 
   // Helper: Calculate date range
   const getDateRange = (range) => {
@@ -1118,7 +1199,7 @@ export function ActiveStudentsPieChart({width, padding, marginTop, filteringDate
         const lastYear = new Date();
         lastYear.setFullYear(today.getFullYear() - 1);
         
-        const res = await axios.get(`${API}/student-logins`, {
+        const res = await axios.get(`${API}/student-login-percentages`, {
           params: { 
             startDate: lastYear.toISOString().slice(0, 10),
             endDate: today.toISOString().slice(0, 10)
@@ -1156,12 +1237,11 @@ export function ActiveStudentsPieChart({width, padding, marginTop, filteringDate
 
     // Filter data based on section
     const filteredData = rawData.filter((row) => {
-      if (section === 'All') return true;
-      return row.section && row.section.toUpperCase().includes(section.toUpperCase());
+      return matchesFilters(row.section, section, grade);
     });
 
     // Get unique students count based on section filter
-    const sectionStudentsCount = section === 'All' 
+    const sectionStudentsCount = (section === 'all' && grade === 'all')
       ? totalStudents 
       : new Set(filteredData.map(row => row.student_id)).size;
 
@@ -1222,7 +1302,7 @@ export function ActiveStudentsPieChart({width, padding, marginTop, filteringDate
 
     setPiePercentage(piePct);
     setBarPercentage(barPct);
-  }, [rawData, dateRange, section, totalStudents]);
+  }, [rawData, dateRange, section, grade, totalStudents]);
 
   const barLabel = dateRange === 'today' ? 'Yesterday' : 'Today';
 
@@ -1350,11 +1430,12 @@ export function ActiveStudentsPieChart({width, padding, marginTop, filteringDate
       }
     ];
   
-    const sectionLabel = section === 'All' ? 'All_Sections' : section.replace(/\s+/g, '_');
+    const sectionLabel = section === 'all' ? 'All_Sections' : section;
+    const gradeLabel = grade === 'all' ? 'All_Grades' : `Grade_${grade}`;
     const dateLabel = getDisplayText(dateRange).replace(/\s+/g, '_');
     
     const csvContent = convertToCSV(formattedData, ['Period', 'Active Students', 'Total Students', 'Percentage']);
-    downloadCSV(csvContent, `Student_Login_${sectionLabel}_${dateLabel}.csv`);
+    downloadCSV(csvContent, `Student_Login_${sectionLabel}_${gradeLabel}_${dateLabel}.csv`);
     setOpenError(true);
     setIsSuccessful(true);
     setAlertMessage('The file is download successfully please check your download.');
@@ -1523,41 +1604,45 @@ export function Resource({ exportResourcesToExcel, topResources }) {
       </div>
       <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col overflow-y-auto px-2 mb-4 min-h-[50%]">
         <div className="flex w-full flex-row justify-end p-4 gap-4">
-          <div
-            className="flex items-center justify-center cursor-pointer inline-block p-0.5"
+          <IconButton
+            className="z-50"
             onClick={exportResourcesToExcel}
+            sx={{
+              color: '#64748b',
+              '&:hover': {
+                color: 'black',
+              },
+            }}
           >
             <FileDownload 
-              sx={{
+              sx={{ 
                 fontSize: 25,
-                justifyItems: 'center',
+                pointerEvents: 'none'  // Add this
+              }} 
+            />
+          </IconButton>
+          <div className="relative">
+            <IconButton
+              className="z-50"
+              onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
+              sx={{
                 color: '#64748b',
                 '&:hover': {
-                  color: 'black',  // Change the color to black on hover
+                  color: 'black',
                 },
               }}
-            />
-          </div>
-          <div className="relative">
-            <div
-              className="flex items-center justify-center cursor-pointer inline-block p-0.5"
-              onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
             >
               <FilterAlt 
-                sx={{
+                sx={{ 
                   fontSize: 25,
-                  justifyItems: 'center',
-                  color: '#64748b',
-                  '&:hover': {
-                    color: 'black',  // Change the color to black on hover
-                  },
-                }}
+                  pointerEvents: 'none'  // Add this
+                }} 
               />
-            </div>
+            </IconButton>
             
             {filterOpen && (
               <div className="z-50">
-                <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
+                <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
                   <ul className="text-right">
                     <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-tl-xl ${filterType === 0 && "text-black"}`} onClick={() => handleFilter(0)}>All</li>
                     <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer ${filterType === 1 && "text-black"}`} onClick={() => handleFilter(1)}>Emotional/Mental</li>
@@ -1569,31 +1654,28 @@ export function Resource({ exportResourcesToExcel, topResources }) {
                     <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-bl-xl ${filterType === 7 && "text-black"}`} onClick={() => handleFilter(7)}>Environment</li>
                   </ul>
                 </div>
-                <div className="absolute right-2 top-[-2px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
-                <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-50" />
+                <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-40" />
+                <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-40" />
               </div>
             )}
           </div>
           <div className="relative">
-            <div
-              className="flex items-center justify-center cursor-pointer inline-block p-0.5"
+            <IconButton
+              className="z-50"
               onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
+              sx={{
+                color: '#64748b',
+                '&:hover': {
+                  color: 'black',
+                },
+              }}
             >
-              <Sort 
-                sx={{
-                  fontSize: 25,
-                  justifyItems: 'center',
-                  color: '#64748b',
-                  '&:hover': {
-                    color: 'black',  // Change the color to black on hover
-                  },
-                }}
-              />
-            </div>
+              <Sort sx={{ fontSize: 25 }} />
+            </IconButton>
             
             {sortOpen && (
               <div className="z-50">
-                <div className="absolute right-1 w-[7.85rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
+                <div className="absolute right-1 w-[7.85rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
                   <ul className="text-right">
                     <li className={`px-4 py-0.5  text-[#64748b] hover:text-[#334155] cursor-pointer rounded-tl-xl ${sortType === 0 && "text-black"}`} onClick={() => handleSort(0)}>A - Z</li>
                     <li className={`px-4 py-0.5  text-[#64748b] hover:text-[#334155] cursor-pointer ${sortType === 1 && "text-black"}`} onClick={() => handleSort(1)}>Z - A</li>
@@ -1602,8 +1684,8 @@ export function Resource({ exportResourcesToExcel, topResources }) {
                     <li className={`px-4 py-0.5  text-[#64748b] hover:text-[#334155] cursor-pointer rounded-bl-xl ${sortType === 4 && "text-black"}`} onClick={() => handleSort(4)}>Date Posted</li>
                   </ul>
                 </div>
-                <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
-                <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-50" />
+                <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-40" />
+                <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-40" />
               </div>
             )}
           </div>
@@ -1763,73 +1845,73 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
       </div>
       <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col overflow-y-auto px-2 min-h-[50%]">
         <div className="flex w-full flex-row justify-end p-4 gap-4">
-          <div
-            className="flex items-center justify-center cursor-pointer inline-block p-0.5"
+          <IconButton
+            className="z-50"
             onClick={exportWellnessToExcel}
+            sx={{
+              color: '#64748b',
+              '&:hover': {
+                color: 'black',
+              },
+            }}
           >
             <FileDownload 
-              sx={{
+              sx={{ 
                 fontSize: 25,
-                justifyItems: 'center',
+                pointerEvents: 'none'  // Add this
+              }} 
+            />
+          </IconButton>
+          <div className="relative">
+            <IconButton
+              className="z-50"
+              onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
+              sx={{
                 color: '#64748b',
                 '&:hover': {
-                  color: 'black',  // Change the color to black on hover
+                  color: 'black',
                 },
               }}
-            />
-          </div>
-          
-          <div className="relative">
-            <div
-              className="flex items-center justify-center cursor-pointer inline-block p-0.5"
-              onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
             >
               <FilterAlt 
-                sx={{
+                sx={{ 
                   fontSize: 25,
-                  justifyItems: 'center',
-                  color: '#64748b',
-                  '&:hover': {
-                    color: 'black',  // Change the color to black on hover
-                  },
-                }}
+                  pointerEvents: 'none'  // Add this
+                }} 
               />
-            </div>
+            </IconButton>
             
             {filterOpen && (
               <div className="z-50">
-                <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
+                <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
                   <ul className="text-right">
                     <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-tl-xl ${filterType === 0 && "text-black"}`} onClick={() => handleFilter(0)}>All</li>
                     <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer ${filterType === 1 && "text-black"}`} onClick={() => handleFilter(1)}>Breathing Exercises</li>
                     <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer ${filterType === 2 && "text-black"}`} onClick={() => handleFilter(2)}>Meditation Guide</li>
                   </ul>
                 </div>
-                <div className="absolute right-2 top-[-2px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
-                <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-50" />
+                <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-40" />
+                <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-40" />
               </div>
             )}
           </div>
           <div className="relative">
-            <div
-              className="flex items-center justify-center cursor-pointer inline-block p-0.5"
+            <IconButton
+              className="z-50"
               onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
+              sx={{
+                color: '#64748b',
+                '&:hover': {
+                  color: 'black',
+                },
+              }}
             >
-              <Sort 
-                sx={{
-                  fontSize: 25,
-                  justifyItems: 'center',
-                  color: '#64748b',
-                  '&:hover': {
-                    color: 'black',  // Change the color to black on hover
-                  },
-                }}
-              />
-            </div>
+              <Sort sx={{ fontSize: 25 }} />
+            </IconButton>
             
             {sortOpen && (
               <div className="z-50">
-                <div className="absolute right-1 w-[7.85rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
+                <div className="absolute right-1 w-[7.85rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
                   <ul className="text-right">
                     <li className={`px-4 py-0.5  text-[#64748b] hover:text-[#334155] cursor-pointer rounded-tl-xl ${sortType === 0 && "text-black"}`} onClick={() => handleSort(0)}>A - Z</li>
                     <li className={`px-4 py-0.5  text-[#64748b] hover:text-[#334155] cursor-pointer ${sortType === 1 && "text-black"}`} onClick={() => handleSort(1)}>Z - A</li>
@@ -1838,8 +1920,8 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
                     <li className={`px-4 py-0.5  text-[#64748b] hover:text-[#334155] cursor-pointer rounded-bl-xl ${sortType === 4 && "text-black"}`} onClick={() => handleSort(4)}>Date Posted</li>
                   </ul>
                 </div>
-                <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
-                <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-50" />
+                <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-40" />
+                <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-40" />
               </div>
             )}
           </div>

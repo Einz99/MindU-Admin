@@ -5,7 +5,7 @@ import { Close } from "@mui/icons-material";
 import './../../App.css';
 
 const LICENSE_KEY =
-	'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjE3NzgxOTgzOTksImp0aSI6IjRiYTA2N2JhLTUxMzgtNDJhZC1hMzU0LTExNGJiM2Y4NTVhNSIsImxpY2Vuc2VkSG9zdHMiOlsiMTI3LjAuMC4xIiwibG9jYWxob3N0IiwiMTkyLjE2OC4qLioiLCIxMC4qLiouKiIsIjE3Mi4qLiouKiIsIioudGVzdCIsIioubG9jYWxob3N0IiwiKi5sb2NhbCJdLCJ1c2FnZUVuZHBvaW50IjoiaHR0cHM6Ly9wcm94eS1ldmVudC5ja2VkaXRvci5jb20iLCJkaXN0cmlidXRpb25DaGFubmVsIjpbImNsb3VkIiwiZHJ1cGFsIl0sImxpY2Vuc2VUeXBlIjoiZGV2ZWxvcG1lbnQiLCJmZWF0dXJlcyI6WyJEUlVQIl0sInZjIjoiMmVlMDNiNDkifQ.xGIO0FDbjTm_iLSDiDfZo4okzkCBTg5j0CRG_rG6mV4mu5skh3Xo60kRKhHsHA4T2vOXrSqdFWWeM_tVHovo_w';
+	'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjE3OTQ2MTQzOTksImp0aSI6ImYwYTNmMmMyLWM2MDMtNDdmMS1iOWE3LTIzMzQwYzQ1OGQ0ZSIsImxpY2Vuc2VkSG9zdHMiOlsid3d3Lm1pbmQtdS5zcGFjZSJdLCJ1c2FnZUVuZHBvaW50IjoiaHR0cHM6Ly9wcm94eS1ldmVudC5ja2VkaXRvci5jb20iLCJkaXN0cmlidXRpb25DaGFubmVsIjpbImNsb3VkIiwiZHJ1cGFsIl0sImZlYXR1cmVzIjpbIkRSVVAiLCJFMlAiLCJFMlciXSwidmMiOiI3NWJjNDRiOSJ9.0j5zTRIR-FrVv3efKjNVPutyCWb0mJ1-kqc0mNLCLajSPzVQa29oFrwx27YfzOa1rSU10fUEXRMgMWqzBXXcsg';
 
 export const DialogWrapper = ({ open, onClose, title, children, actionButtons, dialogSx = {}, maxwidth }) => (
   <Dialog open={open} onClose={onClose} maxWidth={`${maxwidth}`} sx={{ "& .MuiPaper-root": { backgroundColor: "#b7cde3", color: "#000", borderRadius: "24px", width: "70%", height: "auto", minHeight: "50%", maxHeight: "90%", overflowX: "hidden", overflowY: "auto", display: "flex", ...dialogSx, } }}>

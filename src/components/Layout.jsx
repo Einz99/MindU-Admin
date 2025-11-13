@@ -488,8 +488,12 @@ export default function Layout({ open, onMenuClick }) {
             </IconButton>
             <p className="text-center">PROFILE SETTINGS</p>
           </div>
-          <div className="w-60 h-60 rounded-full border-4 border-[#60a5fa] relative mb-14 max-w-[40%] max-h-[21%] ">
-            <img src={previewImage ? previewImage : staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"} alt="Profile" className="w-full h-full rounded-full" />
+          <div className="w-60 aspect-square rounded-full border-4 border-[#60a5fa] relative mb-14 max-w-[40%]">
+            <img 
+              src={previewImage ? previewImage : staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"} 
+              alt="Profile" 
+              className="w-full h-full rounded-full object-cover" 
+            />
             <IconButton className="absolute bottom-6 left-1/2 -translate-x-1/2" onClick={handlePictureChange}>
               <PhotoCamera className="text-white bg-[#60a5fa] rounded-full p-2" sx={{fontSize: 40}} />
             </IconButton>
