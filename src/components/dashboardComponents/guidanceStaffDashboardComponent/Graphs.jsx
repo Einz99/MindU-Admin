@@ -1261,10 +1261,25 @@ export function ActiveStudentsPieChart({
       return matchesFilters(row.section, section, grade);
     });
 
-    // Get unique students count based on section filter
-    const sectionStudentsCount = (section === 'all' && grade === 'all')
-      ? totalStudents 
-      : new Set(filteredData.map(row => row.student_id)).size;
+    // Get total enrolled students count based on section/grade filter
+    // For filters: we need all unique students who have EVER logged in with that section/grade
+    // This represents the total enrolled students in that section/grade
+    let sectionStudentsCount = totalStudents;
+    
+    if (section !== 'all' || grade !== 'all') {
+      // Get all unique students from the filtered section/grade across all time
+      const allStudentsInFilter = rawData.filter(row => 
+        matchesFilters(row.section, section, grade)
+      );
+      sectionStudentsCount = new Set(allStudentsInFilter.map(row => row.student_id)).size;
+      
+      // If no students found in filter, set to 0
+      if (sectionStudentsCount === 0) {
+        setPiePercentage(0);
+        setBarPercentage(0);
+        return;
+      }
+    }
 
     // PIE CHART CALCULATION
     let pieCount = 0;

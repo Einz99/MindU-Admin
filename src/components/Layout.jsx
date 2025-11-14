@@ -378,7 +378,7 @@ export default function Layout({ open, onMenuClick }) {
               <p className="text-base text-[#f8fafc] font-bold">{staff.position}{staff.section && ` - ${staff.section}`}</p>
             </div>
             <div className="w-0.5 h-8 bg-white my-auto"></div>
-            <img src={staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"}   alt="Profile" className="w-10 h-10 rounded-full my-auto" onClick={() => setOpenProfile(true)}/>
+            <img src={staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"}   alt="Profile" className="w-10 h-10 rounded-full my-auto cursor-pointer" onClick={() => setOpenProfile(true)}/>
           </div>
         </Toolbar>
       </AppBar>
