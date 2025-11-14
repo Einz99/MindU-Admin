@@ -48,9 +48,10 @@ const matchesFilters = (itemSection, filterSection, filterGrade) => {
   const strandMatch = filterSection === 'all' || 
                       strand?.toUpperCase() === filterSection.toUpperCase();
   
-  // Check grade filter
+  // Check grade filter  
   const gradeMatch = filterGrade === 'all' || grade === filterGrade;
   
+  // BOTH conditions must be true
   return strandMatch && gradeMatch;
 };
 
@@ -803,13 +804,14 @@ export function CompSchedules({
           onClick={handleExportToExcel}
         />
         }
-      </div>
-      {staff.position !== 'Adviser' &&
-        <div>
+      </div>      
+      <div>
+        {staff.position !== 'Adviser' &&
           <p className="text-gray-400 text-sm">Strand: {section === 'all' ? 'All' : section}</p>
-          <p className="text-gray-400 text-sm">Strand: {grade === 'all' ? 'All' : grade}</p>
-        </div>
-      }
+        }
+        <p className="text-gray-400 text-sm">Grade Level: {grade === 'all' ? 'All' : grade}</p>
+      </div>
+      
 
       <div className="w-full h-[100%] px-2">
         <ResponsiveContainer width="100%" height="100%">
@@ -1131,6 +1133,7 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
   );
 }
 
+
 export function ActiveStudentsPieChart({
   width, 
   padding, 
@@ -1147,6 +1150,7 @@ export function ActiveStudentsPieChart({
   const [grade, setGrade] = useState(filteringGrade || 'all');
   const [rawData, setRawData] = useState(null);
   const [totalStudents, setTotalStudents] = useState(0);
+  const [allStudents, setAllStudents] = useState([]); // All enrolled students with their sections
   const [piePercentage, setPiePercentage] = useState(0);
   const [barPercentage, setBarPercentage] = useState(0);
   const staff = JSON.parse(localStorage.getItem("staff"));
@@ -1220,18 +1224,33 @@ export function ActiveStudentsPieChart({
         const lastYear = new Date();
         lastYear.setFullYear(today.getFullYear() - 1);
         
-        const res = await axios.get(`${API}/student-login-percentages`, {
-          params: { 
-            startDate: lastYear.toISOString().slice(0, 10),
-            endDate: today.toISOString().slice(0, 10)
-          }
-        });
+        const [loginRes, studentsRes] = await Promise.all([
+          axios.get(`${API}/student-login-percentages`, {
+            params: { 
+              startDate: lastYear.toISOString().slice(0, 10),
+              endDate: today.toISOString().slice(0, 10)
+            }
+          }),
+          axios.get(`${API}/students`) // Fetch all enrolled students with sections
+        ]);
 
-        setRawData(res.data.logins);
-        setTotalStudents(res.data.totalStudents);
+        setRawData(loginRes.data.logins);
+        setTotalStudents(loginRes.data.totalStudents);
+        
+        // Store all students - adjust the path based on your API response structure
+        // Assuming it returns { students: [...] } or just [...]
+        const students = studentsRes.data.students || studentsRes.data || [];
+        setAllStudents(students);
+        
+        console.log('[ActiveStudentsPieChart] Data fetched', {
+          totalStudents: loginRes.data.totalStudents,
+          enrolledStudents: students.length,
+          loginRecords: loginRes.data.logins.length
+        });
       } catch (err) {
         console.error("Error fetching login data:", err);
         setRawData([]);
+        setAllStudents([]);
       }
     };
 
@@ -1242,7 +1261,7 @@ export function ActiveStudentsPieChart({
     return () => clearInterval(interval);
   }, []);
 
-  // Filter and calculate percentages on frontend
+  // Calculate percentages
   useEffect(() => {
     if (!rawData || totalStudents === 0) {
       setPiePercentage(0);
@@ -1256,23 +1275,29 @@ export function ActiveStudentsPieChart({
     const yesterdayDate = new Date();
     yesterdayDate.setDate(todayDate.getDate() - 1);
 
-    // Filter data based on section
+    // Filter login data based on BOTH section AND grade
     const filteredData = rawData.filter((row) => {
       return matchesFilters(row.section, section, grade);
     });
 
-    // Get total enrolled students count based on section/grade filter
-    // For filters: we need all unique students who have EVER logged in with that section/grade
-    // This represents the total enrolled students in that section/grade
+    // Get total enrolled students count based on section/grade filter from allStudents
     let sectionStudentsCount = totalStudents;
-    
+
     if (section !== 'all' || grade !== 'all') {
-      // Get all unique students from the filtered section/grade across all time
-      const allStudentsInFilter = rawData.filter(row => 
-        matchesFilters(row.section, section, grade)
-      );
-      sectionStudentsCount = new Set(allStudentsInFilter.map(row => row.student_id)).size;
-      
+      if (allStudents.length > 0) {
+        // Count students from allStudents array that match the filter
+        sectionStudentsCount = allStudents.filter(student => 
+          matchesFilters(student.section, section, grade)
+        ).length;
+      } else {
+        // Fallback: use unique students from login data if allStudents is empty
+        console.warn('[ActiveStudentsPieChart] allStudents is empty, using login data fallback');
+        const allStudentsInFilter = rawData.filter(row => 
+          matchesFilters(row.section, section, grade)
+        );
+        sectionStudentsCount = new Set(allStudentsInFilter.map(row => row.student_id)).size;
+      }
+
       // If no students found in filter, set to 0
       if (sectionStudentsCount === 0) {
         setPiePercentage(0);
@@ -1338,7 +1363,7 @@ export function ActiveStudentsPieChart({
 
     setPiePercentage(piePct);
     setBarPercentage(barPct);
-  }, [rawData, dateRange, section, grade, totalStudents]);
+  }, [rawData, dateRange, section, grade, totalStudents, allStudents]);
 
   const barLabel = dateRange === 'today' ? 'Yesterday' : 'Today';
 
@@ -1392,14 +1417,24 @@ export function ActiveStudentsPieChart({
   
     // Filter data based on section
     const filteredData = rawData.filter((row) => {
-      if (section === 'All') return true;
-      return row.section && row.section.toUpperCase().includes(section.toUpperCase());
+      return matchesFilters(row.section, section, grade);
     });
   
     // Get unique students count based on section filter
-    const sectionStudentsCount = section === 'All' 
-      ? totalStudents 
-      : new Set(filteredData.map(row => row.student_id)).size;
+    let sectionStudentsCount = totalStudents;
+    
+    if (section !== 'all' || grade !== 'all') {
+      if (allStudents.length > 0) {
+        sectionStudentsCount = allStudents.filter(student => 
+          matchesFilters(student.section, section, grade)
+        ).length;
+      } else {
+        const allStudentsInFilter = rawData.filter(row => 
+          matchesFilters(row.section, section, grade)
+        );
+        sectionStudentsCount = new Set(allStudentsInFilter.map(row => row.student_id)).size;
+      }
+    }
   
     // PIE CHART DATA
     let pieCount = 0;
@@ -1470,7 +1505,7 @@ export function ActiveStudentsPieChart({
       setOpenError(true);
       setIsSuccessful(false);
       setAlertMessage('No data available for export after applying the filters.');
-      return; // Exit the function if no data is available
+      return;
     }
   
     const sectionLabel = section === 'all' ? 'All_Sections' : section;
@@ -1495,7 +1530,7 @@ export function ActiveStudentsPieChart({
                 justifyItems: 'center',
                 color: '#64748b',
                 '&:hover': {
-                  color: 'black',  // Change the color to black on hover
+                  color: 'black',
                 },
               }}
               onClick={handleExportToExcel}
@@ -1503,11 +1538,9 @@ export function ActiveStudentsPieChart({
         }
       </div>
       {staff.position !== 'Adviser' && 
-        <>
-          <p className="text-gray-400 text-sm">Strand: {filteringSection === "all" ? "All" : filteringSection}</p>
-          <p className="text-gray-400 text-sm">Grade: {grade  === "all" ? "All" : grade}</p>
-        </>
+        <p className="text-gray-400 text-sm">Strand: {filteringSection === "all" ? "All" : filteringSection}</p>
       }
+      <p className="text-gray-400 text-sm">Grade Level: {grade  === "all" ? "All" : grade}</p>
 
       <div className={`w-full h-full flex flex-col items-center justify-center relative ${marginTop ? "-mt-10" : "-mt-12"}`}>
         <div className={`w-[45%] max-w-xs aspect-square relative`}>

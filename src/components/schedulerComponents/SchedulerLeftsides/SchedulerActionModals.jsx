@@ -258,7 +258,7 @@ export default function SchedulerActionModals({
           // Modal for adding a new event (admin-created)
           <>
             <DialogTitle className="bg-[#b7cde3] relative">
-              {isRequest ? "Proposing Event" : "Walk In Appointment"}
+              <p className="font-bold">{isRequest ? "Proposing Event" : "Walk In Appointment"}</p>
               <DialogActions className="absolute -top-1 right-0">
                 <IconButton onClick={() => setOpen(false)} className="rounded-full ">
                   <Close sx={{ fontSize: 40, color: 'black' }}></Close>
@@ -460,7 +460,7 @@ export default function SchedulerActionModals({
           // View-only mode: show details with a Close button
           <>
             <DialogTitle className="bg-[#b7e3cc] relative">
-              {isProposal ? "Event Details" : "Schedule Details"}
+              <p className="font-bold">{isProposal ? "Event Details" : "Schedule Details"}</p>
               <DialogActions className="absolute -top-1 right-0">
                 <IconButton onClick={() => setOpen(false)} className="rounded-full ">
                   <Close sx={{ fontSize: 40, color: 'black' }}></Close>
@@ -528,7 +528,7 @@ export default function SchedulerActionModals({
               ${actionState === 6 ? "bg-[#b7e3cc]" : "bg-[#e3b7b7]"}
               relative`}
             >
-              {isProposal && actionState === 6 ? "Repropose Event" : isProposal && actionState !== 6 ? "Delete Event Permanently" : actionState === 6 ? "Restore Appointment" : "Delete Appointment Permanently"}
+              <p className="font-bold">{isProposal && actionState === 6 ? "Repropose Event" : isProposal && actionState !== 6 ? "Delete Event Permanently" : actionState === 6 ? "Restore Appointment" : "Delete Appointment Permanently"}</p>
             </DialogTitle>
             <DialogContent className={`${!isProposal && "text-center"}`}>
               {isProposal ? (
@@ -654,7 +654,8 @@ export default function SchedulerActionModals({
               ${actionState === 2 && "bg-[#b7e3cc]"}
               relative`}
             >
-              {actionState === 0
+              <p className="font-bold">
+                {actionState === 0
                 ? "Cancelling Schedule"
                 : (actionState === 1 && isProposal) ? 
                   "Reproposing Event"  
@@ -663,6 +664,7 @@ export default function SchedulerActionModals({
                 : actionState === 1
                 ? "Rescheduling"
                 : "Mark Complete"}
+              </p>
               <DialogActions className="absolute -top-1 right-0">
                 <IconButton onClick={() => setOpen(false)} className="rounded-full ">
                   <Close sx={{ fontSize: 40, color: 'black' }}></Close>
@@ -801,7 +803,7 @@ export default function SchedulerActionModals({
                   }}
                   sx={{
                     paddingX: "3rem",
-                    bgcolor: actionState === 0 ? "#ed4040" : actionState === 1 ? "#ffde59" : "#ef4444",
+                    bgcolor: actionState === 0 ? "#ed4040" : actionState === 1 ? "#ffde59" : "#b7e3cc",
                     color: "white",
                     borderRadius: "100px",
                   }}
@@ -841,7 +843,7 @@ export default function SchedulerActionModals({
         }}
       >
         <DialogTitle className="bg-[#e3b7b7] relative">
-          Move to Trash
+          <p className="font-bold">Move to Trash</p>
           <DialogActions className="absolute -top-1 right-0">
             <IconButton onClick={() => setOpenConfirmTrash(false)} className="rounded-full ">
               <Close sx={{ fontSize: 40, color: 'black' }}></Close>

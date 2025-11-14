@@ -19,7 +19,7 @@ export default function LiveAgent() {
   const [profilePath, setProfilePath] = useState();
   const [studentName, setStudentName] = useState('');
   const [alerts, setAlerts] = useState([]);
-  const [isViewOnly, setIsViewOnly] = useState(false);
+  const [isViewOnly, setIsViewOnly] = useState(true);
   const [openDisconnectModal, setOpenDisconnectModal] = useState(false);
   const [agentInRoom, setAgentInRoom] = useState({}); // Track agents per room
 
@@ -104,7 +104,7 @@ export default function LiveAgent() {
       const studentId = chatData[selected].id;
       checkAgentInRoom(studentId);
     } else {
-      setIsViewOnly(false);
+      setIsViewOnly(true);
     }
   }, [selected, chatData]);
 
@@ -552,7 +552,7 @@ useEffect(() => {
                 {isViewOnly && (
                   <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg mb-2 flex items-center gap-2">
                     <Visibility />
-                    <p className="font-semibold">View Only - This chat is being handled by another agent</p>
+                    <p className="font-semibold">View Only - This chat is being handled by another guidance staff</p>
                   </div>
                 )}
 
@@ -576,7 +576,7 @@ useEffect(() => {
                           }`}
                         >
                           {msg.sender !== 'agent' && !ifNotif(msg.text) && (
-                            <img src={profilePath ? `${RootAPI}/${profilePath}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
+                            <img src={profilePath ? `${RootAPI}${profilePath}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
                           )}
                           <div className={`${msg.sender !== 'agent' && !ifNotif(msg.text) && "ml-3"}`}>
                             {msg.sender !== 'agent' && !ifNotif(msg.text) && (
@@ -637,7 +637,7 @@ useEffect(() => {
                       className={`flex-grow rounded-full bg-[#1e3a8a] px-4 py-2 text-white placeholder-gray-300 ${
                         isViewOnly ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
-                      placeholder={isViewOnly ? "View only mode - Cannot send messages" : "Type your message..."}
+                      placeholder={(chatData[selected].status === 'on-going' && !isViewOnly) ? "View only mode - Cannot send messages" : "Type your message..."}
                       autoComplete="off"
                       disabled={isViewOnly}
                     />

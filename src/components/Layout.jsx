@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { 
   AppBar, 
@@ -61,10 +62,10 @@ const menuItems = [
  * - None (The `open` state is passed from the parent component).
  * 
  * Features:
- * - **Topbar**: Displays the app’s title and icons for notifications and alerts.
+ * - **Topbar**: Displays the app's title and icons for notifications and alerts.
  * - **Sidebar**: Contains navigation links with icons and text. The width of the sidebar adjusts based on whether it's open or collapsed.
  * - The sidebar is sticky and stays in place even when scrolling.
- * - The component uses Material-UI’s `Drawer`, `AppBar`, and `List` components to structure the layout.
+ * - The component uses Material-UI's `Drawer`, `AppBar`, and `List` components to structure the layout.
  */
 
 export default function Layout({ open, onMenuClick }) {
@@ -73,24 +74,37 @@ export default function Layout({ open, onMenuClick }) {
   const staffData = JSON.parse(localStorage.getItem("staff"));
   const [staff, setStaff] = useState({});
   const [openProfile, setOpenProfile] = useState(false);
-  const [editEmail, setEditEmail] = useState(false);
-  const [editPassword, setEditPassword] = useState(false);
   const [email, setEmail] = useState("");
+  const [displayEmail, setDisplayEmail] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
-  const [tempEmail, setTempEmail] = useState("");
-  const [tempPassword, setTempPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
-  const [changeInputs, setChangeInputs] = useState(true);
-  const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [state, setState] = useState(0);
+  const [openEmailDialog, setOpenEmailDialog] = useState(false);
+  const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
+  const [openPictureDialog, setOpenPictureDialog] = useState(false);
   const [openLogoutDialog, setOpenLogoutDialog] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [robitBadge, setRobitBadge] = useState(0);
+  const [openError, setOpenError] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [isSuccessful, setIsSuccessful] = useState(false);
   const socketRef = useRef(null);
+
+  useEffect(() => {
+    if (openError) return;
+
+    const timer = setTimeout(() => {
+      setAlertMessage('');
+      setIsSuccessful(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [openError]);
 
   useEffect(() => {
     // Initialize socket connection
@@ -143,9 +157,8 @@ export default function Layout({ open, onMenuClick }) {
         const hashedPassword = '#'.repeat(data.passwordLength);
         setStaff(data);
         setEmail(data.email);
+        setDisplayEmail(data.email);
         setPassword(hashedPassword);
-        setTempEmail(data.email);
-        setTempPassword(hashedPassword);
       } catch (error) {
         console.error("Error fetching staff data:", error);
         
@@ -181,40 +194,60 @@ export default function Layout({ open, onMenuClick }) {
       }
       setTimeout(() => setOpenProfile(false), 50);
     });
-    setEmail(tempEmail);
-    setPassword(tempPassword);
-    setEditEmail(false);
-    setEditPassword(false);
-    setChangeInputs(true);
   };
 
-  const handleEmailChange = (e) => {
+  const handleEmailDialogOpen = () => {
+    setNewEmail(email);
+    setEmailError(false);
+    setOpenEmailDialog(true);
+  };
+
+  const handleEmailDialogClose = () => {
+    setOpenEmailDialog(false);
+    setNewEmail("");
+    setEmailError(false);
+  };
+
+  const handlePasswordDialogOpen = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError(false);
+    setOpenPasswordDialog(true);
+  };
+
+  const handlePasswordDialogClose = () => {
+    setOpenPasswordDialog(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError(false);
+  };
+
+  const handleNewEmailChange = (e) => {
     const inputEmail = e.target.value;
-    setEmail(inputEmail);
+    setNewEmail(inputEmail);
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(inputEmail)) {
-      setEmailError(true);   // Invalid email format
+      setEmailError(true);
     } else {
-      setEmailError(false);  // Valid email format
+      setEmailError(false);
     }
   };
 
-  const handlePasswordChange = (e) => {
+  const handleNewPasswordChange = (e) => {
     const input = e.target.value;
-    setPassword(input);
+    setNewPassword(input);
 
-    // Validation checks
     const hasMinLength = input.length >= 10;
     const hasUppercase = /[A-Z]/.test(input);
     const hasLowercase = /[a-z]/.test(input);
     const hasNumber    = /[0-9]/.test(input);
     const hasSpecial   = /[!@#$%^&*(),.?":{}|<>]/.test(input);
 
-    // If any check fails, it's an error
     const isValid = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecial;
     setPasswordError(!isValid);
-    setChangeInputs(false);
   };
 
   const handleCurrentPasswordChange = (e) => {
@@ -234,17 +267,6 @@ export default function Layout({ open, onMenuClick }) {
     window.location.href = "/";
   }
 
-  const handleCancel = () => {
-    setOpenEditDialog(false);
-    setEditEmail(false);
-    setEditPassword(false);
-    setEmail(tempEmail);
-    setPassword(tempPassword);
-    setPreviewImage(null);
-    setCurrentPassword("");
-    setChangeInputs(true);
-  }
-
   const handlePictureChange = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -252,12 +274,11 @@ export default function Layout({ open, onMenuClick }) {
     input.onchange = (event) => {
       const file = event.target.files[0];
       if (file) {
-        setSelectedFile(file); // Save the actual file
+        setSelectedFile(file);
         const reader = new FileReader();
         reader.onload = () => {
-          setPreviewImage(reader.result); // base64 for preview only
-          setOpenEditDialog(true);
-          setState(2); // State 2 for picture change
+          setPreviewImage(reader.result);
+          setOpenPictureDialog(true);
         };
         reader.readAsDataURL(file);
       }
@@ -265,86 +286,128 @@ export default function Layout({ open, onMenuClick }) {
     input.click();
   };
 
-  
-  const handleSave = async () => {
+  const handleSaveEmail = async () => {
     try {
+      if (emailError || !newEmail || !currentPassword) {
+        setAlertMessage("Please provide current password and a valid email address.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
       const token = localStorage.getItem("authToken");
       const config = {
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       };
 
-      if (state === 0) {
-        // Save email change
-        if (emailError) {
-          alert("Invalid email format. Please enter a valid email.");
-        } else {
-          await axios.put(`${API}/staffs/email/${staffData.id}`, { email }, {
-            ...config,
-            headers: {
-              ...config.headers,
-              "Content-Type": "application/json",
-            },
-          });
+      // Sending currentPassword along with the email for validation
+      await axios.put(`${API}/staffs/email/${staffData.id}`, 
+        { email: newEmail, currentPassword }, config
+      );
 
-          setOpenEditDialog(false);
-          setEditEmail(false);
-          setTempEmail(email);
-          setEmail(email);
-          alert("Email changed successfully!");
-        }
-      } else if (state === 1) {
-        if (!currentPassword || !password || !confirmPassword) {
-          alert("Password is missing, old password does not match, password and confirm password does not match or not in format\nPassword must have:\nAtleast 10 characters\ncontains Special Caracter(eg. !@#$%^&*)\nAtleast one uppercase and lowercase letter.");
-        } else if (password !== confirmPassword) {
-          alert("New passwords do not match.");
-        } else {
-          await axios.put(`${API}/staffs/password/${staffData.id}`, {
-            currentPassword,
-            newPassword: password,
-          }, {
-            ...config,
-            headers: {
-              ...config.headers,
-              "Content-Type": "application/json",
-            },
-          });
-        
-          setOpenEditDialog(false);
-          setEditPassword(false);
-          setTempPassword(password);
-          setPassword(password);
-          alert("Password changed successfully!");
-        }
-      } else if (state === 2) {
-        // Profile picture change
-        if (!selectedFile) {
-          alert("No file selected.");
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append("picture", selectedFile);
-
-        const response = await axios.put(`${API}/staffs/picture/${staffData.id}`, formData, config);
-
-        // Assuming the backend returns the updated picture filename (relative path)
-        const updatedPicturePath = `${response.data.data.picturePath}`;  // Full URL/path to the new picture
-        // Update staff.picture directly
-        setStaff((prevStaff) => ({
-          ...prevStaff,
-          picture: updatedPicturePath,  // Set the new picture path
-        }));
-
-        setOpenEditDialog(false);
-        alert("Profile picture changed successfully!");
-        setPreviewImage(null);
-        setSelectedFile(null);
-      }
+      setEmail(newEmail);
+      setDisplayEmail(newEmail);
+      setOpenEmailDialog(false);
+      setAlertMessage("Email changed successfully!");
+      setIsSuccessful(true);
+      setOpenError(true);
     } catch (error) {
-      console.error("Update failed:", error);
-      alert(error.response?.data?.message || "An error occurred while updating.");
+      console.error("Email update failed:", error);
+      setAlertMessage(error.response?.data?.message || "An error occurred while updating email.");
+      setIsSuccessful(false);
+      setOpenError(true);
+    }
+  };
+
+  const handleSavePassword = async () => {
+    try {
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        setAlertMessage("All password fields are required.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setAlertMessage("New passwords do not match.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
+      if (passwordError) {
+        setAlertMessage("Password must have:\n• At least 10 characters\n• Special character (e.g., !@#$%^&*)\n• At least one uppercase and lowercase letter\n• At least one number");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
+      const token = localStorage.getItem("authToken");
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      };
+
+      await axios.put(`${API}/staffs/password/${staffData.id}`, {
+        currentPassword,
+        newPassword: newPassword,
+      }, config);
+
+      const hashedPassword = '#'.repeat(newPassword.length);
+      setPassword(hashedPassword);
+      setOpenPasswordDialog(false);
+      setAlertMessage("Password changed successfully!");
+      setIsSuccessful(true);
+      setOpenError(true);
+    } catch (error) {
+      console.error("Password update failed:", error);
+      setAlertMessage(error.response?.data?.message || "An error occurred while updating password.");
+      setIsSuccessful(false);
+      setOpenError(true);
+    }
+  };
+
+  const handleSavePicture = async () => {
+    try {
+      if (!selectedFile) {
+        setAlertMessage("No file selected.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
+      const token = localStorage.getItem("authToken");
+      const formData = new FormData();
+      formData.append("picture", selectedFile);
+
+      const response = await axios.put(`${API}/staffs/picture/${staffData.id}`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const updatedPicturePath = `${response.data.data.picturePath}`;
+      setStaff((prevStaff) => ({
+        ...prevStaff,
+        picture: updatedPicturePath,
+      }));
+
+      setOpenPictureDialog(false);
+      setPreviewImage(null);
+      setSelectedFile(null);
+      setAlertMessage("Profile picture changed successfully!");
+      setIsSuccessful(true);
+      setOpenError(true);
+    } catch (error) {
+      console.error("Picture update failed:", error);
+      setAlertMessage(error.response?.data?.message || "An error occurred while updating picture.");
+      setIsSuccessful(false);
+      setOpenError(true);
     }
   };
 
@@ -505,77 +568,27 @@ export default function Layout({ open, onMenuClick }) {
           <div className="w-full flex flex-col items-center text-start gap-2 mt-8">
             <div className="w-5/6 items-center flex justify-between">
               <p className="font-bold text-lg text-white">Email</p>
-              {editEmail && (
-                <p className="font-bold text-lg text-[#60a5fa] cursor-pointer" onClick={() => {
-                  if (!email || emailError || changeInputs) {
-                    alert("Missing Email or Invalid email format. Please enter a valid email.");
-                  } else {
-                    setOpenEditDialog(true);
-                    setState(0);
-                  }}
-                }>Save</p>
-              )}
+              <Edit className="cursor-pointer text-white" sx={{fontSize: 20}} onClick={handleEmailDialogOpen} />
             </div>
             <div className="w-full relative items-center flex justify-center gap-2">
-            <input
-              type="email"
-              className={`w-5/6 h-10 bg-[#b7cde3] border ${
-                emailError ? "focus:border-red-700" : "focus:border-[#60a5fa]"
-              } text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md`}
-              value={email}
-              onChange={handleEmailChange}
-              onKeyDown={(e => {
-                if (e.key === "Enter") {
-                  if (!email || emailError || changeInputs) {
-                    alert("Missing Email or Invalid email format. Please enter a valid email.");
-                  } else {
-                    setOpenEditDialog(true);
-                    setState(0);
-                  }
-                }
-              })}
-              disabled={!editEmail}
-            />
-              {(!editEmail && !editPassword) && (
-                <Edit className="absolute right-12 top-2" sx={{fontSize: 15}} onClick={() => setEditEmail(true)}></Edit>
-              )}
+              <input
+                type="email"
+                className="w-5/6 h-10 bg-[#b7cde3] text-black placeholder-gray-400 focus:outline-none border border-[#60a5fa] p-2 rounded-md"
+                value={displayEmail}
+                disabled
+              />
             </div>
-            <div className="w-5/6 items-center flex justify-between">
+            <div className="w-5/6 items-center flex justify-between mt-4">
               <p className="font-bold text-lg text-white">Password</p>
-              {editPassword && (
-                <p className="font-bold text-lg text-[#60a5fa] cursor-pointer" onClick={() => {
-                  if (!password || passwordError || changeInputs) {
-                    alert("Password is missing or not in format\nPassword must have:\nAtleast 10 characters\ncontains Special Caracter(eg. !@#$%^&*)\nAtleast one uppercase and lowercase letter.");
-                  } else {
-                    setOpenEditDialog(true);
-                    setState(1);
-                  }}
-                }>Save</p>
-              )}
+              <Edit className="cursor-pointer text-white" sx={{fontSize: 20}} onClick={handlePasswordDialogOpen} />
             </div>
             <div className="w-full relative items-center flex justify-center gap-2">
-            <input
-              type="password"
-              className={`w-5/6 h-10 bg-[#b7cde3] border ${
-                !password ? "focus:border-red-700" : "focus:border-[#60a5fa]"
-              } text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md`}
-              value={password}
-              onChange={handlePasswordChange}
-              onKeyDown={(e => {
-                if (e.key === "Enter") {
-                  if (!password || passwordError || changeInputs) {
-                    alert("Password is missing or not in format\nPassword must have:\nAtleast 10 characters\ncontains Special Caracter(eg. !@#$%^&*)\nAtleast one uppercase and lowercase letter.");
-                  } else {
-                    setOpenEditDialog(true);
-                    setState(1);
-                  }
-                }
-              })}
-              disabled={!editPassword}
-            />
-              {(!editEmail && !editPassword) && (
-                <Edit className="absolute right-12 top-2" sx={{fontSize: 15}} onClick={() => setEditPassword(true)}></Edit>
-              )}
+              <input
+                type="password"
+                className="w-5/6 h-10 bg-[#b7cde3] text-black placeholder-gray-400 focus:outline-none border border-[#60a5fa] p-2 rounded-md"
+                value={password}
+                disabled
+              />
             </div>
           </div>
           <div className="w-full absolute bottom-10 flex items-center justify-between px-20 mt-8">
@@ -591,11 +604,10 @@ export default function Layout({ open, onMenuClick }) {
         </div>
       </Drawer>
 
-      {/* Confirm Dialog */}
-      {/* Email and Password change confirmation dialog */}
+      {/* Email Change Dialog */}
       <Dialog
-        open={openEditDialog}
-        onClose={handleCancel}
+        open={openEmailDialog}
+        onClose={handleEmailDialogClose}
         maxWidth="sm"
         fullWidth 
         sx={{
@@ -607,42 +619,53 @@ export default function Layout({ open, onMenuClick }) {
         }}
       >
         <DialogTitle className="bg-[#b7cde3] relative">
-          {state === 0 ? "Confirm Email Change" : state === 1 ? "Confirm Password Change" : "Confirm Picture Change"}
+          Change Email
           <DialogActions className="absolute -top-1 right-0">
-            <IconButton onClick={handleCancel} className="rounded-full ">
+            <IconButton onClick={handleEmailDialogClose} className="rounded-full">
               <Close sx={{ fontSize: 40, color: 'black' }}></Close>
             </IconButton>
           </DialogActions>
         </DialogTitle>
         <DialogContent className="my-5">
-          {state === 0 ? (
-            <Typography variant="body1" className="text-center mt-4">
-              Are you sure you want to change your email to <span className="font-bold">{email}</span>?
-            </Typography>
-          ) : state === 1 ? (
-            <>
-              <Typography variant="body1" className="text-center mt-4">
-                Are you sure you want to change your password?
-              </Typography>
-              <input type="password" className="w-full h-10 bg-[#b7cde3] border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md mt-4" placeholder="Current Password" value={currentPassword} onChange={handleCurrentPasswordChange} /> 
-              <Typography variant="body1" className="text-center mt-4">
-                Please enter confirm the changed password:
-              </Typography>
-              <input type="password" disabled className="w-full h-10 bg-[#b7cde3] border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md mt-4" placeholder="New Password" value={password} onChange={handlePasswordChange} />
-              <input type="password" className="w-full h-10 bg-[#b7cde3] border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md mt-4" placeholder="Confirm Password" value={confirmPassword} onChange={handleConfirmPasswordChange} />
-            </>
-          ) : (
-            <Typography variant="body1" className="text-center mt-4">
-              Are you sure you want to change your profile picture?
+          <Typography variant="body1" className="mt-4 mb-4">
+            Enter your new email address:
+          </Typography>
+          <input 
+            type="email" 
+            className={`w-full h-10 border ${
+              emailError ? "border-red-700" : "border-[#60a5fa]"
+            } text-black placeholder-gray-400 focus:outline-none p-2 rounded-md mb-4`}
+            placeholder="New Email" 
+            value={newEmail} 
+            onChange={handleNewEmailChange}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleSaveEmail();
+              }
+            }}
+          />
+          <Typography variant="body1" className="mt-4 mb-4">
+            Enter your current password to confirm changes
+          </Typography>
+          <input 
+            type="password" 
+            className="w-full h-10 border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md" 
+            placeholder="Current Password" 
+            value={currentPassword} 
+            onChange={handleCurrentPasswordChange}
+          />
+          {emailError && (
+            <Typography variant="caption" className="text-red-700 mt-2">
+              Please enter a valid email address
             </Typography>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCancel}>
-            <p className="text-base font-roboto font-bold text-[#64748b] p-2">Back</p>
+          <Button onClick={handleEmailDialogClose}>
+            <p className="text-base font-roboto font-bold text-[#64748b] p-2">Cancel</p>
           </Button>
           <Button 
-            onClick={handleSave} 
+            onClick={handleSaveEmail} 
             sx={{
               paddingX: "3rem",
               bgcolor: "#60a5fa",
@@ -650,12 +673,187 @@ export default function Layout({ open, onMenuClick }) {
               borderRadius: "100px",
             }}
           >
-            <p>{state === 0 ? "Save Email" : state === 1 ? "Save Password" : "Save Picture"}</p>
+            <p className="font-bold">Confirm</p>
           </Button>
         </DialogActions>
       </Dialog>
 
+      {/* Password Change Dialog */}
+      <Dialog
+        open={openPasswordDialog}
+        onClose={handlePasswordDialogClose}
+        maxWidth="sm"
+        fullWidth 
+        sx={{
+          "& .MuiPaper-root": {
+            backgroundColor: "white",
+            color: "#000",
+            borderRadius: "25px",
+          },
+        }}
+      >
+        <DialogTitle className="bg-[#b7cde3] relative">
+          Change Password
+          <DialogActions className="absolute -top-1 right-0">
+            <IconButton onClick={handlePasswordDialogClose} className="rounded-full">
+              <Close sx={{ fontSize: 40, color: 'black' }}></Close>
+            </IconButton>
+          </DialogActions>
+        </DialogTitle>
+        <DialogContent className="my-5">
+          <Typography variant="body1" className="text-center mt-4 mb-4">
+            Are you sure you want to change your password?
+          </Typography>
+          <input 
+            type="password" 
+            className="w-full h-10 border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md mt-4" 
+            placeholder="Current Password" 
+            value={currentPassword} 
+            onChange={handleCurrentPasswordChange}
+          />
+          <input 
+            type="password" 
+            className={`w-full h-10 border ${
+              passwordError ? "border-red-700" : "border-[#60a5fa]"
+            } text-black placeholder-gray-400 focus:outline-none p-2 rounded-md mt-4`}
+            placeholder="New Password" 
+            value={newPassword} 
+            onChange={handleNewPasswordChange}
+          />
+          <input 
+            type="password" 
+            className="w-full h-10 border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md mt-4" 
+            placeholder="Confirm New Password" 
+            value={confirmPassword} 
+            onChange={handleConfirmPasswordChange}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleSavePassword();
+              }
+            }}
+          />
+          {passwordError && (
+            <Typography variant="caption" className="text-red-700 mt-2 block">
+              Password must have at least 10 characters, one uppercase, one lowercase, one number, and one special character
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handlePasswordDialogClose}>
+            <p className="text-base font-roboto font-bold text-[#64748b] p-2">Cancel</p>
+          </Button>
+          <Button 
+            onClick={handleSavePassword} 
+            sx={{
+              paddingX: "3rem",
+              bgcolor: "#60a5fa",
+              color: "white",
+              borderRadius: "100px",
+            }}
+          >
+            <p>Save Password</p>
+          </Button>
+        </DialogActions>
+      </Dialog>
 
+      {/* Picture Change Dialog */}
+      <Dialog
+        open={openPictureDialog}
+        onClose={() => {
+          setOpenPictureDialog(false);
+          setPreviewImage(null);
+          setSelectedFile(null);
+        }}
+        maxWidth="sm"
+        fullWidth 
+        sx={{
+          "& .MuiPaper-root": {
+            backgroundColor: "white",
+            color: "#000",
+            borderRadius: "25px",
+          },
+        }}
+      >
+        <DialogTitle className="bg-[#b7cde3] relative">
+          Change Profile Picture
+          <DialogActions className="absolute -top-1 right-0">
+            <IconButton onClick={() => {
+              setOpenPictureDialog(false);
+              setPreviewImage(null);
+              setSelectedFile(null);
+            }} className="rounded-full">
+              <Close sx={{ fontSize: 40, color: 'black' }}></Close>
+            </IconButton>
+          </DialogActions>
+        </DialogTitle>
+        <DialogContent className="my-5">
+          <Typography variant="body1" className="text-center mt-4 mb-4">
+            Are you sure you want to change your profile picture?
+          </Typography>
+          {previewImage && (
+            <div className="flex justify-center">
+              <img 
+                src={previewImage} 
+                alt="Preview" 
+                className="w-40 h-40 rounded-full object-cover border-4 border-[#60a5fa]" 
+              />
+            </div>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setOpenPictureDialog(false);
+            setPreviewImage(null);
+            setSelectedFile(null);
+          }}>
+            <p className="text-base font-roboto font-bold text-[#64748b] p-2">Cancel</p>
+          </Button>
+          <Button 
+            onClick={handleSavePicture} 
+            sx={{
+              paddingX: "3rem",
+              bgcolor: "#60a5fa",
+              color: "white",
+              borderRadius: "100px",
+            }}
+          >
+            <p>Save Picture</p>
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openError}
+        onClose={() => {setOpenError(false);}}
+        fullWidth
+        sx={{
+          "& .MuiPaper-root": {
+            backgroundColor: "white",
+            color: "#000",
+            borderRadius: "25px",
+          },
+        }}
+        maxWidth="xs"
+      >
+        <DialogTitle className={`${isSuccessful ? "bg-[#b7e3cc]" : "bg-[#e3b7b7]"} relative`}>
+          <p className="font-bold">{isSuccessful ? "Successful" : "Error"}</p>
+          <DialogActions className="absolute -top-1 right-0">
+            <IconButton onClick={() => {setOpenError(false);}} className="rounded-full">
+              <Close sx={{ fontSize: 40, color: "black" }} />
+            </IconButton>
+          </DialogActions>
+        </DialogTitle>
+        
+        <DialogContent className="text-center text-base py-6 px-10 mt-2">
+          <p className="font-roboto font-medium text-xl">{alertMessage}</p>
+        </DialogContent>
+        <DialogActions>
+          <button onClick={() => {setOpenError(false);}}>
+            <p className="text-base font-roboto font-bold text-[#64748b] p-2 px-6">OK</p>
+          </button>
+        </DialogActions>
+      </Dialog>
+      
       {/* Logout Dialog */}
       <Dialog
         open={openLogoutDialog}

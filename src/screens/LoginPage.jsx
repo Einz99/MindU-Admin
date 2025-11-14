@@ -5,7 +5,9 @@ import { API } from "../api";
 import axios from 'axios';
 // import { jwtDecode } from 'jwt-decode';
 import { Button } from "@mui/material";
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff, Close } from '@mui/icons-material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from "@mui/material";
+
 
 // Array of Image and Text that rotates within the Login page.
 const slides = [
@@ -86,6 +88,11 @@ export default function LoginScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
 
+  const [openError, setOpenError] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [isSuccessful, setIsSuccessful] = useState(false);
+  const [errorInput, setErrorInput] = useState(false);
+
   /**
    * handleSubmit
    * 
@@ -122,7 +129,10 @@ export default function LoginScreen() {
 
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
-      alert(err.response?.data?.message || "Login failed.");
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage(err.response?.data?.message || "Login failed");
+      setErrorInput(true);
     }
   };
 
@@ -174,6 +184,7 @@ export default function LoginScreen() {
     setEmail(inputEmail);
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    setErrorInput(false);
     if (!emailRegex.test(inputEmail)) {
       setEmailError(true);   // Invalid email format
     } else {
@@ -207,6 +218,7 @@ export default function LoginScreen() {
    */
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
+    setErrorInput(false);
   };
 
   // const login = useGoogleLogin({
@@ -263,14 +275,20 @@ export default function LoginScreen() {
 
       if (response.status === 200) {
         setCodeSended(true);
-        alert("Code sent to your email");
+        setOpenError(true);
+        setIsSuccessful(true);
+        setAlertMessage("Code sent to your email");
       } else {
-        alert("Failed to send code");
+        setOpenError(true);
+        setIsSuccessful(false);
+        setAlertMessage("Failed to send code");
       }
     }
     catch (err) {
       console.error("Error sending code:", err.response?.data || err.message);
-      alert(err.response?.data?.message || "Failed to send code.");
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage(err.response?.data?.message || "Failed to send code.");
     }
   }
 
@@ -286,20 +304,28 @@ export default function LoginScreen() {
       if (response.status === 200) {
         setCodeConfirm(true);
         setCodeSended(false);
-        alert("Code verified successfully");
+        setOpenError(true);
+        setIsSuccessful(true);
+        setAlertMessage("Code verified successfully");
       } else {
-        alert("Failed to verify code");
+        setOpenError(true);
+        setIsSuccessful(false);
+        setAlertMessage("Failed to verify code");
       }
     }
     catch (err) {
       console.error("Error verifying code:", err.response?.data || err.message);
-      alert(err.response?.data?.message || "Failed to verify code.");
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage(err.response?.data?.message || "Failed to verify code.");
     }
   }
 
   const handleResetPassword = async () => {
     if (newPassword !== confirmNewPassword) {
-      alert("Passwords do not match");
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage("Passwords do not match");
       return;
     }
     try {
@@ -312,7 +338,9 @@ export default function LoginScreen() {
       });
 
       if (response.status === 200) {
-        alert("Password reset successfully");
+        setOpenError(true);
+        setIsSuccessful(true);
+        setAlertMessage("Password reset successfully");
         setForgotComponent(false);
         setCodeConfirm(false);
         setForgotEmail('');
@@ -320,12 +348,16 @@ export default function LoginScreen() {
         setNewPassword('');
         setConfirmNewPassword('');
       } else {
-        alert("Failed to reset password");
+        setOpenError(true);
+        setIsSuccessful(false);
+        setAlertMessage("Failed to reset password");
       }
     }
     catch (err) {
       console.error("Error resetting password:", err.response?.data || err.message);
-      alert(err.response?.data?.message || "Failed to reset password.");
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage(err.response?.data?.message || "Failed to reset password.");
     }
   }
 
@@ -346,6 +378,17 @@ export default function LoginScreen() {
     setConfirmNewPassword('');
     setCodeSended(false);
   }
+
+  useEffect(() => {
+    if (openError) return;
+
+    const timer = setTimeout(() => {
+      setAlertMessage('');
+      setIsSuccessful(false);
+    }, 1000); // 1 second
+
+    return () => clearTimeout(timer);
+  }, [openError]);
 
   return (
     <div className="w-screen h-screen">
@@ -403,7 +446,7 @@ export default function LoginScreen() {
                     id="email"
                     value={email}
                     onChange={handleEmailChange}
-                    className={`w-full py-2 px-4 border-2 ${emailError ? "border-red-700" : "border-black"} rounded mt-2`}
+                    className={`w-full py-2 px-4 border-2 ${emailError || errorInput ? "border-red-700" : "border-black"} rounded mt-2`}
                     placeholder="Enter your email"
                     required
                   />
@@ -420,7 +463,7 @@ export default function LoginScreen() {
                           handleSubmit(e);
                         }
                       }}
-                      className="w-full py-2 px-4 pr-12 border-2 border-black rounded"
+                      className={`w-full py-2 px-4 pr-12 border-2 rounded ${errorInput ? "border-red-700" : "border-black"}`}
                       placeholder="Enter your password"
                       required
                     />
@@ -432,6 +475,9 @@ export default function LoginScreen() {
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </button>
                   </div>
+                  {errorInput && 
+                    <p className="text-[#ed4040] text-center">Invalid username or password. Please try again.</p>
+                  }
                 </div>
               </div>
               <p className="text-sm text-end px-16 cursor-pointer hover:text-blue-600" onClick={() => setForgotComponent(true)}>Forgot Password?</p>
@@ -545,6 +591,38 @@ export default function LoginScreen() {
           </div>
         </div>
       )}
+
+      <Dialog
+        open={openError}
+        onClose={() => {setOpenError(false);}}
+        fullWidth
+        sx={{
+          "& .MuiPaper-root": {
+            backgroundColor: "white",
+            color: "#000",
+            borderRadius: "25px",
+          },
+        }}
+        maxWidth="xs"
+      >
+        <DialogTitle className={`${isSuccessful ? "bg-[#b7e3cc]" : "bg-[#e3b7b7]"} relative`}>
+          <p className="font-bold">{isSuccessful ? "Successful" : "Error"}</p>
+          <DialogActions className="absolute -top-1 right-0">
+            <IconButton onClick={() => {setOpenError(false);}} className="rounded-full">
+              <Close sx={{ fontSize: 40, color: "black" }} />
+            </IconButton>
+          </DialogActions>
+        </DialogTitle>
+        
+        <DialogContent className="text-center text-base py-6 px-10 mt-2">
+          <p className="font-roboto font-medium text-xl">{alertMessage}</p>
+        </DialogContent>
+        <DialogActions>
+          <button onClick={() => {setOpenError(false);}}>
+            <p className="text-base font-roboto font-bold text-[#64748b] p-2 px-6">OK</p>
+          </button>
+        </DialogActions>
+      </Dialog>
 
     </div>
   );

@@ -9,6 +9,7 @@ import { useContext } from 'react';
 import { OpenContext } from '../contexts/OpenContext';
 import { Download, FilterAlt, Sort } from "@mui/icons-material";
 import { format } from "date-fns";
+import { IconButton } from "@mui/material";
 
 /**
  * ===========================================
@@ -279,36 +280,45 @@ export default function Scheduler() {
                 </div>
                 <div className="flex items-center justify-center" style={{ height: '100%' }}>
                   <div className="flex gap-4">
-                    <div className="cursor-pointer" onClick={handleDownload}>
+                    <IconButton
+                      className="z-50"
+                      onClick={handleDownload}
+                      sx={{
+                        color: '#64748b',
+                        '&:hover': {
+                          color: 'black',
+                        },
+                      }}
+                    >
                       <Download 
-                        style={{ fontSize: '2rem', }}
+                        sx={{ 
+                          fontSize: '2rem',
+                          pointerEvents: 'none'  // Add this
+                        }} 
+                      />
+                    </IconButton>
+                    <div className="relative">
+                      <IconButton
+                        className="z-50"
+                        onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
                         sx={{
                           color: '#64748b',
                           '&:hover': {
-                            color: 'black',  // Change the color to black on hover
+                            color: 'black',
                           },
                         }}
-                      />
-                    </div>
-                    <div className="relative">
-                      <div
-                        className="flex items-center justify-center cursor-pointer inline-block p-0.5"
-                        onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
                       >
                         <FilterAlt 
-                        style={{ fontSize: '2rem' }}
-                        sx={{
-                          color: '#64748b',
-                          '&:hover': {
-                            color: 'black',  // Change the color to black on hover
-                          },
-                        }}
-                      />
-                      </div>
+                          sx={{ 
+                            fontSize: '2rem',
+                            pointerEvents: 'none'  // Add this
+                          }} 
+                        />
+                      </IconButton>
                       
                       {filterOpen && (
                         <div className="z-50">
-                          <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
+                          <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
                             <ul className="text-right">
                               {Object.entries(filterNames).map(([key, value]) => {
                                 // Apply conditions for filters based on the tab
@@ -331,38 +341,36 @@ export default function Scheduler() {
                               })}
                             </ul>
                           </div>
-                          <div className="absolute right-2 top-[-0.5px] w-4 h-10 border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
-                          <div className="absolute right-2 top-[12px] w-4 h-8 border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-50" />
+                          <div className="absolute right-2 top-[6px] w-4 h-10 border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-40" />
+                          <div className="absolute right-2 top-[18px] w-4 h-8 border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-40" />
                         </div>
                       )}
                     </div>
                     <div className="relative">
-                      <div
-                        className="flex items-center justify-center cursor-pointer inline-block p-0.5"
+                      <IconButton
+                        className="z-50"
                         onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
+                        sx={{
+                          color: '#64748b',
+                          '&:hover': {
+                            color: 'black',
+                          },
+                        }}
                       >
-                        <Sort 
-                          style={{ fontSize: '2rem' }} 
-                          sx={{
-                            color: '#64748b',
-                            '&:hover': {
-                              color: 'black',  // Change the color to black on hover
-                            },
-                          }}
-                        />
-                      </div>
+                        <Sort sx={{ fontSize: 25 }} />
+                      </IconButton>
                       
                       {sortOpen && (
                         <div className="z-50">
-                          <div className="absolute right-1 w-[5.903rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] mt-2 z-40">
+                          <div className="absolute right-1 w-[5.903rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
                             <ul className="text-right">
                               <li className={`px-4 py-2  text-[#64748b] hover:text-[#334155] cursor-pointer rounded-tl-xl ${sortType === 0 && "text-black"}`} onClick={() => handleSort(0)}>A - Z</li>
                               <li className={`px-4 py-2  text-[#64748b] hover:text-[#334155] cursor-pointer ${sortType === 1 && "text-black"}`} onClick={() => handleSort(1)}>Z - A</li>
                               <li className={`px-4 py-2  text-[#64748b] hover:text-[#334155] cursor-pointer rounded-bl-xl ${sortType === 2 && "text-black"}`} onClick={() => handleSort(2)}>By Date</li>
                             </ul>
                           </div>
-                          <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-50" />
-                          <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-50" />
+                          <div className="absolute right-2 top-[-0.5px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-40" />
+                          <div className="absolute right-2 top-[12px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-40" />
                         </div>
                       )}
                     </div>

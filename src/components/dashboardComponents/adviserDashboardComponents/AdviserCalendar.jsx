@@ -80,18 +80,30 @@ export default function AdviserCalendar() {
   useEffect(() => {
     if (!selectedDay) return;
 
-    const appointmentsList = [];
+    const appointmentsMap = new Map();
 
     studentRequests.forEach((r) => {
       if (
         r.status === "Scheduled" &&
         format(new Date(r.sched_date), "yyyy-MM-dd") === selectedDay
       ) {
-        appointmentsList.push({
-          name: r.student_name,
-          time: format(new Date(r.sched_date), "hh:mm a"),
-          type: "student", // Red dot
-        });
+        console.log("Student request:", r.student_name, r.sched_date)
+        const schedDate = new Date(r.sched_date);
+        const time = format(schedDate, "hh:mm a");
+        // Use ISO string of the full datetime to create unique key
+        const timeKey = schedDate.toISOString();
+        const key = `${r.student_name}-${timeKey}`;
+        
+        if (!appointmentsMap.has(key)) {
+          appointmentsMap.set(key, {
+            name: r.student_name,
+            time: time,
+            datetime: schedDate,
+            hasStudent: false,
+            hasStaff: false,
+          });
+        }
+        appointmentsMap.get(key).hasStudent = true;
       }
     });
 
@@ -100,20 +112,29 @@ export default function AdviserCalendar() {
         r.status === "Scheduled" &&
         format(new Date(r.sched_date), "yyyy-MM-dd") === selectedDay
       ) {
-        appointmentsList.push({
-          name: r.student_name,
-          time: format(new Date(r.sched_date), "hh:mm a"),
-          type: "staff", // Blue dot
-        });
+        console.log("Staff request:", r.student_name, r.sched_date)
+        const schedDate = new Date(r.sched_date);
+        const time = format(schedDate, "hh:mm a");
+        const timeKey = schedDate.toISOString();
+        const key = `${r.student_name}-${timeKey}`;
+        
+        if (!appointmentsMap.has(key)) {
+          appointmentsMap.set(key, {
+            name: r.student_name,
+            time: time,
+            datetime: schedDate,
+            hasStudent: false,
+            hasStaff: false,
+          });
+        }
+        appointmentsMap.get(key).hasStaff = true;
       }
     });
 
-    // Sort by time
-    appointmentsList.sort((a, b) => {
-      const timeA = new Date(`2000/01/01 ${a.time}`);
-      const timeB = new Date(`2000/01/01 ${b.time}`);
-      return timeA - timeB;
-    });
+    const appointmentsList = Array.from(appointmentsMap.values());
+
+    // Sort by datetime
+    appointmentsList.sort((a, b) => a.datetime - b.datetime);
 
     setAppointments(appointmentsList);
   }, [selectedDay, studentRequests, staffRequests]);
@@ -238,13 +259,21 @@ export default function AdviserCalendar() {
                     </div>
                   </div>
                   
-                  {/* Colored dot indicator */}
-                  <div
-                    className={`w-3 h-3 rounded-full flex-shrink-0 ml-3 ${
-                      apt.type === "student" ? "bg-[#ff9059]" : "bg-blue-600"
-                    }`}
-                    title={apt.type === "student" ? "Student Request" : "Staff Request"}
-                  />
+                  {/* Colored dot indicators */}
+                  <div className="flex space-x-1 flex-shrink-0 ml-3">
+                    {apt.hasStudent && (
+                      <div
+                        className="w-3 h-3 rounded-full bg-[#ff9059]"
+                        title="Student Request"
+                      />
+                    )}
+                    {apt.hasStaff && (
+                      <div
+                        className="w-3 h-3 rounded-full bg-blue-600"
+                        title="Staff Request"
+                      />
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

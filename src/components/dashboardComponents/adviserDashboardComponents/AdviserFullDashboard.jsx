@@ -4,7 +4,7 @@ import { API } from '../../../api';
 import { ActiveStudentsPieChart, CompSchedules } from '../guidanceStaffDashboardComponent/Graphs';
 import AdviserCalendar from './AdviserCalendar';
 import { Dialog, DialogTitle, DialogActions, DialogContent, IconButton, Button, Autocomplete, TextField } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import { Close, FilterAlt } from '@mui/icons-material';
 
 export default function AdviserFullDashboard({ backlogs }) {
   const [students, setStudents] = useState([]);
@@ -17,6 +17,16 @@ export default function AdviserFullDashboard({ backlogs }) {
   const [viewId, setViewId] = useState(0);
   const [selectedBacklog, setSelectedBacklog] = useState([]);
   const staff = JSON.parse(localStorage.getItem("staff"));
+
+  const [filteringDateType, setFilteringDateType] = useState('today');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterDateOpen, setFilterDateOpen] = useState(false);
+  const [sendFilterDate, setSendFilterDate] = useState('today');
+
+  const handleApplyFilters = () => {
+    setSendFilterDate(filteringDateType);
+    setFilterOpen(false);
+  };
 
   // Fetch students data for the logged-in staff (Adviser)
   useEffect(() => {
@@ -98,7 +108,6 @@ export default function AdviserFullDashboard({ backlogs }) {
     setMessage('');
   }
 
-  const filterBacklog = backlogs.filter((item) => (item.status === "Scheduled" && item.student_id));
 
   useEffect(() => {
     if (viewId !== 0) {
@@ -117,10 +126,95 @@ export default function AdviserFullDashboard({ backlogs }) {
         style={{ gridTemplateColumns: "45% 55%" }}  // Set the width for the two main columns
       >
         {/* First Column (40% width) */}
-        <div className="w-full h-full flex flex-col gap-4 p-5">
+        <div className="w-full h-full flex flex-col gap-4 p-5 relative">
+          {filterOpen && (
+            <div className="absolute top-5 right-2 z-50 bg-white border-[1px] border-[#1e3a8a] rounded-md shadow-lg text-[#1e3a8a] w-60 pt-2">
+              <p className="font-bold p-2">Filter Date</p>
+              <div 
+                className="relative -mt-2"
+                onClick={() => {
+                  setFilterDateOpen(!filterDateOpen); 
+                }}
+              >
+                {filterDateOpen && (
+                  <div className="bg-white text-[#1e3a8a] border-[1px] border-[#1e3a8a] rounded-md shadow-lg absolute top-8 right-2 w-36 z-50">
+                    <div
+                      onClick={() => {setFilteringDateType("today");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer rounded-t-md"
+                    >
+                      Today
+                    </div>
+                    <div
+                      onClick={() => {setFilteringDateType("last7days");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      Last 7 Days
+                    </div>
+                    <div
+                      onClick={() => {setFilteringDateType("lastMonth");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      Last 30 Days
+                    </div>
+                    <div
+                      onClick={() => {setFilteringDateType("last3Months");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      Last 3 Months
+                    </div>
+                    <div
+                      onClick={() => {setFilteringDateType("last6Months");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer"
+                    >
+                      Last 6 Months
+                    </div>
+                    <div
+                      onClick={() => {setFilteringDateType("lastYear");}}
+                      className="p-2 hover:bg-[#1e3a8a] hover:text-white cursor-pointer rounded-b-md"
+                    >
+                      Last 1 Year
+                    </div>
+                  </div>
+                )}
+                <div className="z-50">
+                  <p className="bg-[#1e3a8a] text-white p-2 border-b-2 cursor-pointer rounded-md mx-2">
+                    {filteringDateType === 'today' ? 'Today' :
+                      filteringDateType === 'last7days' ? 'Last 7 Days' :
+                      filteringDateType === 'lastMonth' ? 'Last 30 Days' :
+                      filteringDateType === 'last3Months' ? 'Last 3 Months' :
+                      filteringDateType === 'last6Months' ? 'Last 6 Months' :
+                      filteringDateType === 'lastYear' ? 'Last 1 Year' :
+                      'Select Date Range'}
+                  </p>
+                </div>
+              </div>
+                    
+              <div className="flex justify-end p-2">
+                <button
+                  className="text-red-500"
+                  onClick={() => setFilterOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="text-[#1e3a8a] px-4 py-2 rounded-md"
+                  onClick={handleApplyFilters}
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          )}
+          <div 
+            className="absolute w-fit h-fit bg-white rounded-full z-50 border-2 border-[#1e3a8a] top-0 right-2 flex flex-row items-center justify-center py-1 px-3 gap-2 text-[#1e3a8a] cursor-pointer"
+            onClick={() => setFilterOpen(!filterOpen)}
+          >
+            <p className="italic">Filter Options</p>
+            <FilterAlt />
+          </div>
           <div className="grid grid-rows-2 gap-4">  {/* Divide the left side into 2 rows */}
-              <CompSchedules backlog={filteredBacklogs} isAdviser={true} />
-              <ActiveStudentsPieChart width={100} padding={5} marginTop={false} />
+              <CompSchedules backlog={filteredBacklogs} isAdviser={true} filteringDateType={sendFilterDate} />
+              <ActiveStudentsPieChart width={100} padding={5} marginTop={false} filteringDateType={sendFilterDate} />
           </div>
         </div>
 
@@ -242,8 +336,8 @@ export default function AdviserFullDashboard({ backlogs }) {
           <div className="h-[25%]">
             <p className='text-[#f57c00] text-2xl font-bold mb-3'>Student Scheduled Appointments</p>
             <div className='w-full h-[75%] border-4 border-[#f57c00] rounded-lg mb-4 overflow-y-auto p-4'>
-              {filterBacklog.length > 0 ? (
-              filterBacklog.map((item, index) => (
+              {filteredBacklogs.length > 0 ? (
+              filteredBacklogs.map((item, index) => (
                 <div
                   key={index}
                   className="w-full flex flex-row items-center justify-between border-b-2 border-[#94a3b8]"
