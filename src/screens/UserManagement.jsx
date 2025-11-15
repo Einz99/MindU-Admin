@@ -470,7 +470,7 @@ export default function DashboardLayout() {
   // Handler to update search term from the search field in UserTabs
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-    setTab(0);
+    setPage(0);
   };
 
   useEffect(() => {
