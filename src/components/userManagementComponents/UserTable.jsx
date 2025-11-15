@@ -19,18 +19,19 @@ export default function UserTable({
   tab,
   students,
   staffs,
-  allChecked,
   checked,
   handleCheckAll,
   handleCheck,
   handleEditButtonClick,
   setSelectedStudent,
   setOpenDeleteModal,
+  page,
+  setPage
 }) {
   const staff = JSON.parse(localStorage.getItem("staff") || "{}");
   
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [page, setPage] = useState(1);
+  
   const [sortField, setSortField] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
   
@@ -54,6 +55,7 @@ export default function UserTable({
     setPage(1);
     setSortField(null);
     setSortDirection('asc');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
   const handleSort = (field) => {
@@ -151,6 +153,9 @@ export default function UserTable({
     );
   };
 
+  // Check if all visible items are checked
+  const allVisibleChecked = sortedData.length > 0 && sortedData.every(item => checked.includes(item.id));
+
   return (
     <div>
       <TableContainer className="border-y border-black">
@@ -158,7 +163,12 @@ export default function UserTable({
           <TableHead>
             <TableRow className="bg-[#f8fbfd] border-y border-black">
               <TableCell className="p-3 font-bold w-[40px]">
-                <Checkbox checked={allChecked} onChange={handleCheckAll} />
+                <Tooltip title={"Select All"} arrow >
+                  <Checkbox 
+                    onChange={handleCheckAll} 
+                    checked={allVisibleChecked}
+                  />
+                </Tooltip>
               </TableCell>
               <TableCell className="p-3 font-bold text-center">
                 <SortHeader field="name" label="Name" />
@@ -166,7 +176,7 @@ export default function UserTable({
               {tab === 0 ? (
                 <>
                   <TableCell className="p-3 font-bold text-center">
-                    <SortHeader field="section" label="Section" />
+                    <SortHeader field="section" label="Strand/Grade/Section" />
                   </TableCell>
                   <TableCell className="p-3 font-bold text-center">
                     <SortHeader field="adviser" label="Adviser" />
@@ -178,7 +188,7 @@ export default function UserTable({
                     <p className="mx-auto font-roboto font-bold text-center">Position</p>
                   </TableCell>
                   <TableCell className="p-3 font-bold text-center">
-                    <SortHeader field="section" label="Section" />
+                    <SortHeader field="section" label="Strand/Grade/Section" />
                   </TableCell>
                 </>
               ) : (
@@ -201,7 +211,7 @@ export default function UserTable({
                   className="p-3 font-bold w-[40px]"
                   sx={{ borderBottom: "none" }}
                 >
-                  <Checkbox checked={checked.includes(index)} onChange={(event) => handleCheck(event, index)} />
+                  <Checkbox checked={checked.includes(item.id)} onChange={(event) => handleCheck(event, item.id)} />
                 </TableCell>
                 <TableCell 
                   className="p-3 text-center"

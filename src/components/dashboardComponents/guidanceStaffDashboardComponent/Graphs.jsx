@@ -267,7 +267,7 @@ export function UsageUtilization({
   return (
     <div className="flex flex-col p-5">
       <div className="flex w-full flex-row justify-between items-center">
-        <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">Usage Utilization</p>
+        <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">Feature Utilization</p>
         <FileDownload
           sx={{
             fontSize: 25,
@@ -789,7 +789,7 @@ export function CompSchedules({
     <div className="flex flex-col p-5">
       <div className="flex w-full flex-row justify-between">
         <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">
-          Schedules Completed Overtime
+          Appointments Completed Overtime
         </p>
         {staff.position !== 'Adviser' &&
         <FileDownload

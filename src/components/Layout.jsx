@@ -18,6 +18,7 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  Tooltip,
 } from "@mui/material";
 import { 
   Menu as MenuIcon, 
@@ -441,7 +442,7 @@ export default function Layout({ open, onMenuClick }) {
               <p className="text-base text-[#f8fafc] font-bold">{staff.position}{staff.section && ` - ${staff.section}`}</p>
             </div>
             <div className="w-0.5 h-8 bg-white my-auto"></div>
-            <img src={staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"}   alt="Profile" className="w-10 h-10 rounded-full my-auto cursor-pointer" onClick={() => setOpenProfile(true)}/>
+            <img src={staff.picture ? `${RootAPI}/resources/profile_pics/${staff.picture}` : "/defaultProfile.png"}   alt="Profile" className="w-10 h-10 rounded-full my-auto cursor-pointer" onClick={() => setOpenProfile(true)}/>
           </div>
         </Toolbar>
       </AppBar>
@@ -553,13 +554,16 @@ export default function Layout({ open, onMenuClick }) {
           </div>
           <div className="w-60 aspect-square rounded-full border-4 border-[#60a5fa] relative mb-14 max-w-[40%]">
             <img 
-              src={previewImage ? previewImage : staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"} 
+              src={previewImage ? previewImage : staff.picture ? `${RootAPI}/resources/profile_pics/${staff.picture}` : "/defaultProfile.png"} 
               alt="Profile" 
               className="w-full h-full rounded-full object-cover" 
             />
-            <IconButton className="absolute bottom-6 left-1/2 -translate-x-1/2" onClick={handlePictureChange}>
-              <PhotoCamera className="text-white bg-[#60a5fa] rounded-full p-2" sx={{fontSize: 40}} />
-            </IconButton>
+            <Tooltip title={"Edit Picture"} arrow>
+              <IconButton className="absolute bottom-6 left-1/2 -translate-x-1/2" onClick={handlePictureChange}>
+                <PhotoCamera className="text-white bg-[#60a5fa] rounded-full p-2" sx={{fontSize: 40}} />
+              </IconButton>
+            </Tooltip>
+            
           </div>
           <div className="text-center">
             <p className="font-bold text-4xl text-white">{staff.name}</p>
@@ -568,7 +572,9 @@ export default function Layout({ open, onMenuClick }) {
           <div className="w-full flex flex-col items-center text-start gap-2 mt-8">
             <div className="w-5/6 items-center flex justify-between">
               <p className="font-bold text-lg text-white">Email</p>
-              <Edit className="cursor-pointer text-white" sx={{fontSize: 20}} onClick={handleEmailDialogOpen} />
+              <Tooltip title={"Edit Email"} arrow>
+                <Edit className="cursor-pointer text-white" sx={{fontSize: 20}} onClick={handleEmailDialogOpen} />
+              </Tooltip>
             </div>
             <div className="w-full relative items-center flex justify-center gap-2">
               <input
@@ -580,7 +586,9 @@ export default function Layout({ open, onMenuClick }) {
             </div>
             <div className="w-5/6 items-center flex justify-between mt-4">
               <p className="font-bold text-lg text-white">Password</p>
-              <Edit className="cursor-pointer text-white" sx={{fontSize: 20}} onClick={handlePasswordDialogOpen} />
+              <Tooltip title={"Edit Password"} arrow>
+                <Edit className="cursor-pointer text-white" sx={{fontSize: 20}} onClick={handlePasswordDialogOpen} />
+              </Tooltip>
             </div>
             <div className="w-full relative items-center flex justify-center gap-2">
               <input
@@ -619,7 +627,7 @@ export default function Layout({ open, onMenuClick }) {
         }}
       >
         <DialogTitle className="bg-[#b7cde3] relative">
-          Change Email
+          <p className="font-bold">Change Email</p>
           <DialogActions className="absolute -top-1 right-0">
             <IconButton onClick={handleEmailDialogClose} className="rounded-full">
               <Close sx={{ fontSize: 40, color: 'black' }}></Close>
@@ -693,7 +701,7 @@ export default function Layout({ open, onMenuClick }) {
         }}
       >
         <DialogTitle className="bg-[#b7cde3] relative">
-          Change Password
+          <p className="font-bold">Change Password</p>
           <DialogActions className="absolute -top-1 right-0">
             <IconButton onClick={handlePasswordDialogClose} className="rounded-full">
               <Close sx={{ fontSize: 40, color: 'black' }}></Close>
@@ -775,7 +783,7 @@ export default function Layout({ open, onMenuClick }) {
         }}
       >
         <DialogTitle className="bg-[#b7cde3] relative">
-          Change Profile Picture
+          <p className="font-bold">Change Profile Picture</p>
           <DialogActions className="absolute -top-1 right-0">
             <IconButton onClick={() => {
               setOpenPictureDialog(false);
@@ -869,7 +877,7 @@ export default function Layout({ open, onMenuClick }) {
         }}
       >
         <DialogTitle className="bg-[#ef4444] relative">
-          Confirm Logout
+          <p className="font-bold">Confirm Logout</p>
           <DialogActions className="absolute -top-1 right-0">
             <IconButton onClick={() => setOpenLogoutDialog(false)} className="rounded-full ">
               <Close sx={{ fontSize: 40, color: 'black' }}></Close>

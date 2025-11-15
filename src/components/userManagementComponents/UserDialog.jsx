@@ -43,8 +43,11 @@ const UserDialog = ({
   isViewMode,
   staffs,
   loading,
+  setOpenError,
+  setIsSuccessful,
+  setAlertMessage,
 }) => {
-  const [data, setData] = useState([]); // start empty
+  const [data, setData] = useState([]);
   const [colWidths, setColWidths] = useState([]);
   const [isTableValid, setIsTableValid] = useState(true);
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -53,11 +56,9 @@ const UserDialog = ({
   const staff = JSON.parse(localStorage.getItem("staff") || "{}");
   const isAdviser = staff.position === "Adviser";
 
-  // Define column headers dynamically
   const columnHeaders = useMemo(() => (
     tab === 0 ? ["Email", "First Name", "Last Name", "Section"] : ["Email", "Name", "Section"]
   ), [tab]);
-
 
   useEffect(() => {
     const colCount = tab === 0 ? 4 : 3;
@@ -65,54 +66,23 @@ const UserDialog = ({
     setData([newRow]);
     setIsTableValid(true);
   }, [tab]);
-  
-  useEffect(() => {
-  const placeholderRow = tab === 0
-    ? ["example@student.com", "John", "Doe", "Section A"]
-    : ["example@adviser.com", "Jane Doe", "Section A"]
-      
 
-  const isEmptyRow = (row) => row.every(cell => cell === "");
-    const isPlaceholder = (row) =>
-      JSON.stringify(row) === JSON.stringify(["example@student.com", "John", "Doe", "Section A"]) ||
-      JSON.stringify(row) === JSON.stringify(["example@adviser.com", "Jane Doe", "Section A"]);
-
-    if (data.length === 1 && isEmptyRow(data[0])) {
-      // Case: blank table — insert placeholder
-      setData([placeholderRow, ...data]);
-    } else if (data.length >= 1 && isPlaceholder(data[0])) {
-      // Case: already has a placeholder — replace it
-      const newData = [...data];
-      newData[0] = placeholderRow;
-      setData(newData);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
-
-  // Dynamically calculate column widths based on modal size
   const calculateColWidths = useCallback(() => {
-    if (typeof window === "undefined") return []; // Prevent SSR errors
-
-    const modalWidth = window.innerWidth * 0.56; // 55% of the screen width
-    const padding = 32; // Account for modal padding
+    if (typeof window === "undefined") return [];
+    const modalWidth = window.innerWidth * 0.56;
+    const padding = 32;
     const availableWidth = modalWidth - padding;
     const columnCount = columnHeaders.length;
-
-    // Ensure each column has a minimum width of 120px
     return Array(columnCount).fill(Math.max(availableWidth / columnCount, 120));
   }, [columnHeaders.length]);
 
-  // Update column widths on mount and window resize
   useEffect(() => {
-    setColWidths(calculateColWidths()); // Set initial column widths
-
+    setColWidths(calculateColWidths());
     const handleResize = () => setColWidths(calculateColWidths());
     window.addEventListener("resize", handleResize);
-    
     return () => window.removeEventListener("resize", handleResize);
   }, [columnHeaders.length, calculateColWidths]);
 
-  // Handle data changes and auto-add new rows
   const handleDataChange = (changes, source) => {
     if (changes && source !== "loadData") {
       const newData = [...data];
@@ -129,8 +99,6 @@ const UserDialog = ({
   
       if (shouldAddRow) newData.push(Array(columnHeaders.length).fill(""));
       setData(newData);
-  
-      // Run validation on the whole table
       validateTable(newData);
     }
   };
@@ -142,7 +110,7 @@ const UserDialog = ({
       const row = tableData[i];
       const hasAnyInput = row.some(cell => cell && cell.trim() !== '');
   
-      if (!hasAnyInput) continue; // Skip empty rows
+      if (!hasAnyInput) continue;
   
       for (let j = 0; j < row.length; j++) {
         const cellValue = row[j]?.trim() || "";
@@ -158,8 +126,6 @@ const UserDialog = ({
           break;
         }
       }
-      console.log("Validating row", i, row);
-      console.log("isTableValid?", valid);
       if (!valid) break;
     }
   
@@ -170,13 +136,14 @@ const UserDialog = ({
     const trimmedData = data.filter(row => row.some(cell => cell && cell.trim() !== "")); 
   
     if (trimmedData.length === 0) {
-      alert("No valid data to upload.");
+      setAlertMessage("No valid data to upload.");
+      setIsSuccessful(false);
+      setOpenError(true);
       return;
     }
   
     handleBulkUpload(trimmedData, columnHeaders);
     setBulkUploadOpen(false);
-    setData([tab === 0 ? ["example@student.com", "John", "Doe", "Section A"] : ["example@adviser.com", "Jane Doe", "Section A"]]); // Reset after upload
   };
 
   const handleFileUpload = (e) => {
@@ -193,37 +160,37 @@ const UserDialog = ({
       let parsedData = [];
 
       if (isCSV) {
-        // Handle CSV file
         parsedData = Papa.parse(content, {
           skipEmptyLines: true,
           header: false,
         }).data;
       } else if (isExcel) {
-        // Handle Excel file
         const workbook = XLSX.read(content, { type: 'binary' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         parsedData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       } else {
-        alert("Unsupported file type. Please upload a CSV or Excel file.");
+        setAlertMessage("Unsupported file type. Please upload a CSV or Excel file.");
+        setIsSuccessful(false);
+        setOpenError(true);
         return;
       }
 
-      // Skip the header row and remove completely empty rows
       const [, ...withoutHeader] = parsedData;
       const cleaned = withoutHeader.filter(row =>
         row.some(cell => cell?.toString().trim() !== '')
       );
 
       if (cleaned.length === 0) {
-        alert("No valid rows found in the file.");
+        setAlertMessage("No valid rows found in the file.");
+        setIsSuccessful(false);
+        setOpenError(true);
         return;
       }
 
       const newData = [...data];
-      let insertIndex = 1;
+      let insertIndex = 0;
 
-      // Find the first empty row (starting after placeholder)
-      for (let i = 1; i < newData.length; i++) {
+      for (let i = 0; i < newData.length; i++) {
         const isEmpty = newData[i].every(cell => !cell || cell.toString().trim() === '');
         if (isEmpty) {
           insertIndex = i;
@@ -231,16 +198,14 @@ const UserDialog = ({
         }
       }
 
-      // Insert cleaned rows
       cleaned.forEach((row, idx) => {
-        const paddedRow = [...row].slice(0, columnHeaders.length); // Limit to column count
+        const paddedRow = [...row].slice(0, columnHeaders.length);
         while (paddedRow.length < columnHeaders.length) {
-          paddedRow.push(""); // Fill missing cells
+          paddedRow.push("");
         }
         newData[insertIndex + idx] = paddedRow;
       });
 
-      // Pad table if needed
       const requiredLength = insertIndex + cleaned.length;
       while (newData.length <= requiredLength) {
         newData.push(Array(columnHeaders.length).fill(""));
@@ -250,39 +215,36 @@ const UserDialog = ({
     };
 
     if (isCSV) {
-      reader.readAsText(file); // For CSV, we read as text
+      reader.readAsText(file);
     } else if (isExcel) {
-      reader.readAsBinaryString(file); // For Excel, we read as binary string
+      reader.readAsBinaryString(file);
     } else {
-      alert("Unsupported file type. Please upload a CSV or Excel file.");
+      setAlertMessage("No valid rows found in the file.");
+      setIsSuccessful(false);
+      setOpenError(true);
     }
 
-    e.target.value = null; // Reset file input after processing
+    e.target.value = null;
   };
 
   const filteredAdvisers = staffs.filter((staff) => staff.position === "Adviser");
 
   const convertToCSV = (data, headers) => {
-  const csvRows = [];
-  
-  // Add headers
-  csvRows.push(headers.join(','));
-  
-  // Add data rows
-  data.forEach(row => {
-    const values = headers.map(header => {
-      const value = row[header] || '';
-      // Escape values that contain commas, quotes, or newlines
-      const escaped = String(value).replace(/"/g, '""');
-      return `"${escaped}"`;
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    data.forEach(row => {
+      const values = row.map(cell => {
+        const value = cell || '';
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
     });
-    csvRows.push(values.join(','));
-  });
-  
-  return csvRows.join('\n');
-};
+    
+    return csvRows.join('\n');
+  };
 
-  // Helper function to download CSV
   const downloadCSV = (csvContent, filename) => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -297,39 +259,28 @@ const UserDialog = ({
     document.body.removeChild(link);
   };
 
-  // Function to export HotTable data to CSV
   const exportHotTableToCSV = (hotInstance, columnHeaders, filename = tab === 0
     ? "Mind-U Bulk Creation Students Draft.csv"
     : "Mind-U Bulk Creation Advisers Draft.csv") => {
     
-    // Get all table data
     const allData = hotInstance.getData();
     
-    // Skip the first row (placeholder row)
-    const dataRows = allData.slice(1).filter(row =>
+    const dataRows = allData.filter(row =>
       row.some(cell => cell && cell.toString().trim() !== "")
     );
 
-    // Always allow export — even with no data
-    // If there's no data, just include headers + one empty example row
-    const exportData =
-      dataRows.length > 0
-        ? [columnHeaders, ...dataRows]
-        : [
-            columnHeaders,
-            tab === 0
-              ? ["example@student.com", "John", "Doe", "Section A"]
-              : ["example@adviser.com", "Jane Doe", "Section A"]
-          ];
+    if (dataRows.length === 0) {
+      setAlertMessage("No data to export.");
+      setIsSuccessful(false);
+      setOpenError(true);
+      return;
+    }
 
-    // Format data to CSV
-    const csvContent = convertToCSV(exportData, columnHeaders);
+    const csvContent = convertToCSV(dataRows, columnHeaders);
         
-    // Generate filename with current date
-    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const currentDate = new Date().toISOString().split('T')[0];
     const finalFilename = `${filename.replace(".csv", "")}_${currentDate}.csv`;
 
-    // Download CSV file
     downloadCSV(csvContent, finalFilename);
   };
 
@@ -337,20 +288,62 @@ const UserDialog = ({
     e.preventDefault();
     setFormSubmitted(true);
 
-    // validation already handled by the button's `disabled` logic
     if (tab === 0) {
-      // Student Form Validation
-      if (!newStudent.firstName) return alert("First name is required.");
-      if (!newStudent.lastName) return alert("Last name is required.");
-      if (!newStudent.section) return alert("Section is required.");
-      if (!newStudent.email) return alert("Email is required.");
-      if (!/@.+\..+/.test(newStudent.email)) return alert("Invalid email format (e.g. name@domain.com)");
+      if (!newStudent.firstName) {
+        setAlertMessage("First name is required.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      };
+      if (!newStudent.lastName) {
+        setAlertMessage("Last name is required.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      };
+      if (!newStudent.section) {
+        setAlertMessage("Section is required.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      };
+      if (!newStudent.email) {
+        setAlertMessage("Email is required.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      };
+      if (!/@.+\..+/.test(newStudent.email)) {
+        setAlertMessage("Invalid email format (e.g. name@domain.com)");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      };
     } else {
-      // Staff Form Validation
-      if (!newStaff.name) return alert("Name is required.");
-      if (!newStaff.position) return alert("Position is required.");
-      if (!newStaff.email) return alert("Email is required.");
-      if (!/@.+\..+/.test(newStaff.email)) return alert("Invalid email format (e.g. name@domain.com)");
+      if (!newStaff.name) {
+        setAlertMessage("Name is required.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      };
+      if (!newStaff.position) {
+        setAlertMessage("Position is required.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      };
+      if (!newStaff.email) {
+        setAlertMessage("Email is required.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      };
+      if (!/@.+\..+/.test(newStaff.email)) {
+        setAlertMessage("Invalid email format (e.g. name@domain.com)");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      };
     }
 
     handleFormSubmit();
@@ -407,8 +400,8 @@ const UserDialog = ({
                 disabled={isViewMode}
                 sx={{
                   "& .MuiInputBase-input.Mui-disabled": {
-                    WebkitTextFillColor: "black", // For Safari
-                    color: "black",               // For other browsers
+                    WebkitTextFillColor: "black",
+                    color: "black",
                   }
                 }}
               />
@@ -431,8 +424,8 @@ const UserDialog = ({
                 disabled={isViewMode}
                 sx={{
                   "& .MuiInputBase-input.Mui-disabled": {
-                    WebkitTextFillColor: "black", // For Safari
-                    color: "black",               // For other browsers
+                    WebkitTextFillColor: "black",
+                    color: "black",
                   }
                 }}
               />
@@ -445,7 +438,6 @@ const UserDialog = ({
                 disabled={isViewMode}
               >
                 {isAdviser ? (
-                  // Adviser: locked value
                   <Select
                     value={staff.section}
                     disabled
@@ -459,7 +451,6 @@ const UserDialog = ({
                     <MenuItem value={staff.section}>{staff.section}</MenuItem>
                   </Select>
                 ) : (
-                  // Admin/Guidance: normal dropdown
                   <Select
                     labelId="section-label"
                     name="section"
@@ -501,8 +492,8 @@ const UserDialog = ({
                     disabled={isViewMode}
                     sx={{
                       "& .MuiInputBase-input.Mui-disabled": {
-                        WebkitTextFillColor: "black", // For Safari
-                        color: "black",               // For other browsers
+                        WebkitTextFillColor: "black",
+                        color: "black",
                       }
                     }}
                   />
@@ -537,8 +528,8 @@ const UserDialog = ({
                 disabled={isViewMode}
                 sx={{
                   "& .MuiInputBase-input.Mui-disabled": {
-                    WebkitTextFillColor: "black", // For Safari
-                    color: "black",               // For other browsers
+                    WebkitTextFillColor: "black",
+                    color: "black",
                   }
                 }}
               />
@@ -565,8 +556,8 @@ const UserDialog = ({
                 disabled={isViewMode}
                 sx={{
                   "& .MuiInputBase-input.Mui-disabled": {
-                    WebkitTextFillColor: "black", // For Safari
-                    color: "black",               // For other browsers
+                    WebkitTextFillColor: "black",
+                    color: "black",
                   }
                 }}
               />
@@ -601,8 +592,8 @@ const UserDialog = ({
                     disabled={isViewMode}
                     sx={{
                       "& .MuiInputBase-input.Mui-disabled": {
-                        WebkitTextFillColor: "black", // For Safari
-                        color: "black",               // For other browsers
+                        WebkitTextFillColor: "black",
+                        color: "black",
                       }
                     }}
                   />
@@ -616,8 +607,8 @@ const UserDialog = ({
                   variant="outlined"
                   sx={{
                     "& .MuiInputBase-input.Mui-disabled": {
-                      WebkitTextFillColor: "black", // For Safari
-                      color: "black",               // For other browsers
+                      WebkitTextFillColor: "black",
+                      color: "black",
                     }
                   }}
                 >
@@ -669,8 +660,8 @@ const UserDialog = ({
                 disabled={isViewMode}
                 sx={{
                   "& .MuiInputBase-input.Mui-disabled": {
-                    WebkitTextFillColor: "black", // For Safari
-                    color: "black",               // For other browsers
+                    WebkitTextFillColor: "black",
+                    color: "black",
                   }
                 }}
               />
@@ -691,8 +682,8 @@ const UserDialog = ({
                     error={formSubmitted && (!isEditMode && !newStaff.password)}
                     sx={{
                       "& .MuiInputBase-input.Mui-disabled": {
-                        WebkitTextFillColor: "black", // For Safari
-                        color: "black",               // For other browsers
+                        WebkitTextFillColor: "black",
+                        color: "black",
                       }
                     }}
                   />
@@ -722,14 +713,14 @@ const UserDialog = ({
       {/* Bulk Upload Dialog */}
       <Dialog 
         open={bulkUploadOpen} 
-        onClose={() => {setBulkUploadOpen(false); setData([["example@student.com", "John", "Doe", "Section A"]]);}} 
+        onClose={() => setBulkUploadOpen(false)} 
         maxWidth="md" 
         fullWidth 
         sx={{ "& .MuiDialog-paper": { 
           width: "61%",
           maxWidth: "none",
-          backgroundColor: "white", // Light blue for Restore, Light red for Delete
-          color: "#000", // Text color
+          backgroundColor: "white",
+          color: "#000",
           borderRadius: "25px",
         } }} 
       >
@@ -777,7 +768,7 @@ const UserDialog = ({
             colWidths={colWidths}
             licenseKey="non-commercial-and-evaluation"
             afterChange={handleDataChange}
-            className="custom-hot-table" // custom class for scoping
+            className="custom-hot-table"
             rowHeights={40}
             copyPaste={{
               enabled: true,
@@ -794,24 +785,17 @@ const UserDialog = ({
               if (col === -1 || row === -1) {
                 cellProperties.className = 'highlighted-cell';
                 return cellProperties
-              } 
-
-              if (row === 0) {
-                cellProperties.readOnly = true; // 👈 Make placeholder row read-only
-                cellProperties.className = 'placeholder-row';
-              } 
+              }
 
               const hasAnyInput = rowData.some(cell => cell && cell.trim() !== '');
-              if (!hasAnyInput) return cellProperties; // Skip highlight if whole row is empty
+              if (!hasAnyInput) return cellProperties;
                         
               const cellValue = rowData[col] || "";
                         
-              // Highlight empty cells (only if something else in row is filled)
               if (cellValue.trim() === "") {
                 cellProperties.className = 'incomplete-cell';
               }
             
-              // Validate email if this is the email column
               const emailCol = 0;
               if (col === emailCol && cellValue.trim() !== "") {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -870,7 +854,10 @@ const UserDialog = ({
             onClick={() => {
               if (data.length === 1 || !isTableValid)
               {
-                return alert("Empty Table or Invalid Input please check the table again")
+                setAlertMessage("Empty Table or Invalid Input please check the table again");
+                setIsSuccessful(false);
+                setOpenError(true);
+                return;
               }
               handleConfirmUpload();
             }}
@@ -880,6 +867,7 @@ const UserDialog = ({
           </Button>
         </DialogActions>
       </Dialog>
+      
       <Dialog
         open={OpenBulkDelete}
         onClose={() => setOpenBulkDelete(false)}
@@ -906,11 +894,18 @@ const UserDialog = ({
         </DialogTitle>
         <DialogContent>
           <div className="justify-center align-middle text-center">
-            <p className="font-bold my-5">Are you sure you want to delete the following {tab === 0 ? "student/s" : "staff/s"} ?</p>
-            {checked.map((index) => (
-              tab === 0 ? (<p key={index}>{students[index].firstName} {students[index].lastName}</p>) :
-              (<p key={index}>{staffs[index].name}</p>) 
-            ))}
+            <p className="font-bold my-5">Are you sure you want to delete the following {tab === 0 ? "student" : "staff"} ?</p>
+            {checked.map((id) => {
+              const item = tab === 0 
+                ? students.find(s => s.id === id)
+                : staffs.find(s => s.id === id);
+              
+              if (!item) return null;
+              
+              return tab === 0 
+                ? <p key={id}>{item.firstName} {item.lastName}</p>
+                : <p key={id}>{item.name}</p>;
+            })}
           </div>
         </DialogContent>
         <DialogActions>
@@ -922,6 +917,7 @@ const UserDialog = ({
           </Button>
         </DialogActions>
       </Dialog>
+      
       <Dialog
         open={openDeleteModal}
         onClose={() => {setOpenDeleteModal(false); setSelectedStudent(null)}}
@@ -962,8 +958,8 @@ const UserDialog = ({
           <Button
             onClick={() => {
               if (selectedStudent) {
-                handleDeleteButtonClick(selectedStudent);  // Call parent's delete function
-                setOpenDeleteModal(false);  // Close modal after delete
+                handleDeleteButtonClick(selectedStudent);
+                setOpenDeleteModal(false);
               }
             }}
           >

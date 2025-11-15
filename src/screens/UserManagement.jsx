@@ -15,7 +15,6 @@ export default function DashboardLayout() {
   const { open, setOpen } = useContext(OpenContext);
   const [tab, setTab] = useState(0); // 0 = Students, 1 = Guidance Staffs
   const [checked, setChecked] = useState([]);
-  const [allChecked, setAllChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
@@ -28,6 +27,7 @@ export default function DashboardLayout() {
   const [OpenBulkDelete, setOpenBulkDelete] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const staff = JSON.parse(localStorage.getItem("staff") || "{}");
   // Form states
   const [newStudent, setNewStudent] = useState({
     firstName: "",
@@ -50,6 +50,7 @@ export default function DashboardLayout() {
   const [openError, setOpenError] = useState(false);
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [page, setPage] = useState(1);
 
   // Fetch data when component mounts or when tab changes
   useEffect(() => {
@@ -84,7 +85,7 @@ export default function DashboardLayout() {
     return () => clearInterval(interval); // clean up on unmount
   }, [students.length, staffs.length, tab, reloadKey]);
   
-  const filteredStudents = students.filter((student) =>
+  const filteredStudents = students.filter((student) => 
     `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.section.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -103,10 +104,9 @@ export default function DashboardLayout() {
   // Checkbox handlers
   const handleCheckAll = (event) => {
     const isChecked = event.target.checked;
-    setAllChecked(isChecked);
     if (isChecked) {
-      const allIds =
-        tab === 0 ? students.map((_, index) => index) : staffs.map((_, index) => index);
+      const currentData = tab === 0 ? filteredStudents : filteredStaffs;
+      const allIds = currentData.map((item) => item.id);
       setChecked(allIds);
     } else {
       setChecked([]);
@@ -132,7 +132,7 @@ export default function DashboardLayout() {
       setNewStudent({
         firstName: "",
         lastName: "",
-        section: "",
+        section: staff.position === "Adviser" ? staff.section : "", // ADD THIS LINE
         adviser: "",
         email: "",
         password: ""
@@ -341,12 +341,12 @@ export default function DashboardLayout() {
   const handleBulkDelete = () => {
     if (checked.length === 0) return;
     setLoading(true);
-    const idsToDelete = checked.map((index) =>
-      tab === 0 ? students[index].id : staffs[index].id
-    );
-
+    
+    // checked already contains IDs now
+    const idsToDelete = checked;
+    
     const staff = JSON.parse(localStorage.getItem("staff"));
-  
+    
     const deleteRequests = idsToDelete.map((id) =>
       axios.delete(`${API}/${tab === 0 ? "students" : "staffs"}/${id}`, {
         params: {
@@ -368,14 +368,14 @@ export default function DashboardLayout() {
         setAlertMessage(`Successfully Deleted ${tab === 0 ? "Students" : tab === 1 ? "Advisers" : "Guidance Staffs"}`);
         setIsSuccessful(true);
         setOpenError(true);
+        setLoading(false);
       })
-      .finally(() => (
-        setIsModalOpen(false)
-      ))
-      .catch((err) => console.error("Error during bulk delete:", err));
+      .catch((err) => {
+        console.error("Error during bulk delete:", err);
+        setLoading(false);
+      });
     setReloadKey(prev => prev + 1);
-    
-  };  
+  };
 
   const handleBulkUpload = async (spreadsheetData, columnHeaders) => {
     try {
@@ -470,6 +470,7 @@ export default function DashboardLayout() {
   // Handler to update search term from the search field in UserTabs
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
+    setTab(0);
   };
 
   useEffect(() => {
@@ -484,9 +485,14 @@ export default function DashboardLayout() {
   }, [openError]);
 
   useEffect(() => {
-    setSearchTerm('')
+    setSearchTerm('');
+    setChecked([]);
   }, [tab]);
-  
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm])
+
   return (
     <div className="flex bg-[#f8fafc] flex-1 overflow-hidden">
       {/* The Top and Left Bar */}
@@ -533,13 +539,14 @@ export default function DashboardLayout() {
                 setAlertMessage={setAlertMessage}
                 setIsSuccessful={setIsSuccessful}
                 searchTerm={searchTerm}
+                students={students}
+                staffs={staffs}
               />
               <UserTable
                 tab={tab}
                 // Pass filtered data instead of full arrays
                 students={filteredStudents}
                 staffs={filteredStaffs}
-                allChecked={allChecked}
                 checked={checked}
                 handleCheckAll={handleCheckAll}
                 handleCheck={handleCheck}
@@ -547,6 +554,8 @@ export default function DashboardLayout() {
                 handleDeleteButtonClick={handleDeleteButtonClick}
                 setSelectedStudent={setSelectedStudent}
                 setOpenDeleteModal={setOpenDeleteModal}
+                page={page}
+                setPage={setPage}
               />
             </div>
           </div>
@@ -579,8 +588,10 @@ export default function DashboardLayout() {
         isViewMode={isViewMode}
         setIsViewMode={setIsViewMode}
         loading={loading}
+        setOpenError={setOpenError}
+        setIsSuccessful={setIsSuccessful}
+        setAlertMessage={setAlertMessage}
       />
-
 
       <Dialog
         open={openError}

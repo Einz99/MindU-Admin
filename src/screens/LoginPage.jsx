@@ -129,9 +129,6 @@ export default function LoginScreen() {
 
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
-      setOpenError(true);
-      setIsSuccessful(false);
-      setAlertMessage(err.response?.data?.message || "Login failed");
       setErrorInput(true);
     }
   };

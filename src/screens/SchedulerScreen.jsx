@@ -9,7 +9,7 @@ import { useContext } from 'react';
 import { OpenContext } from '../contexts/OpenContext';
 import { Download, FilterAlt, Sort } from "@mui/icons-material";
 import { format } from "date-fns";
-import { IconButton } from "@mui/material";
+import { IconButton, Tooltip } from "@mui/material";
 
 /**
  * ===========================================
@@ -184,9 +184,15 @@ export default function Scheduler() {
     const filteredData = (backlogs || [])
       .filter((data) => {
         if (!data.sched_date || (tab === 0 && data.status === "Pending")) return false;
+        if (tab === 0 && data.student_id == null) return false;
+        if (tab === 1 && data.student_id != null) return false;
         if (filterType === 1 && data.status !== "Scheduled") return false;
         if (filterType === 2 && data.status !== "Cancelled") return false;
-        if (filterType === 3 && data.status !== "Completed") return false;
+        if (filterType === 3 && data.status !== "Missed") return false;
+        if (filterType === 4 && data.status !== "Completed") return false;
+        if (filterType === 5 && data.status !== "Trash") return false;
+        if (filterType === 6 && data.status !== "Pending") return false;
+        if (filterType === 7 && data.status !== "Denied") return false;
         return true;
       })
       .sort((a, b) => {
@@ -280,24 +286,27 @@ export default function Scheduler() {
                 </div>
                 <div className="flex items-center justify-center" style={{ height: '100%' }}>
                   <div className="flex gap-4">
-                    <IconButton
-                      className="z-50"
-                      onClick={handleDownload}
-                      sx={{
-                        color: '#64748b',
-                        '&:hover': {
-                          color: 'black',
-                        },
-                      }}
-                    >
-                      <Download 
-                        sx={{ 
-                          fontSize: '2rem',
-                          pointerEvents: 'none'  // Add this
-                        }} 
-                      />
-                    </IconButton>
+                    <Tooltip title={"Download"} arrow>
+                      <IconButton
+                        className="z-50"
+                        onClick={handleDownload}
+                        sx={{
+                          color: '#64748b',
+                          '&:hover': {
+                            color: 'black',
+                          },
+                        }}
+                      >
+                        <Download 
+                          sx={{ 
+                            fontSize: '2rem',
+                            pointerEvents: 'none'  // Add this
+                          }} 
+                        />
+                      </IconButton>
+                    </Tooltip>
                     <div className="relative">
+                      <Tooltip title={"Filter by Status"} arrow>
                       <IconButton
                         className="z-50"
                         onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
@@ -315,7 +324,7 @@ export default function Scheduler() {
                           }} 
                         />
                       </IconButton>
-                      
+                      </Tooltip>
                       {filterOpen && (
                         <div className="z-50">
                           <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
@@ -347,19 +356,20 @@ export default function Scheduler() {
                       )}
                     </div>
                     <div className="relative">
-                      <IconButton
-                        className="z-50"
-                        onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
-                        sx={{
-                          color: '#64748b',
-                          '&:hover': {
-                            color: 'black',
-                          },
-                        }}
-                      >
-                        <Sort sx={{ fontSize: 25 }} />
-                      </IconButton>
-                      
+                      <Tooltip title={"Sort"} arrow>
+                        <IconButton
+                          className="z-50"
+                          onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
+                          sx={{
+                            color: '#64748b',
+                            '&:hover': {
+                              color: 'black',
+                            },
+                          }}
+                        >
+                          <Sort sx={{ fontSize: 25 }} />
+                        </IconButton>
+                      </Tooltip>
                       {sortOpen && (
                         <div className="z-50">
                           <div className="absolute right-1 w-[5.903rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">

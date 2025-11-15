@@ -1,5 +1,5 @@
-import { Tabs, Tab, TextField } from "@mui/material";
-import { Search, Delete, UploadFile, Add } from "@mui/icons-material";
+import { Tabs, Tab, TextField, IconButton } from "@mui/material";
+import { Search, Delete, UploadFile, Add, FileDownload } from "@mui/icons-material";
 
 export default function UserTabs({ 
   tab, 
@@ -14,6 +14,8 @@ export default function UserTabs({
   setAlertMessage,
   setIsSuccessful,
   searchTerm,
+  students,
+  staffs,
 }) {
   const isAdviser = staff?.position === "Adviser";
   const isStaff = staff?.position === "Guidance Staff";
@@ -30,6 +32,86 @@ export default function UserTabs({
         { label: "Advisers" },
         { label: "Guidance Staffs" }
       ];
+
+  // ADD THESE HELPER FUNCTIONS HERE:
+  const convertToCSV = (data, headers) => {
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    data.forEach(row => {
+      const values = headers.map(header => {
+        const value = row[header] || '';
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+  };
+
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportToExcel = () => {
+    let formattedData = [];
+    let filename = '';
+    
+    if (tab === 0) {
+      formattedData = students.map(student => ({
+        Name: `${student.firstName} ${student.lastName}`,
+        Section: student.section,
+        Adviser: student.adviser,
+        Email: student.email
+      }));
+      filename = 'Students.csv';
+    } else if (tab === 1) {
+      const advisers = staffs.filter(s => s.position === "Adviser");
+      formattedData = advisers.map(adviser => ({
+        Name: adviser.name,
+        Position: adviser.position,
+        Section: adviser.section,
+        Email: adviser.email
+      }));
+      filename = 'Advisers.csv';
+    } else {
+      const guidanceStaffs = staffs.filter(
+        s => !(s.name === "Mind-U" && s.position !== "Admin") && s.position !== "Adviser"
+      );
+      formattedData = guidanceStaffs.map(staff => ({
+        Name: staff.name,
+        Position: staff.position,
+        Email: staff.email
+      }));
+      filename = 'Guidance_Staffs.csv';
+    }
+
+    if (formattedData.length === 0) {
+      setOpenError(true);
+      setIsSuccessful(false);
+      setAlertMessage('No data available for export.');
+      return;
+    }
+
+    const headers = Object.keys(formattedData[0]);
+    const csvContent = convertToCSV(formattedData, headers);
+    downloadCSV(csvContent, filename);
+    
+    setOpenError(true);
+    setIsSuccessful(true);
+    setAlertMessage('The file is downloaded successfully. Please check your downloads.');
+  };
       
   return (
     <div className="flex items-center justify-between w-full h-12 mb-5"> 
@@ -137,6 +219,23 @@ export default function UserTabs({
               marginLeft: '8px',
             }}/>
           </button>
+          <IconButton
+            className="z-50"
+            onClick={handleExportToExcel}
+            sx={{
+              color: '#64748b',
+              '&:hover': {
+                color: 'black',
+              },
+            }}
+          >
+            <FileDownload 
+              sx={{ 
+                fontSize: '2rem',
+                pointerEvents: 'none'
+              }} 
+            />
+          </IconButton>
         </div>
       </div>
     </div>

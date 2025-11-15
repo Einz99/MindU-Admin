@@ -73,13 +73,20 @@ export default function ContentDialog({
     setIsVideo(false);
     setPreview(null);
     setVideoPreview(null);
-    setIsRichText(null);
+    setIsRichText(false);
     setBannerFile(null);
     setArticleFile(null);
     setNewItem({});
-    setIsRichText(false);
     setShowSaveDialog(false);
-    setIsSaving(false); // Reset this too
+    setIsSaving(false);
+    // Reset additional state
+    setVideoPath("");
+    setBlob(null);
+    setEditorData(null);
+    setIsDraft(false);
+    setLoading(false);
+    setViewMode(false);
+    setIsAdd(true);
   };
 
   const hasUnsavedChanges = () => {
