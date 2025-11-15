@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { 
   AppBar, 
@@ -32,42 +31,22 @@ import {
   Logout,
   Close,
   ArrowBack,
+  Visibility,
+  VisibilityOff,
 } from "@mui/icons-material";
 import { Link, useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
-import { API, RootAPI } from "../api"; // Import the API URL from the api.js file
+import { API, RootAPI } from "../api";
 import axios from "axios";
 import io from "socket.io-client";
 import { useNavigate } from 'react-router-dom';
 
-// Sidebar menu items
 const menuItems = [
   { text: "Dashboard", icon: <Home />, link: "/landing-page" },
   { text: "Scheduler", icon: <CalendarToday />, link: "/scheduler" },
   { text: "Content Management", icon: <Folder />, link: "/content-management" },
   { text: "User Management", icon: <People />, link: "/user-management" },
 ];
-
-/**
- * Layout Component
- * 
- * This component serves as the main layout structure for the dashboard, containing:
- * - **Topbar**: A fixed AppBar at the top of the screen, used for global navigation and actions like notifications and alerts.
- * - **Sidebar**: A collapsible and scrollable navigation drawer, used to navigate between different sections like Home, Scheduler, Content Management, and User Management.
- * 
- * Props:
- * - `open` (boolean): Controls the open/close state of the sidebar.
- * - `onMenuClick` (function): A callback function to toggle the sidebar's open/close state when the menu button is clicked.
- * 
- * State:
- * - None (The `open` state is passed from the parent component).
- * 
- * Features:
- * - **Topbar**: Displays the app's title and icons for notifications and alerts.
- * - **Sidebar**: Contains navigation links with icons and text. The width of the sidebar adjusts based on whether it's open or collapsed.
- * - The sidebar is sticky and stays in place even when scrolling.
- * - The component uses Material-UI's `Drawer`, `AppBar`, and `List` components to structure the layout.
- */
 
 export default function Layout({ open, onMenuClick }) {
   const navigate = useNavigate();
@@ -94,47 +73,40 @@ export default function Layout({ open, onMenuClick }) {
   const [openError, setOpenError] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCurrentPasswordEmail, setShowCurrentPasswordEmail] = useState(false);
   const socketRef = useRef(null);
 
   useEffect(() => {
     if (openError) return;
-
     const timer = setTimeout(() => {
       setAlertMessage('');
       setIsSuccessful(false);
     }, 1000);
-
     return () => clearTimeout(timer);
   }, [openError]);
 
   useEffect(() => {
-    // Initialize socket connection
     if (!socketRef.current) {
       const newSocket = io(RootAPI);
       socketRef.current = newSocket;
-
       newSocket.on('connect', () => {
         console.log('✅ Layout connected to server:', newSocket.id);
       });
-
       newSocket.on('disconnect', () => {
         console.log('❌ Layout disconnected from server');
       });
-
-      // Listen for new help requests
       newSocket.on('new-help-request', () => {
         console.log('🆕 New help request received');
         setRobitBadge(prev => prev + 1);
       });
-
-      // Listen for completed help requests
       newSocket.on('help-request-completed', () => {
         console.log('✅ Help request completed');
         setRobitBadge(prev => Math.max(0, prev - 1));
       });
     }
-
-    // Cleanup on unmount
     return () => {
       if (socketRef.current) {
         socketRef.current.off('new-help-request');
@@ -153,7 +125,6 @@ export default function Layout({ open, onMenuClick }) {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
         });
-      
         const data = response.data;
         const hashedPassword = '#'.repeat(data.passwordLength);
         setStaff(data);
@@ -162,12 +133,8 @@ export default function Layout({ open, onMenuClick }) {
         setPassword(hashedPassword);
       } catch (error) {
         console.error("Error fetching staff data:", error);
-        
-        // Clear authentication data
         localStorage.removeItem("authToken");
         localStorage.removeItem("staff");
-        
-        // Redirect to login page using React Router
         navigate("/", { replace: true });
       }
     };
@@ -182,12 +149,10 @@ export default function Layout({ open, onMenuClick }) {
         console.error("Error fetching data:", error);
       }
     }
-  
     fetchStaffData();
     fetchLength();
   }, [staffData.id, navigate]);
-        
-  
+
   const handleCloseDrawer = () => {
     requestAnimationFrame(() => {
       if (document.activeElement) {
@@ -200,6 +165,8 @@ export default function Layout({ open, onMenuClick }) {
   const handleEmailDialogOpen = () => {
     setNewEmail(email);
     setEmailError(false);
+    setShowCurrentPasswordEmail(false);
+    setCurrentPassword("");
     setOpenEmailDialog(true);
   };
 
@@ -207,6 +174,8 @@ export default function Layout({ open, onMenuClick }) {
     setOpenEmailDialog(false);
     setNewEmail("");
     setEmailError(false);
+    setCurrentPassword("");
+    setShowCurrentPasswordEmail(false);
   };
 
   const handlePasswordDialogOpen = () => {
@@ -214,6 +183,9 @@ export default function Layout({ open, onMenuClick }) {
     setNewPassword("");
     setConfirmPassword("");
     setPasswordError(false);
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
     setOpenPasswordDialog(true);
   };
 
@@ -223,46 +195,31 @@ export default function Layout({ open, onMenuClick }) {
     setNewPassword("");
     setConfirmPassword("");
     setPasswordError(false);
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleNewEmailChange = (e) => {
     const inputEmail = e.target.value;
     setNewEmail(inputEmail);
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(inputEmail)) {
-      setEmailError(true);
-    } else {
-      setEmailError(false);
-    }
+    setEmailError(!emailRegex.test(inputEmail));
   };
 
   const handleNewPasswordChange = (e) => {
     const input = e.target.value;
     setNewPassword(input);
-
     const hasMinLength = input.length >= 10;
     const hasUppercase = /[A-Z]/.test(input);
     const hasLowercase = /[a-z]/.test(input);
-    const hasNumber    = /[0-9]/.test(input);
-    const hasSpecial   = /[!@#$%^&*(),.?":{}|<>]/.test(input);
-
+    const hasNumber = /[0-9]/.test(input);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(input);
     const isValid = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecial;
     setPasswordError(!isValid);
   };
 
-  const handleCurrentPasswordChange = (e) => {
-    const inputCurrentPassword = e.target.value;
-    setCurrentPassword(inputCurrentPassword);
-  }
-
-  const handleConfirmPasswordChange = (e) => {
-    const inputConfirmPassword = e.target.value;
-    setConfirmPassword(inputConfirmPassword);
-  }
-
   const handleLogout = () => {
-    // Clear local storage and redirect to login page
     localStorage.removeItem("staff");
     localStorage.removeItem("authToken");
     window.location.href = "/";
@@ -295,7 +252,6 @@ export default function Layout({ open, onMenuClick }) {
         setOpenError(true);
         return;
       }
-
       const token = localStorage.getItem("authToken");
       const config = {
         headers: {
@@ -303,15 +259,12 @@ export default function Layout({ open, onMenuClick }) {
           "Content-Type": "application/json",
         },
       };
-
-      // Sending currentPassword along with the email for validation
-      await axios.put(`${API}/staffs/email/${staffData.id}`, 
-        { email: newEmail, currentPassword }, config
-      );
-
+      await axios.put(`${API}/staffs/email/${staffData.id}`, { email: newEmail, currentPassword }, config);
       setEmail(newEmail);
       setDisplayEmail(newEmail);
       setOpenEmailDialog(false);
+      setCurrentPassword("");
+      setShowCurrentPasswordEmail(false);
       setAlertMessage("Email changed successfully!");
       setIsSuccessful(true);
       setOpenError(true);
@@ -331,21 +284,18 @@ export default function Layout({ open, onMenuClick }) {
         setOpenError(true);
         return;
       }
-
       if (newPassword !== confirmPassword) {
         setAlertMessage("New passwords do not match.");
         setIsSuccessful(false);
         setOpenError(true);
         return;
       }
-
       if (passwordError) {
         setAlertMessage("Password must have:\n• At least 10 characters\n• Special character (e.g., !@#$%^&*)\n• At least one uppercase and lowercase letter\n• At least one number");
         setIsSuccessful(false);
         setOpenError(true);
         return;
       }
-
       const token = localStorage.getItem("authToken");
       const config = {
         headers: {
@@ -353,12 +303,10 @@ export default function Layout({ open, onMenuClick }) {
           "Content-Type": "application/json",
         },
       };
-
       await axios.put(`${API}/staffs/password/${staffData.id}`, {
         currentPassword,
         newPassword: newPassword,
       }, config);
-
       const hashedPassword = '#'.repeat(newPassword.length);
       setPassword(hashedPassword);
       setOpenPasswordDialog(false);
@@ -381,23 +329,19 @@ export default function Layout({ open, onMenuClick }) {
         setOpenError(true);
         return;
       }
-
       const token = localStorage.getItem("authToken");
       const formData = new FormData();
       formData.append("picture", selectedFile);
-
       const response = await axios.put(`${API}/staffs/picture/${staffData.id}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
       const updatedPicturePath = `${response.data.data.picturePath}`;
       setStaff((prevStaff) => ({
         ...prevStaff,
         picture: updatedPicturePath,
       }));
-
       setOpenPictureDialog(false);
       setPreviewImage(null);
       setSelectedFile(null);
@@ -414,15 +358,11 @@ export default function Layout({ open, onMenuClick }) {
 
   return (
     <div>
-      {/* Topbar */}
       <AppBar position="fixed" sx={{ backgroundColor: "#1E3A8A", boxShadow: 1 }}>
         <Toolbar className="h-20 flex justify-between items-center">
           <div className="flex gap-2 align-middle">
             <img src={"/MIND U WEB Icon.png"} alt="Logo" className="w-12 h-12"/>
-            <Typography
-              variant="h6"
-              className="flex items-center justify-center"
-            >
+            <Typography variant="h6" className="flex items-center justify-center">
               <span className="text-3xl font-norwester">MIND U</span>
             </Typography>
           </div>
@@ -442,12 +382,11 @@ export default function Layout({ open, onMenuClick }) {
               <p className="text-base text-[#f8fafc] font-bold">{staff.position}{staff.section && ` - ${staff.section}`}</p>
             </div>
             <div className="w-0.5 h-8 bg-white my-auto"></div>
-            <img src={staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"}   alt="Profile" className="w-10 h-10 rounded-full my-auto cursor-pointer" onClick={() => setOpenProfile(true)}/>
+            <img src={staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full my-auto cursor-pointer" onClick={() => setOpenProfile(true)}/>
           </div>
         </Toolbar>
       </AppBar>
 
-      {/* Sidebar */}
       <Drawer
         variant="permanent"
         open={open}
@@ -475,8 +414,7 @@ export default function Layout({ open, onMenuClick }) {
                 <ArrowBack className="text-white"/>
               </IconButton>
             </Link>
-          ) : 
-          open ? (
+          ) : open ? (
             <IconButton color="inherit" edge="start" onClick={onMenuClick}>
               <ArrowBack className="text-white"/>
             </IconButton>
@@ -489,9 +427,7 @@ export default function Layout({ open, onMenuClick }) {
         <Box className="flex flex-col w-full gap-4">
           <List className="w-full flex flex-col gap-4">
             {menuItems.map((item, index) => ((
-              (index === 0) ||   
-              ((index === 2 || index === 1) && staffData.position !== "Adviser") || 
-              (index === 3)) && (
+              (index === 0) || ((index === 2 || index === 1) && staffData.position !== "Adviser") || (index === 3)) && (
               <ListItem key={index} disablePadding className="w-full">
                 <ListItemButton
                   component={Link}
@@ -514,20 +450,13 @@ export default function Layout({ open, onMenuClick }) {
         </Box>
       </Drawer>
 
-      {/* Profile Sidebar */}
       <Drawer
         anchor="right"
         variant="temporary"
         open={openProfile}
         onClose={handleCloseDrawer}
-        ModalProps={{
-          keepMounted: true, // ✅ prevents unmount flicker
-        }}
-        BackdropProps={{
-          sx: {
-            backgroundColor: "#1E3A8AA0",
-          },
-        }}
+        ModalProps={{ keepMounted: true }}
+        BackdropProps={{ sx: { backgroundColor: "#1E3A8AA0" }}}
         sx={{
           "& .MuiDrawer-paper": {
             backgroundColor: "#1E3A8A",
@@ -544,10 +473,7 @@ export default function Layout({ open, onMenuClick }) {
       >
         <div className="flex flex-col items-center h-full gap-4 relative">
           <div className="relative w-full py-4 text-white text-3xl font-bold">
-            <IconButton
-              className="!absolute left-4 top-1/2 -translate-y-1/2"
-              onClick={handleCloseDrawer}
-            >
+            <IconButton className="!absolute left-4 top-1/2 -translate-y-1/2" onClick={handleCloseDrawer}>
               <NavigateBefore sx={{ color: "white", fontSize: 50 }} />
             </IconButton>
             <p className="text-center">PROFILE SETTINGS</p>
@@ -563,7 +489,6 @@ export default function Layout({ open, onMenuClick }) {
                 <PhotoCamera className="text-white bg-[#60a5fa] rounded-full p-2" sx={{fontSize: 40}} />
               </IconButton>
             </Tooltip>
-            
           </div>
           <div className="text-center">
             <p className="font-bold text-4xl text-white">{staff.name}</p>
@@ -612,20 +537,7 @@ export default function Layout({ open, onMenuClick }) {
         </div>
       </Drawer>
 
-      {/* Email Change Dialog */}
-      <Dialog
-        open={openEmailDialog}
-        onClose={handleEmailDialogClose}
-        maxWidth="sm"
-        fullWidth 
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: "white",
-            color: "#000",
-            borderRadius: "25px",
-          },
-        }}
-      >
+      <Dialog open={openEmailDialog} onClose={handleEmailDialogClose} maxWidth="sm" fullWidth sx={{ "& .MuiPaper-root": { backgroundColor: "white", color: "#000", borderRadius: "25px" }}}>
         <DialogTitle className="bg-[#b7cde3] relative">
           <p className="font-bold">Change Email</p>
           <DialogActions className="absolute -top-1 right-0">
@@ -635,71 +547,42 @@ export default function Layout({ open, onMenuClick }) {
           </DialogActions>
         </DialogTitle>
         <DialogContent className="my-5">
-          <Typography variant="body1" className="mt-4 mb-4">
-            Enter your new email address:
-          </Typography>
+          <Typography variant="body1" className="mt-4 mb-4">Enter your new email address:</Typography>
           <input 
             type="email" 
-            className={`w-full h-10 border ${
-              emailError ? "border-red-700" : "border-[#60a5fa]"
-            } text-black placeholder-gray-400 focus:outline-none p-2 rounded-md mb-4`}
+            className={`w-full h-10 border ${emailError ? "border-red-700" : "border-[#60a5fa]"} text-black placeholder-gray-400 focus:outline-none p-2 rounded-md mb-4`}
             placeholder="New Email" 
             value={newEmail} 
             onChange={handleNewEmailChange}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSaveEmail();
-              }
-            }}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSaveEmail(); }}
           />
-          <Typography variant="body1" className="mt-4 mb-4">
-            Enter your current password to confirm changes
-          </Typography>
-          <input 
-            type="password" 
-            className="w-full h-10 border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md" 
-            placeholder="Current Password" 
-            value={currentPassword} 
-            onChange={handleCurrentPasswordChange}
-          />
-          {emailError && (
-            <Typography variant="caption" className="text-red-700 mt-2">
-              Please enter a valid email address
-            </Typography>
-          )}
+          <Typography variant="body1" className="mt-4 mb-4">Enter your current password to confirm changes</Typography>
+          <div className="relative">
+            <input 
+              type={showCurrentPasswordEmail ? "text" : "password"}
+              className="w-full h-10 border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 pr-10 rounded-md" 
+              placeholder="Current Password" 
+              value={currentPassword} 
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSaveEmail(); }}
+            />
+            <IconButton onClick={() => setShowCurrentPasswordEmail(!showCurrentPasswordEmail)} className="!absolute right-1 top-1/2 -translate-y-1/2" size="small">
+              {showCurrentPasswordEmail ? <VisibilityOff /> : <Visibility />}
+            </IconButton>
+          </div>
+          {emailError && <Typography variant="caption" className="text-red-700 mt-2">Please enter a valid email address</Typography>}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleEmailDialogClose}>
             <p className="text-base font-roboto font-bold text-[#64748b] p-2">Cancel</p>
           </Button>
-          <Button 
-            onClick={handleSaveEmail} 
-            sx={{
-              paddingX: "3rem",
-              bgcolor: "#60a5fa",
-              color: "white",
-              borderRadius: "100px",
-            }}
-          >
+          <Button onClick={handleSaveEmail} sx={{ paddingX: "3rem", bgcolor: "#60a5fa", color: "white", borderRadius: "100px" }}>
             <p className="font-bold">Confirm</p>
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Password Change Dialog */}
-      <Dialog
-        open={openPasswordDialog}
-        onClose={handlePasswordDialogClose}
-        maxWidth="sm"
-        fullWidth 
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: "white",
-            color: "#000",
-            borderRadius: "25px",
-          },
-        }}
-      >
+      <Dialog open={openPasswordDialog} onClose={handlePasswordDialogClose} maxWidth="sm" fullWidth sx={{ "& .MuiPaper-root": { backgroundColor: "white", color: "#000", borderRadius: "25px" }}}>
         <DialogTitle className="bg-[#b7cde3] relative">
           <p className="font-bold">Change Password</p>
           <DialogActions className="absolute -top-1 right-0">
@@ -709,203 +592,123 @@ export default function Layout({ open, onMenuClick }) {
           </DialogActions>
         </DialogTitle>
         <DialogContent className="my-5">
-          <Typography variant="body1" className="text-center mt-4 mb-4">
-            Are you sure you want to change your password?
-          </Typography>
-          <input 
-            type="password" 
-            className="w-full h-10 border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md mt-4" 
-            placeholder="Current Password" 
-            value={currentPassword} 
-            onChange={handleCurrentPasswordChange}
-          />
-          <input 
-            type="password" 
-            className={`w-full h-10 border ${
-              passwordError ? "border-red-700" : "border-[#60a5fa]"
-            } text-black placeholder-gray-400 focus:outline-none p-2 rounded-md mt-4`}
-            placeholder="New Password" 
-            value={newPassword} 
-            onChange={handleNewPasswordChange}
-          />
-          <input 
-            type="password" 
-            className="w-full h-10 border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 rounded-md mt-4" 
-            placeholder="Confirm New Password" 
-            value={confirmPassword} 
-            onChange={handleConfirmPasswordChange}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSavePassword();
-              }
-            }}
-          />
-          {passwordError && (
-            <Typography variant="caption" className="text-red-700 mt-2 block">
-              Password must have at least 10 characters, one uppercase, one lowercase, one number, and one special character
-            </Typography>
-          )}
+          <Typography variant="body1" className="text-center mt-4 mb-4">Are you sure you want to change your password?</Typography>
+          <div className="relative">
+            <input 
+              type={showCurrentPassword ? "text" : "password"}
+              className="w-full h-10 border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 pr-10 rounded-md mt-4" 
+              placeholder="Current Password" 
+              value={currentPassword} 
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+            <IconButton onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="!absolute right-1 top-1/2 -translate-y-1/2" size="small">
+              {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+            </IconButton>
+          </div>
+          <div className="relative">
+            <input 
+              type={showNewPassword ? "text" : "password"}
+              className={`w-full h-10 border ${passwordError ? "border-red-700" : "border-[#60a5fa]"} text-black placeholder-gray-400 focus:outline-none p-2 pr-10 rounded-md mt-4`}
+              placeholder="New Password" 
+              value={newPassword} 
+              onChange={handleNewPasswordChange}
+            />
+            <IconButton onClick={() => setShowNewPassword(!showNewPassword)} className="!absolute right-1 top-1/2 -translate-y-1/2" size="small">
+              {showNewPassword ? <VisibilityOff /> : <Visibility />}
+            </IconButton>
+          </div>
+          <div className="relative">
+            <input 
+              type={showConfirmPassword ? "text" : "password"}
+              className="w-full h-10 border text-black placeholder-gray-400 focus:outline-none border-[#60a5fa] p-2 pr-10 rounded-md mt-4" 
+              placeholder="Confirm New Password" 
+              value={confirmPassword} 
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSavePassword(); }}
+            />
+            <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="!absolute right-1 top-1/2 -translate-y-1/2" size="small">
+              {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+            </IconButton>
+          </div>
+          {passwordError && <Typography variant="caption" className="text-red-700 mt-2 block">Password must have at least 10 characters, one uppercase, one lowercase, one number, and one special character</Typography>}
         </DialogContent>
         <DialogActions>
           <Button onClick={handlePasswordDialogClose}>
             <p className="text-base font-roboto font-bold text-[#64748b] p-2">Cancel</p>
           </Button>
-          <Button 
-            onClick={handleSavePassword} 
-            sx={{
-              paddingX: "3rem",
-              bgcolor: "#60a5fa",
-              color: "white",
-              borderRadius: "100px",
-            }}
-          >
+          <Button onClick={handleSavePassword} sx={{ paddingX: "3rem", bgcolor: "#60a5fa", color: "white", borderRadius: "100px" }}>
             <p>Save Password</p>
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Picture Change Dialog */}
-      <Dialog
-        open={openPictureDialog}
-        onClose={() => {
-          setOpenPictureDialog(false);
-          setPreviewImage(null);
-          setSelectedFile(null);
-        }}
-        maxWidth="sm"
-        fullWidth 
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: "white",
-            color: "#000",
-            borderRadius: "25px",
-          },
-        }}
-      >
+      <Dialog open={openPictureDialog} onClose={() => { setOpenPictureDialog(false); setPreviewImage(null); setSelectedFile(null); }} maxWidth="sm" fullWidth sx={{ "& .MuiPaper-root": { backgroundColor: "white", color: "#000", borderRadius: "25px" }}}>
         <DialogTitle className="bg-[#b7cde3] relative">
           <p className="font-bold">Change Profile Picture</p>
           <DialogActions className="absolute -top-1 right-0">
-            <IconButton onClick={() => {
-              setOpenPictureDialog(false);
-              setPreviewImage(null);
-              setSelectedFile(null);
-            }} className="rounded-full">
+            <IconButton onClick={() => { setOpenPictureDialog(false); setPreviewImage(null); setSelectedFile(null); }} className="rounded-full">
               <Close sx={{ fontSize: 40, color: 'black' }}></Close>
             </IconButton>
           </DialogActions>
         </DialogTitle>
         <DialogContent className="my-5">
-          <Typography variant="body1" className="text-center mt-4 mb-4">
-            Are you sure you want to change your profile picture?
-          </Typography>
+          <Typography variant="body1" className="text-center mt-4 mb-4">Are you sure you want to change your profile picture?</Typography>
           {previewImage && (
             <div className="flex justify-center">
-              <img 
-                src={previewImage} 
-                alt="Preview" 
-                className="w-40 h-40 rounded-full object-cover border-4 border-[#60a5fa]" 
-              />
+              <img src={previewImage} alt="Preview" className="w-40 h-40 rounded-full object-cover border-4 border-[#60a5fa]" />
             </div>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => {
-            setOpenPictureDialog(false);
-            setPreviewImage(null);
-            setSelectedFile(null);
-          }}>
+          <Button onClick={() => { setOpenPictureDialog(false); setPreviewImage(null); setSelectedFile(null); }}>
             <p className="text-base font-roboto font-bold text-[#64748b] p-2">Cancel</p>
           </Button>
-          <Button 
-            onClick={handleSavePicture} 
-            sx={{
-              paddingX: "3rem",
-              bgcolor: "#60a5fa",
-              color: "white",
-              borderRadius: "100px",
-            }}
-          >
+          <Button onClick={handleSavePicture} sx={{ paddingX: "3rem", bgcolor: "#60a5fa", color: "white", borderRadius: "100px" }}>
             <p>Save Picture</p>
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={openError}
-        onClose={() => {setOpenError(false);}}
-        fullWidth
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: "white",
-            color: "#000",
-            borderRadius: "25px",
-          },
-        }}
-        maxWidth="xs"
-      >
+      <Dialog open={openError} onClose={() => setOpenError(false)} fullWidth sx={{ "& .MuiPaper-root": { backgroundColor: "white", color: "#000", borderRadius: "25px" }}} maxWidth="xs">
         <DialogTitle className={`${isSuccessful ? "bg-[#b7e3cc]" : "bg-[#e3b7b7]"} relative`}>
           <p className="font-bold">{isSuccessful ? "Successful" : "Error"}</p>
           <DialogActions className="absolute -top-1 right-0">
-            <IconButton onClick={() => {setOpenError(false);}} className="rounded-full">
+            <IconButton onClick={() => setOpenError(false)} className="rounded-full">
               <Close sx={{ fontSize: 40, color: "black" }} />
             </IconButton>
           </DialogActions>
         </DialogTitle>
-        
         <DialogContent className="text-center text-base py-6 px-10 mt-2">
           <p className="font-roboto font-medium text-xl">{alertMessage}</p>
         </DialogContent>
         <DialogActions>
-          <button onClick={() => {setOpenError(false);}}>
+          <button onClick={() => setOpenError(false)}>
             <p className="text-base font-roboto font-bold text-[#64748b] p-2 px-6">OK</p>
           </button>
         </DialogActions>
       </Dialog>
       
-      {/* Logout Dialog */}
-      <Dialog
-        open={openLogoutDialog}
-        onClose={() => setOpenLogoutDialog(false)}
-        maxWidth="xs"
-        fullWidth
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: "white",
-            color: "#000",
-            borderRadius: "25px",
-          },
-        }}
-      >
+      <Dialog open={openLogoutDialog} onClose={() => setOpenLogoutDialog(false)} maxWidth="xs" fullWidth sx={{ "& .MuiPaper-root": { backgroundColor: "white", color: "#000", borderRadius: "25px" }}}>
         <DialogTitle className="bg-[#ef4444] relative">
           <p className="font-bold">Confirm Logout</p>
           <DialogActions className="absolute -top-1 right-0">
-            <IconButton onClick={() => setOpenLogoutDialog(false)} className="rounded-full ">
+            <IconButton onClick={() => setOpenLogoutDialog(false)} className="rounded-full">
               <Close sx={{ fontSize: 40, color: 'black' }}></Close>
             </IconButton>
           </DialogActions>
         </DialogTitle>
-        <dialogContent className="my-5">
-          <Typography variant="body1" className="text-center mt-4">
-            Are you sure you want to log out?
-          </Typography>
-        </dialogContent>
+        <DialogContent className="my-5">
+          <Typography variant="body1" className="text-center mt-4">Are you sure you want to log out?</Typography>
+        </DialogContent>
         <DialogActions>
-            <Button onClick={() => setOpenLogoutDialog(false)}>
-              <p className="text-base font-roboto font-bold text-[#64748b] p-2">Back</p>
-            </Button>
-            <Button 
-              onClick={handleLogout} 
-              sx={{
-                paddingX: "3rem",
-                bgcolor: "#ef4444",
-                color: "white",
-                borderRadius: "100px",
-              }}
-            >
-              <Logout className="text-white" style={{ fontSize: 25 }} />
-              <p className="font-bold text-lg">LOG OUT</p>
-            </Button>
-          </DialogActions>
+          <Button onClick={() => setOpenLogoutDialog(false)}>
+            <p className="text-base font-roboto font-bold text-[#64748b] p-2">Back</p>
+          </Button>
+          <Button onClick={handleLogout} sx={{ paddingX: "3rem", bgcolor: "#ef4444", color: "white", borderRadius: "100px" }}>
+            <Logout className="text-white" style={{ fontSize: 25 }} />
+            <p className="font-bold text-lg">LOG OUT</p>
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );

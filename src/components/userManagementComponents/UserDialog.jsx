@@ -144,6 +144,7 @@ const UserDialog = ({
   
     handleBulkUpload(trimmedData, columnHeaders);
     setBulkUploadOpen(false);
+    setData([]);
   };
 
   const handleFileUpload = (e) => {
@@ -894,7 +895,7 @@ const UserDialog = ({
         </DialogTitle>
         <DialogContent>
           <div className="justify-center align-middle text-center">
-            <p className="font-bold my-5">Are you sure you want to delete the following {tab === 0 ? "student" : "staff"} ?</p>
+            <p className="font-bold my-5">Are you sure you want to delete the following {tab === 0 ? "student/s" : "staff/s"} ?</p>
             {checked.map((id) => {
               const item = tab === 0 
                 ? students.find(s => s.id === id)
@@ -913,7 +914,7 @@ const UserDialog = ({
             <p className="text-base font-roboto font-bold text-[#64748b] p-2">Cancel</p>
           </Button>
           <Button onClick={handleBulkDelete} disabled={loading}>
-            <p className="text-base bg-[#ef4444] py-2 px-4 text-white rounded-full">{loading ? "Deleting..." : `Delete ${tab === 0 ? "Student/s" : "Staff/s"}`}</p>
+            <p className="text-base bg-[#ef4444] py-2 px-4 text-white rounded-full">{loading ? "Deleting..." : "Delete"}</p>
           </Button>
         </DialogActions>
       </Dialog>
