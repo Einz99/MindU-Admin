@@ -442,7 +442,7 @@ export default function Layout({ open, onMenuClick }) {
               <p className="text-base text-[#f8fafc] font-bold">{staff.position}{staff.section && ` - ${staff.section}`}</p>
             </div>
             <div className="w-0.5 h-8 bg-white my-auto"></div>
-            <img src={staff.picture ? `${RootAPI}/resources/profile_pics/${staff.picture}` : "/defaultProfile.png"}   alt="Profile" className="w-10 h-10 rounded-full my-auto cursor-pointer" onClick={() => setOpenProfile(true)}/>
+            <img src={staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"}   alt="Profile" className="w-10 h-10 rounded-full my-auto cursor-pointer" onClick={() => setOpenProfile(true)}/>
           </div>
         </Toolbar>
       </AppBar>
@@ -554,7 +554,7 @@ export default function Layout({ open, onMenuClick }) {
           </div>
           <div className="w-60 aspect-square rounded-full border-4 border-[#60a5fa] relative mb-14 max-w-[40%]">
             <img 
-              src={previewImage ? previewImage : staff.picture ? `${RootAPI}/resources/profile_pics/${staff.picture}` : "/defaultProfile.png"} 
+              src={previewImage ? previewImage : staff.picture ? `${RootAPI}${staff.picture}` : "/defaultProfile.png"} 
               alt="Profile" 
               className="w-full h-full rounded-full object-cover" 
             />

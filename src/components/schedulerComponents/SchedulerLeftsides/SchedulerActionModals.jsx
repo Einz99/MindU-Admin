@@ -67,7 +67,7 @@ export default function SchedulerActionModals({
     const loadProposalContent = async () => {
       if (isProposal && selectedData && selectedData.proposal) {
         try {
-          const response = await axios.get(`${RootAPI}/public/${selectedData.proposal}`, {
+          const response = await axios.get(`${RootAPI}${selectedData.proposal}`, {
             responseType: 'text',
           });
           setEditorData(response.data);
