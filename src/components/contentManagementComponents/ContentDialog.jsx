@@ -956,7 +956,11 @@ export default function ContentDialog({
               </div>
               
               <div className="flex flex-row mt-4">
-                {tab !== 2 && (
+                {tab === 1 ? (
+                  <div className="w-[50%] p-4 border-r-2">
+                    <p className="text-center my-auto">"This guide helps students learn relaxation strategies to support and enhance their mental health and overall well-being."</p>
+                  </div>
+                ) : tab === 0 ? (
                   <div className="w-[50%] p-4 border-r-2">
                     <h1 className="text-3xl text-[#737373] font-normal">
                       {isVideo ? "Thumbnail" : "Banner"}
@@ -1003,7 +1007,7 @@ export default function ContentDialog({
                       />
                     </Box>
                   </div>
-                )}
+                ) : null}
 
                 {tab !== 2 && (
                   <div className="w-[50%] p-4">

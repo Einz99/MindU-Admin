@@ -34,8 +34,8 @@ export default function SchedulerTable({ initial, handleOpen, searchTerm, tab, f
         if (searchTerm && data.name && !data.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
         if (!data.sched_date || (tab === 0 && data.status === "Pending")) return false;
 
-        if (tab === 0 && data.student_id == null) return false;
-        if (tab === 1 && data.student_id != null) return false;
+        if (tab === 0 && data.student_id != null) return false;
+        if (tab === 1 && !data.proposal) return false;
         if (filterType === 1 && data.status !== "Scheduled") return false;
         if (filterType === 2 && data.status !== "Cancelled") return false;
         if (filterType === 3 && data.status !== "Missed") return false;

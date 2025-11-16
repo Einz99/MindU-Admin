@@ -552,7 +552,7 @@ useEffect(() => {
                 {isViewOnly && (
                   <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg mb-2 flex items-center gap-2">
                     <Visibility />
-                    <p className="font-semibold">View Only - This chat is being handled by another guidance staff</p>
+                    <p className="font-semibold">View Only</p>
                   </div>
                 )}
 
@@ -637,9 +637,15 @@ useEffect(() => {
                       className={`flex-grow rounded-full bg-[#1e3a8a] px-4 py-2 text-white placeholder-gray-300 ${
                         isViewOnly ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
-                      placeholder={(chatData[selected].status === 'on-going' && !isViewOnly) ? "View only mode - Cannot send messages" : "Type your message..."}
+                      placeholder={
+                        isViewOnly 
+                          ? "View only mode - Cannot send messages" 
+                          : chatData[selected].status === 'pending'
+                            ? "Accept the chat to start messaging..."
+                            : "Type your message..."
+                      }
                       autoComplete="off"
-                      disabled={isViewOnly}
+                      disabled={isViewOnly || chatData[selected].status === 'pending'}
                     />
                     <button 
                       type="submit" 

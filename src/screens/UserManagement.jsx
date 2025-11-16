@@ -386,7 +386,7 @@ export default function DashboardLayout() {
         return;
       }
       setLoading(true);
-      const dataToUpload = spreadsheetData.slice(1); // Skip guide row
+      const dataToUpload = spreadsheetData; // Skip guide row
     
       const keyMap = tab === 0 ? {
         "Email": "email",
@@ -414,6 +414,7 @@ export default function DashboardLayout() {
         setAlertMessage('There is no data to be uploaded.');
         setIsSuccessful(false);
         setOpenError(true);
+        setLoading(false);
         return;
       }
     
@@ -428,26 +429,34 @@ export default function DashboardLayout() {
       const result = response.data;
     
       if (response.status === 200) {
-        setAlertMessage(`${tab === 0 ? "Students" : "Advisers"} uploaded successfully. ${result.skipped || ""}`);
-        setIsSuccessful(true);
+        // Check if there were any errors
+        if (result.errors && result.errors.length > 0) {
+          // Format errors for display
+          const errorReport = result.errors.join('\n');
+          setAlertMessage(
+            `Bulk Upload Report:\n\n` +
+            `✓ Successfully added: ${result.insertedCount || 0} ${tab === 0 ? 'students' : 'advisers'}\n` +
+            `✗ Failed rows: ${result.errors.length}\n\n` +
+            `Errors:\n${errorReport}`
+          );
+          setIsSuccessful(result.insertedCount > 0); // Partial success
+        } else {
+          setAlertMessage(
+            `Successfully added ${result.insertedCount} ${tab === 0 ? 'students' : 'advisers'}`
+          );
+          setIsSuccessful(true);
+        }
         setOpenError(true);
-        setAlertMessage(`Successfully Added ${tab === 0 ? "Students" : tab === 1 ? "Advisers" : "Guidance Staffs"}`);
-        setIsSuccessful(true);
-        setOpenError(true);
-        setLoading(false);
-        setReloadKey(prev => prev + 1);
+
+        // Refresh data
         if (tab === 0) {
           const updatedStudents = await axios.get(`${API}/students`);
           setStudents(updatedStudents.data);
-          setLoading(false);
-          setReloadKey(prev => prev + 1);
         } else {
           const updatedStaff = await axios.get(`${API}/staffs`);
           setStaffs(updatedStaff.data);
-          setLoading(false);
-          setReloadKey(prev => prev + 1);
         }
-      
+
         setLoading(false);
         setReloadKey(prev => prev + 1);
       } else {
@@ -455,15 +464,23 @@ export default function DashboardLayout() {
         setIsSuccessful(false);
         setOpenError(true);
         setLoading(false);
-        setReloadKey(prev => prev + 1);
       }
     } catch (error) {
       console.error("Bulk upload failed:", error.response?.data || error.message);
-      setAlertMessage("Server error occurred. Try again later.");
+
+      // Handle validation errors from backend
+      if (error.response?.data?.errors) {
+        const errorReport = error.response.data.errors.join('\n');
+        setAlertMessage(
+          `Bulk Upload Failed:\n\n${errorReport}`
+        );
+      } else {
+        setAlertMessage(error.response?.data?.message || "Server error occurred. Try again later.");
+      }
+
       setIsSuccessful(false);
       setOpenError(true);
       setLoading(false);
-      setReloadKey(prev => prev + 1);
     }
   };
 
@@ -616,7 +633,9 @@ export default function DashboardLayout() {
         </DialogTitle>
         
         <DialogContent className="text-center text-base py-6 px-10 mt-2">
-          <p className="font-roboto font-medium text-xl">{alertMessage}</p>
+          <p className="font-roboto font-medium text-xl" style={{ whiteSpace: 'pre-wrap' }}>
+            {alertMessage}
+          </p>
         </DialogContent>
         <DialogActions>
           <button onClick={() => {setOpenError(false);}}>

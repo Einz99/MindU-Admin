@@ -292,7 +292,7 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
         return (
           <>
             <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.resourceType}</p></TableCell>
-            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.description ? item.description : "No Description Available"}</p></TableCell>
+            <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.description ? item.description : ""}</p></TableCell>
             <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{item.status}</p></TableCell>
             <TableCell className="p-3 font-bold text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.posted_at)}</p></TableCell>
             <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}><p className="text-center">{formatDate(item.created_at)}</p></TableCell>

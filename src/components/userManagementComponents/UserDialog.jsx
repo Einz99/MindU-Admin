@@ -103,6 +103,24 @@ const UserDialog = ({
     }
   };
 
+  const validateName = (name) => {
+    // Only letters, spaces, hyphens, and apostrophes allowed
+    const nameRegex = /^[a-zA-Z\s\-']+$/;
+    return nameRegex.test(name) && name.trim().length > 0;
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const checkDuplicateEmail = (email, existingData, currentId = null) => {
+    return existingData.some(item => 
+      item.email.toLowerCase() === email.toLowerCase() && 
+      item.id !== currentId
+    );
+  };
+
   const validateTable = (tableData) => {
     let valid = true;
   
@@ -132,17 +150,118 @@ const UserDialog = ({
     setIsTableValid(valid);
   };
 
+  // Update the handleConfirmUpload function
   const handleConfirmUpload = () => {
-    const trimmedData = data.filter(row => row.some(cell => cell && cell.trim() !== "")); 
-  
+    const trimmedData = data.filter(row => Array.isArray(row) && row.some(cell => cell && cell.trim() !== "")); 
+
     if (trimmedData.length === 0) {
       setAlertMessage("No valid data to upload.");
       setIsSuccessful(false);
       setOpenError(true);
       return;
     }
-  
-    handleBulkUpload(trimmedData, columnHeaders);
+
+    // Validate bulk data
+    const errors = [];
+    const validRows = [];
+    const existingEmails = new Set(
+      (tab === 0 ? students : staffs).map(item => item.email.toLowerCase())
+    );
+    const uploadEmails = new Set();
+
+    trimmedData.forEach((row, index) => {
+      const rowNumber = index + 1;
+      const rowErrors = [];
+
+      if (tab === 0) {
+        // Student validation
+        const [email, firstName, lastName, section] = row;
+
+        // Validate email
+        if (!email || !validateEmail(email)) {
+          rowErrors.push(`Invalid email format`);
+        } else {
+          const emailLower = email.toLowerCase();
+          if (existingEmails.has(emailLower)) {
+            rowErrors.push(`Email already exists in the system`);
+          } else if (uploadEmails.has(emailLower)) {
+            rowErrors.push(`Duplicate email in upload`);
+          } else {
+            uploadEmails.add(emailLower);
+          }
+        }
+
+        // Validate first name
+        if (!firstName || !validateName(firstName)) {
+          rowErrors.push(`Invalid first name (only letters, spaces, hyphens, apostrophes allowed)`);
+        }
+
+        // Validate last name
+        if (!lastName || !validateName(lastName)) {
+          rowErrors.push(`Invalid last name (only letters, spaces, hyphens, apostrophes allowed)`);
+        }
+
+        // Validate section exists
+        if (!section) {
+          rowErrors.push(`Section is required`);
+        } else {
+          const sectionExists = filteredAdvisers.some(adviser => adviser.section === section);
+          if (!sectionExists) {
+            rowErrors.push(`Section "${section}" does not exist`);
+          }
+        }
+      } else {
+        // Adviser validation
+        const [email, name, section] = row;
+
+        // Validate email
+        if (!email || !validateEmail(email)) {
+          rowErrors.push(`Invalid email format`);
+        } else {
+          const emailLower = email.toLowerCase();
+          if (existingEmails.has(emailLower)) {
+            rowErrors.push(`Email already exists in database`);
+          } else if (uploadEmails.has(emailLower)) {
+            rowErrors.push(`Duplicate email in upload`);
+          } else {
+            uploadEmails.add(emailLower);
+          }
+        }
+
+        // Validate name
+        if (!name || !validateName(name)) {
+          rowErrors.push(`Invalid name (only letters, spaces, hyphens, apostrophes allowed)`);
+        }
+
+        // Validate section
+        if (!section) {
+          rowErrors.push(`Section is required for advisers`);
+        }
+      }
+
+      if (rowErrors.length > 0) {
+        errors.push(`Row ${rowNumber}: ${rowErrors.join(', ')}`);
+      } else {
+        validRows.push(row);
+      }
+    });
+
+    if (errors.length > 0) {
+      const errorMessage = `Bulk upload failed:\n\n${errors.join('\n')}`;
+      setAlertMessage(errorMessage);
+      setIsSuccessful(false);
+      setOpenError(true);
+      return;
+    }
+
+    if (validRows.length === 0) {
+      setAlertMessage("No valid rows to upload after validation.");
+      setIsSuccessful(false);
+      setOpenError(true);
+      return;
+    }
+
+    handleBulkUpload(validRows, columnHeaders);
     setBulkUploadOpen(false);
     setData([]);
   };
@@ -178,7 +297,7 @@ const UserDialog = ({
 
       const [, ...withoutHeader] = parsedData;
       const cleaned = withoutHeader.filter(row =>
-        row.some(cell => cell?.toString().trim() !== '')
+        Array.isArray(row) && row.some(cell => cell?.toString().trim() !== '')
       );
 
       if (cleaned.length === 0) {
@@ -267,7 +386,7 @@ const UserDialog = ({
     const allData = hotInstance.getData();
     
     const dataRows = allData.filter(row =>
-      row.some(cell => cell && cell.toString().trim() !== "")
+      Array.isArray(row) && row.some(cell => cell && cell.toString().trim() !== "")
     );
 
     if (dataRows.length === 0) {
@@ -290,61 +409,140 @@ const UserDialog = ({
     setFormSubmitted(true);
 
     if (tab === 0) {
+      // Validate first name
       if (!newStudent.firstName) {
         setAlertMessage("First name is required.");
         setIsSuccessful(false);
         setOpenError(true);
         return;
-      };
+      }
+      if (!validateName(newStudent.firstName)) {
+        setAlertMessage("First name can only contain letters, spaces, hyphens, and apostrophes.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
+      // Validate last name
       if (!newStudent.lastName) {
         setAlertMessage("Last name is required.");
         setIsSuccessful(false);
         setOpenError(true);
         return;
-      };
+      }
+      if (!validateName(newStudent.lastName)) {
+        setAlertMessage("Last name can only contain letters, spaces, hyphens, and apostrophes.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
+      // Validate section
       if (!newStudent.section) {
         setAlertMessage("Section is required.");
         setIsSuccessful(false);
         setOpenError(true);
         return;
-      };
+      }
+
+      // Check if section exists (has an adviser)
+      const sectionExists = filteredAdvisers.some(adviser => adviser.section === newStudent.section);
+      if (!sectionExists && !isAdviser) {
+        setAlertMessage(`Section "${newStudent.section}" does not exist. Please select a valid section.`);
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
+      // Validate email
       if (!newStudent.email) {
         setAlertMessage("Email is required.");
         setIsSuccessful(false);
         setOpenError(true);
         return;
-      };
-      if (!/@.+\..+/.test(newStudent.email)) {
+      }
+      if (!validateEmail(newStudent.email)) {
         setAlertMessage("Invalid email format (e.g. name@domain.com)");
         setIsSuccessful(false);
         setOpenError(true);
         return;
-      };
+      }
+
+      // Check for duplicate email
+      if (checkDuplicateEmail(newStudent.email, students, newStudent.id)) {
+        setAlertMessage("This email is already registered to another student.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
     } else {
+      // Validate name
       if (!newStaff.name) {
         setAlertMessage("Name is required.");
         setIsSuccessful(false);
         setOpenError(true);
         return;
-      };
+      }
+      if (!validateName(newStaff.name)) {
+        setAlertMessage("Name can only contain letters, spaces, hyphens, and apostrophes.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
+      // Validate position
       if (!newStaff.position) {
         setAlertMessage("Position is required.");
         setIsSuccessful(false);
         setOpenError(true);
         return;
-      };
+      }
+
+      // Validate section (ONLY for Advisers)
+      if (newStaff.position === "Adviser" && !newStaff.section) {
+        setAlertMessage("Section is required for advisers.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
+      // Validate email
       if (!newStaff.email) {
         setAlertMessage("Email is required.");
         setIsSuccessful(false);
         setOpenError(true);
         return;
-      };
-      if (!/@.+\..+/.test(newStaff.email)) {
+      }
+      if (!validateEmail(newStaff.email)) {
         setAlertMessage("Invalid email format (e.g. name@domain.com)");
         setIsSuccessful(false);
         setOpenError(true);
         return;
-      };
+      }
+
+      // Check for duplicate email in ALL staff (advisers + guidance staff)
+      if (checkDuplicateEmail(newStaff.email, staffs, newStaff.id)) {
+        setAlertMessage("This email is already registered to another staff member.");
+        setIsSuccessful(false);
+        setOpenError(true);
+        return;
+      }
+
+      // Additional validation: Prevent duplicate section for Advisers
+      if (newStaff.position === "Adviser" && !isEditMode) {
+        const sectionExists = staffs.some(
+          staff => staff.position === "Adviser" && 
+          staff.section === newStaff.section &&
+          staff.id !== newStaff.id
+        );
+
+        if (sectionExists) {
+          setAlertMessage(`Section "${newStaff.section}" already has an assigned adviser.`);
+          setIsSuccessful(false);
+          setOpenError(true);
+          return;
+        }
+      }
     }
 
     handleFormSubmit();
@@ -781,22 +979,36 @@ const UserDialog = ({
               const cellProperties = {
                 className: 'htCenter htMiddle',
               };
+              
+              // Get row data safely
               const rowData = data[row];
-
+              
+              // Handle header cells
               if (col === -1 || row === -1) {
                 cellProperties.className = 'highlighted-cell';
-                return cellProperties
+                return cellProperties;
               }
-
+            
+              // Check if rowData exists and is an array
+              if (!rowData || !Array.isArray(rowData)) {
+                return cellProperties;
+              }
+            
+              // Check if row has any input
               const hasAnyInput = rowData.some(cell => cell && cell.trim() !== '');
-              if (!hasAnyInput) return cellProperties;
-                        
+              if (!hasAnyInput) {
+                return cellProperties;
+              }
+                          
+              // Get cell value safely
               const cellValue = rowData[col] || "";
-                        
+                          
+              // Check if cell is empty when row has input
               if (cellValue.trim() === "") {
                 cellProperties.className = 'incomplete-cell';
               }
             
+              // Validate email column
               const emailCol = 0;
               if (col === emailCol && cellValue.trim() !== "") {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
