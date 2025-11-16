@@ -807,9 +807,12 @@ export function CompSchedules({
       </div>      
       <div>
         {staff.position !== 'Adviser' &&
+        <>
           <p className="text-gray-400 text-sm">Strand: {section === 'all' ? 'All' : section}</p>
+          <p className="text-gray-400 text-sm">Grade Level: {grade === 'all' ? 'All' : grade}</p>
+        </>
         }
-        <p className="text-gray-400 text-sm">Grade Level: {grade === 'all' ? 'All' : grade}</p>
+        
       </div>
       
 
@@ -1538,9 +1541,12 @@ export function ActiveStudentsPieChart({
         }
       </div>
       {staff.position !== 'Adviser' && 
+      <>
         <p className="text-gray-400 text-sm">Strand: {filteringSection === "all" ? "All" : filteringSection}</p>
+        <p className="text-gray-400 text-sm">Grade Level: {grade  === "all" ? "All" : grade}</p>
+      </>
       }
-      <p className="text-gray-400 text-sm">Grade Level: {grade  === "all" ? "All" : grade}</p>
+      
 
       <div className={`w-full h-full flex flex-col items-center justify-center relative ${marginTop ? "-mt-10" : "-mt-12"}`}>
         <div className={`w-[45%] max-w-xs aspect-square relative`}>
