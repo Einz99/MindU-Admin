@@ -429,21 +429,28 @@ export default function Layout({ open, onMenuClick }) {
             {menuItems.map((item, index) => ((
               (index === 0) || ((index === 2 || index === 1) && staffData.position !== "Adviser") || (index === 3)) && (
               <ListItem key={index} disablePadding className="w-full">
-                <ListItemButton
-                  component={Link}
-                  to={item.link}
-                  selected={location.pathname === item.link}
-                  sx={{
-                    "&.Mui-selected": { backgroundColor: "#b7cde3", color: "black" },
-                    marginBottom: "12px",
-                    borderRadius: "8px",
-                  }}
+                <Tooltip 
+                  title={item.text} 
+                  placement="right" 
+                  arrow
+                  disableHoverListener={open} // Disable tooltip when drawer is open
                 >
-                  <ListItemIcon sx={{ color: location.pathname === item.link ? "Black" : "#F8FAFC" }}>
-                    {item.icon}
-                  </ListItemIcon>
-                  {open && <ListItemText primary={item.text} className={`${location.pathname === item.link ? "text-black" : "text-[#F8FAFC]"}`} />}
-                </ListItemButton>
+                  <ListItemButton
+                    component={Link}
+                    to={item.link}
+                    selected={location.pathname === item.link}
+                    sx={{
+                      "&.Mui-selected": { backgroundColor: "#b7cde3", color: "black" },
+                      marginBottom: "12px",
+                      borderRadius: "8px",
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: location.pathname === item.link ? "Black" : "#F8FAFC" }}>
+                      {item.icon}
+                    </ListItemIcon>
+                    {open && <ListItemText primary={item.text} className={`${location.pathname === item.link ? "text-black" : "text-[#F8FAFC]"}`} />}
+                  </ListItemButton>
+                </Tooltip>
               </ListItem>
             )))}
           </List>

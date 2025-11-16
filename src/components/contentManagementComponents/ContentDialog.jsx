@@ -63,6 +63,7 @@ export default function ContentDialog({
   const [isDraft, setIsDraft] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [savingType, setSavingType] = useState(null);
   
   const handleDialogClose = () => {
     setDialogOpen(false);
@@ -79,6 +80,7 @@ export default function ContentDialog({
     setNewItem({});
     setShowSaveDialog(false);
     setIsSaving(false);
+    setSavingType(null); // Reset saving type
     // Reset additional state
     setVideoPath("");
     setBlob(null);
@@ -256,6 +258,7 @@ export default function ContentDialog({
   const handleSave = async (isDraft) => { 
     setLoading(true);
     setIsSaving(true);
+    setSavingType(isDraft ? 'draft' : 'post');
 
     try {
       let response;
@@ -321,13 +324,21 @@ export default function ContentDialog({
         formData.append("posted_at", isDraft ? null : formatDateForMySQL(new Date()));
         formData.append("staff_name", staff?.name ?? "");
         formData.append("staff_position", staff?.position ?? "");
-      
+            
         if (tab === 0) {
           formData.append("resourceType", newItem.resourceType || "");
         }
       
         if (articleFile) formData.append("file", articleFile);
-        if (bannerFile) formData.append("banner", bannerFile);
+        
+        // Only append banner if it exists OR if it's required (tab === 0 and not video)
+        if (bannerFile) {
+          formData.append("banner", bannerFile);
+        } else if (tab === 0 && !isVideo) {
+          // For Resources that aren't videos, banner is required
+          throw new Error("Banner is required for this content type");
+        }
+        // For tab === 1 (Wellness), banner is optional
       
         const endpoint = `${API}/resources`;
         response = isUpdating
@@ -358,6 +369,7 @@ export default function ContentDialog({
       
       setTimeout(() => {
         setIsSaving(false); // Reset after dialog closes
+        setSavingType(null);
         handleDialogClose();
         updateContent();
       }, 2000);
@@ -367,6 +379,7 @@ export default function ContentDialog({
       setAlertMessage("Failed to save data.");
       setIsSuccessful(false);
       setIsSaving(false);
+      setSavingType(null);
       setOpenError(true);
     } finally {
       setLoading(false);
@@ -406,6 +419,7 @@ export default function ContentDialog({
     const file = new File([blob], `${newItem.title}.html`, { type: "text/html" });
     setArticleFile(file);
     shouldHandleSave.current = true;
+    setSavingType(isDraft ? 'draft' : 'post');
   };
 
   useEffect(() => {
@@ -439,6 +453,24 @@ export default function ContentDialog({
         newItem.end_date
       );
     }
+    // For Wellness (tab === 1)
+    else if (tab === 1) {
+      if (isVideo) {
+        return (
+          newItem.title?.trim() &&
+          newItem.description?.trim() &&
+          newItem.category?.trim() &&
+          (videoPreview || videoPath)
+        );
+      } else {
+        // Document type wellness - no banner required
+        return (
+          newItem.title?.trim() &&
+          newItem.category?.trim()
+        );
+      }
+    }
+    // For Resources (tab === 0)
     else if (isVideo) {
       return (
         newItem.title?.trim() &&
@@ -505,7 +537,7 @@ export default function ContentDialog({
                 <p className="text-white text-lg rounded-3xl px-8 py-1 bg-red-500">Don't Save</p>
               </Button>
               <Button onClick={handleSaveAsDraft} disabled={loading}>
-                <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
+                <p className={`text-white text-lg rounded-3xl px-8 py-1 ${loading ? "bg-[#74aff7]" : "bg-[#60a5fa]"}`}>
                   {loading ? "Saving..." : "Save as Draft"}
                 </p>
               </Button>
@@ -560,8 +592,8 @@ export default function ContentDialog({
                   }}
                   disabled={loading}
               > 
-                <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
-                  {loading ? "Saving as Draft..." : "Save as Draft"}
+                <p className={`text-white text-lg rounded-3xl px-8 py-1 ${loading ? "bg-[#74aff7]" : "bg-[#60a5fa]"}`}>
+                  {savingType === 'draft' ? "Saving as Draft..." : "Save as Draft"}
                 </p>
               </Button>
               <Button 
@@ -576,8 +608,8 @@ export default function ContentDialog({
                 }}
                 disabled={loading}
               > 
-                <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
-                  {loading ? "Posting..." : "Post"}
+                <p className={`text-white text-lg rounded-3xl px-8 py-1 ${loading ? "bg-[#74aff7]" : "bg-[#60a5fa]"}`}>
+                  {savingType === 'post' ? "Posting..." : "Post"}
                 </p>
               </Button>
             </>
@@ -1075,7 +1107,7 @@ export default function ContentDialog({
               <>
                 <Button onClick={() => {
                   if(!isFormValid()) {
-                    setAlertMessage("Missing Field.\nPlease make sure all fields is filled");
+                    setAlertMessage("Missing Field.\nAll fields are required.");
                     setIsSuccessful(false);
                     setOpenError(true);
                     return;
@@ -1085,8 +1117,8 @@ export default function ContentDialog({
                   }} 
                   disabled={loading}
                 > 
-                  <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
-                    {loading ? "Saving as Draft..." : "Save as Draft"}
+                  <p className={`text-white text-lg rounded-3xl px-8 py-1 ${loading ? "bg-[#74aff7]" : "bg-[#60a5fa]"}`}>
+                    {savingType === 'draft' ? "Saving as Draft..." : "Save as Draft"}
                   </p>
                 </Button>
                 <Button onClick={() => {
@@ -1095,8 +1127,8 @@ export default function ContentDialog({
                   }} 
                   disabled={loading}
                 >
-                  <p className="text-white text-lg rounded-3xl px-8 py-1 bg-[#60a5fa]">
-                    {loading ? "Posting..." : "Post"}
+                  <p className={`text-white text-lg rounded-3xl px-8 py-1 ${loading ? "bg-[#74aff7]" : "bg-[#60a5fa]"}`}>
+                    {savingType === 'post' ? "Posting..." : "Post"}
                   </p>
                 </Button>
               </>

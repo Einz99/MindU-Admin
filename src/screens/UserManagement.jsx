@@ -211,10 +211,18 @@ export default function DashboardLayout() {
       }
       setLoading(false);
       setAlertMessage(`Successfully Deleted ${tab === 0 ? "Student" : tab === 1 ? "Adviser" : "Guidance Staff"}`);
-      setIsSuccessful(false);
+      setIsSuccessful(true);
       setOpenError(true);
     })
-    .catch((err) => console.error(`Error deleting ${tab === 0 ? "student" : "staff"}`, err));
+    .catch((err) => {
+      console.error("Error...", err);
+      setLoading(false);
+      setAlertMessage("Failed to delete/save. Please try again.");
+      setIsSuccessful(false);  // ADD THIS
+      setOpenError(true);      // ADD THIS
+    });
+    
+    setOpenError(true);
     setChecked([])
     setOpenBulkDelete(false);
     setReloadKey(prev => prev + 1);
@@ -276,7 +284,13 @@ export default function DashboardLayout() {
             setIsSuccessful(true);
             setOpenError(true);
           })
-          .catch((err) => console.error("Error updating student:", err));
+          .catch((err) => {
+            console.error("Error...", err);
+            setLoading(false);
+            setAlertMessage("Operation failed. Please try again.");
+            setIsSuccessful(false);
+            setOpenError(true);
+          });
       } else {
         axios
           .post(`${API}/students`, studentData)
@@ -289,7 +303,13 @@ export default function DashboardLayout() {
             setIsSuccessful(true);
             setOpenError(true);
           })
-          .catch((err) => console.error("Error adding student:", err));
+          .catch((err) => {
+            console.error("Error...", err);
+            setLoading(false);
+            setAlertMessage("Operation failed. Please try again.");
+            setIsSuccessful(false);
+            setOpenError(true);
+          });
       }
     } else {
       // For staff
@@ -320,7 +340,13 @@ export default function DashboardLayout() {
             setIsSuccessful(true);
             setOpenError(true);
           })
-          .catch((err) => console.error("Error updating staff:", err));
+          .catch((err) => {
+            console.error("Error...", err);
+            setLoading(false);
+            setAlertMessage("Operation failed. Please try again.");
+            setIsSuccessful(false);
+            setOpenError(true);
+          });
       } else {
         axios
           .post(`${API}/staffs`, staffData)
@@ -332,7 +358,13 @@ export default function DashboardLayout() {
             setIsSuccessful(true);
             setOpenError(true);
           })
-          .catch((err) => console.error("Error adding staff:", err));
+          .catch((err) => {
+            console.error("Error...", err);
+            setLoading(false);
+            setAlertMessage("Operation failed. Please try again.");
+            setIsSuccessful(false);
+            setOpenError(true);
+          });
       }
     }
     setReloadKey(prev => prev + 1);
@@ -371,8 +403,11 @@ export default function DashboardLayout() {
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Error during bulk delete:", err);
+        console.error("Error...", err);
         setLoading(false);
+        setAlertMessage("Operation failed. Please try again.");
+        setIsSuccessful(false);
+        setOpenError(true);
       });
     setReloadKey(prev => prev + 1);
   };

@@ -548,6 +548,9 @@ const UserDialog = ({
     handleFormSubmit();
   };
 
+  useEffect(() => {
+    setFormSubmitted(false);
+  }, [isModalOpen, isEditMode]);
   
   return (
     <>

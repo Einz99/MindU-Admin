@@ -511,7 +511,7 @@ export default function LoginScreen() {
                     placeholder="Enter code from email"
                     required
                   />
-                  <p className="text-center mt-2 text-sm">An email with a verification code was just sent to {forgotEmail}</p>
+                  <p className="text-center mt-2 text-sm">An email with a verification code was sent to {forgotEmail}</p>
                 </>
               )}
             </div>

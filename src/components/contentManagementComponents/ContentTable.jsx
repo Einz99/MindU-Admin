@@ -347,11 +347,13 @@ export default function ContentTable({ tab, data, setSelectedItems, setDeleteTar
           <TableHead>
             <TableRow className="bg-[#f8fbfd] border-y border-black">
               <TableCell className="p-3 font-bold w-[40px]">
-                <Checkbox
-                  indeterminate={selectedRows.length > 0 && selectedRows.length < data.length}
-                  checked={selectedRows.length === data.length && data.length > 0}
-                  onChange={handleSelectAll}
-                />
+                <Tooltip title={"Select All"} arrow>
+                  <Checkbox
+                    indeterminate={selectedRows.length > 0 && selectedRows.length < data.length}
+                    checked={selectedRows.length === data.length && data.length > 0}
+                    onChange={handleSelectAll}
+                  />
+                </Tooltip>
               </TableCell>
               <TableCell className="p-3 font-bold text-center">
                 {tab === 3 ? (
