@@ -26,7 +26,8 @@ export default function UserTable({
   setSelectedStudent,
   setOpenDeleteModal,
   page,
-  setPage
+  setPage,
+  filterType
 }) {
   const staff = JSON.parse(localStorage.getItem("staff") || "{}");
   
@@ -39,11 +40,20 @@ export default function UserTable({
   const filteredGuidanceStaffs = staffs.filter(
     (staff) => !(staff.name === "Mind-U" && staff.position !== "Admin") && staff.position !== "Adviser"
   );
+  
+  const categoryMap = {
+    0: 'All',
+    1: 'ABM',
+    2: 'HE',
+    3: 'HUMSS',
+    4: 'ICT',
+    5: 'STEM'
+  };
 
   const filteredStudents =
     staff.position === "Adviser"
       ? students.filter((s) => s.section === staff.section)
-      : students;
+      : filterType > 0 ? students.filter((s) => s.section.includes(categoryMap[filterType])) : students;
 
   const data = tab === 0
     ? filteredStudents
@@ -205,67 +215,82 @@ export default function UserTable({
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedData.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((item, index) => (
-              <TableRow key={item.id || item.ID}>
+            {sortedData.length === 0 ? (
+              <TableRow>
                 <TableCell 
-                  className="p-3 font-bold w-[40px]"
-                  sx={{ borderBottom: "none" }}
+                  colSpan={6}
+                  align="center"
+                  className="text-center"
+                  sx={{ borderBottom: "none", height: "100px" }}
                 >
-                  <Checkbox checked={checked.includes(item.id)} onChange={(event) => handleCheck(event, item.id)} />
+                  <p className="text-gray-500 text-lg">
+                    No students found
+                  </p>
                 </TableCell>
-                <TableCell 
-                  className="p-3 text-center"
-                  sx={{ borderBottom: "none" }}
-                >
-                  {item.firstName || item.name} {item.lastName || ""}
-                </TableCell>
-                {tab === 0 ? (
-                  <>
-                    <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
-                      <p className="text-center">{item.section}</p>
-                    </TableCell>
-                    <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
-                      <p className="text-center">{item.adviser}</p>
-                    </TableCell>
-                  </>
-                ) : (
-                  <>
-                    <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
-                      <p className="text-center">{item.position}</p>
-                    </TableCell>
-                    {tab === 1 && (
+              </TableRow>
+            ) : (
+              sortedData.slice((page - 1) * rowsPerPage, page * rowsPerPage).map((item, index) => (
+                <TableRow key={item.id || item.ID}>
+                  <TableCell 
+                    className="p-3 font-bold w-[40px]"
+                    sx={{ borderBottom: "none" }}
+                  >
+                    <Checkbox checked={checked.includes(item.id)} onChange={(event) => handleCheck(event, item.id)} />
+                  </TableCell>
+                  <TableCell 
+                    className="p-3 text-center"
+                    sx={{ borderBottom: "none" }}
+                  >
+                    {item.firstName || item.name} {item.lastName || ""}
+                  </TableCell>
+                  {tab === 0 ? (
+                    <>
                       <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
                         <p className="text-center">{item.section}</p>
                       </TableCell>
-                    )}
-                  </>
-                )}
-                <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
-                  <p className="text-center">{item.email}</p>
-                </TableCell>
-                <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
-                  <div className="flex justify-center">
-                    <Tooltip title={getLabel("view")} arrow>
-                      <IconButton onClick={() => handleEditButtonClick(item.id, false)}>
-                        <Summarize className="text-[#4F46E5] bg-[#f8fbfd] rounded-full" />
-                      </IconButton>
-                    </Tooltip>
-                                
-                    <Tooltip title={getLabel("edit")} arrow>
-                      <IconButton onClick={() => handleEditButtonClick(item.id, true)}>
-                        <Edit className="text-yellow-400 bg-[#f8fbfd] rounded-full" />
-                      </IconButton>
-                    </Tooltip>
-                                
-                    <Tooltip title={getLabel("delete")} arrow>
-                      <IconButton onClick={() => { setSelectedStudent(item); setOpenDeleteModal(true); }}>
-                        <Delete className="text-red-400 bg-[#f8fbfd] rounded-full" />
-                      </IconButton>
-                    </Tooltip>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
+                        <p className="text-center">{item.adviser}</p>
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
+                        <p className="text-center">{item.position}</p>
+                      </TableCell>
+                      {tab === 1 && (
+                        <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
+                          <p className="text-center">{item.section}</p>
+                        </TableCell>
+                      )}
+                    </>
+                  )}
+                  <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
+                    <p className="text-center">{item.email}</p>
+                  </TableCell>
+                  <TableCell className="p-3 text-center" sx={{ borderBottom: "none" }}>
+                    <div className="flex justify-center">
+                      <Tooltip title={getLabel("view")} arrow>
+                        <IconButton onClick={() => handleEditButtonClick(item.id, false)}>
+                          <Summarize className="text-[#4F46E5] bg-[#f8fbfd] rounded-full" />
+                        </IconButton>
+                      </Tooltip>
+                                  
+                      <Tooltip title={getLabel("edit")} arrow>
+                        <IconButton onClick={() => handleEditButtonClick(item.id, true)}>
+                          <Edit className="text-yellow-400 bg-[#f8fbfd] rounded-full" />
+                        </IconButton>
+                      </Tooltip>
+                                  
+                      <Tooltip title={getLabel("delete")} arrow>
+                        <IconButton onClick={() => { setSelectedStudent(item); setOpenDeleteModal(true); }}>
+                          <Delete className="text-red-400 bg-[#f8fbfd] rounded-full" />
+                        </IconButton>
+                      </Tooltip>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>

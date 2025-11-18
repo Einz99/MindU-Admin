@@ -16,7 +16,7 @@ import {
   LineChart,
 } from "recharts";
 import { useNavigate } from "react-router-dom";
-import { Badge, Button, Select, MenuItem, TableContainer, TableBody, TableCell, TableRow, Table, TableHead, IconButton } from "@mui/material";
+import { Badge, Button, Select, MenuItem, TableContainer, TableBody, TableCell, TableRow, Table, TableHead, IconButton, Tooltip as Tooltips } from "@mui/material";
 import axios from "axios";
 import { API } from "../../../api";
 
@@ -268,17 +268,19 @@ export function UsageUtilization({
     <div className="flex flex-col p-5">
       <div className="flex w-full flex-row justify-between items-center">
         <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">Feature Utilization</p>
-        <FileDownload
-          sx={{
-            fontSize: 25,
-            justifyItems: 'center',
-            color: '#64748b',
-            '&:hover': {
-              color: 'black',  // Change the color to black on hover
-            },
-          }}
-          onClick={handleExportToExcel}
-        />
+        <Tooltips title={"Download"} arrow>
+          <FileDownload
+            sx={{
+              fontSize: 25,
+              justifyItems: 'center',
+              color: '#64748b',
+              '&:hover': {
+                color: 'black',  // Change the color to black on hover
+              },
+            }}
+            onClick={handleExportToExcel}
+          />
+        </Tooltips> 
       </div>
 
       <div className="flex w-full flex-col mb-2">
@@ -398,13 +400,15 @@ export function AlertsOvertime({
     return { start: startDate, end: today };
   };
 
-    useEffect(() => {
+  useEffect(() => {
     const { start, end } = getDateRange(dateRange);
 
     const filtered = (rawData || []).filter((alert) => {
       if (!alert.date) return false;
       
+      // Add 8 hours to alert date for Philippine timezone (UTC+8)
       const alertDate = new Date(alert.date);
+      alertDate.setHours(alertDate.getHours() + 8);
       const dateMatch = alertDate >= start && alertDate <= end;
       
       return dateMatch && matchesFilters(alert.section, section, grade);
@@ -413,7 +417,6 @@ export function AlertsOvertime({
     const getMostRecentSaturday = (date) => {
       const d = new Date(date);
       const day = d.getDay();
-      // Saturday is day 6
       const diff = day === 6 ? 0 : (day + 1);
       d.setDate(d.getDate() - diff);
       d.setHours(0, 0, 0, 0);
@@ -426,7 +429,6 @@ export function AlertsOvertime({
     let numPoints;
     
     if (daySpan <= 7) {
-      // Last 7 days - show daily data starting from most recent Saturday
       numPoints = 7;
     } else if (daySpan <= 31) {
       numPoints = 4;
@@ -449,6 +451,8 @@ export function AlertsOvertime({
 
       const count = filtered.filter((alert) => {
         const alertDate = new Date(alert.date);
+        // Add 8 hours for Philippine timezone (UTC+8)
+        alertDate.setHours(alertDate.getHours() + 8);
         return alertDate >= periodStart && alertDate <= periodEnd;
       }).length;
 
@@ -516,7 +520,7 @@ export function AlertsOvertime({
       setOpenError(true);
       setIsSuccessful(false);
       setAlertMessage('No data available for export after applying the filters.');
-      return; // Exit the function if no data is available
+      return;
     }
 
     const dateRange = generateDateRangeString();
@@ -536,17 +540,19 @@ export function AlertsOvertime({
         <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">
           Alerts Recorded Overtime
         </p>
-        <FileDownload
-          sx={{
-            fontSize: 25,
-            justifyItems: 'center',
-            color: '#64748b',
-            '&:hover': {
-              color: 'black',  // Change the color to black on hover
-            },
-          }}
-          onClick={handleExportToExcel}
-        />
+        <Tooltips title={"Download"} arrow>
+          <FileDownload
+            sx={{
+              fontSize: 25,
+              justifyItems: 'center',
+              color: '#64748b',
+              '&:hover': {
+                color: 'black',
+              },
+            }}
+            onClick={handleExportToExcel}
+          />
+        </Tooltips>
       </div>
       <div>
         <p className="text-gray-400 text-sm">Strand: {section === 'all' ? 'All' : section}</p>
@@ -791,19 +797,19 @@ export function CompSchedules({
         <p className="font-roboto font-bold text-[#1e3a8a] text-2xl">
           Appointments Completed Overtime
         </p>
-        {staff.position !== 'Adviser' &&
-        <FileDownload
-          sx={{
-            fontSize: 25,
-            justifyItems: 'center',
-            color: '#64748b',
-            '&:hover': {
-              color: 'black',  // Change the color to black on hover
-            },
-          }}
-          onClick={handleExportToExcel}
-        />
-        }
+        <Tooltips title={"Download"} arrow>
+          <FileDownload
+            sx={{
+              fontSize: 25,
+              justifyItems: 'center',
+              color: '#64748b',
+              '&:hover': {
+                color: 'black',  // Change the color to black on hover
+              },
+            }}
+            onClick={handleExportToExcel}
+          />
+        </Tooltips>
       </div>      
       <div>
         {staff.position !== 'Adviser' &&
@@ -919,11 +925,17 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
 
     // Step 3: For each student, select the oldest alert
     const oldestAlerts = Object.values(groupedAlerts).map(studentAlerts => {
-    // Sorting the alerts by date (oldest first)
-    const sortedAlerts = studentAlerts.sort((a, b) => new Date(a.date) - new Date(b.date));
-    // Return the oldest (first) alert
-    return sortedAlerts[0]; 
-  });
+      // Sorting the alerts by date (oldest first), adding 8 hours for UTC+8
+      const sortedAlerts = studentAlerts.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        dateA.setHours(dateA.getHours() + 8);
+        dateB.setHours(dateB.getHours() + 8);
+        return dateA - dateB;
+      });
+      // Return the oldest (first) alert
+      return sortedAlerts[0]; 
+    });
 
     // Step 4: Set the filtered alerts to state
     setFilteredAlerts(oldestAlerts);
@@ -939,6 +951,8 @@ export function CalmiTriggerAlert({ alerts, padding, filterBacklog, filterBacklo
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
+    // Add 8 hours for Philippine timezone (UTC+8)
+    date.setHours(date.getHours() + 8);
     return date.toLocaleString('en-US', {
       month: '2-digit',
       day: '2-digit',
@@ -1526,7 +1540,7 @@ export function ActiveStudentsPieChart({
     <div className={`flex flex-col w-[${width}%] h-full p-${padding}`}>
       <div className="flex w-full flex-row justify-between items-center">
         <p className="text-[#1e3a8a] font-bold font-roboto text-2xl">In-app Student Login</p>
-        {staff.position !== 'Adviser' && 
+        <Tooltips title={"Download"} arrow>
           <FileDownload 
               sx={{
                 fontSize: 25,
@@ -1538,7 +1552,7 @@ export function ActiveStudentsPieChart({
               }}
               onClick={handleExportToExcel}
             />
-        }
+        </Tooltips>
       </div>
       {staff.position !== 'Adviser' && 
       <>
@@ -1689,27 +1703,10 @@ export function Resource({ exportResourcesToExcel, topResources }) {
       </div>
       <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col overflow-y-auto px-2 mb-4 min-h-[50%]">
         <div className="flex w-full flex-row justify-end p-4 gap-4">
-          <IconButton
-            className="z-50"
-            onClick={exportResourcesToExcel}
-            sx={{
-              color: '#64748b',
-              '&:hover': {
-                color: 'black',
-              },
-            }}
-          >
-            <FileDownload 
-              sx={{ 
-                fontSize: 25,
-                pointerEvents: 'none'  // Add this
-              }} 
-            />
-          </IconButton>
-          <div className="relative">
+          <Tooltips title={"Download"} arrow>
             <IconButton
               className="z-50"
-              onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
+              onClick={exportResourcesToExcel}
               sx={{
                 color: '#64748b',
                 '&:hover': {
@@ -1717,14 +1714,34 @@ export function Resource({ exportResourcesToExcel, topResources }) {
                 },
               }}
             >
-              <FilterAlt 
+              <FileDownload 
                 sx={{ 
                   fontSize: 25,
                   pointerEvents: 'none'  // Add this
                 }} 
               />
             </IconButton>
-            
+          </Tooltips>
+          <div className="relative">
+            <Tooltips title={"Filter"} arrow>
+              <IconButton
+                className="z-50"
+                onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
+                sx={{
+                  color: '#64748b',
+                  '&:hover': {
+                    color: 'black',
+                  },
+                }}
+              >
+                <FilterAlt 
+                  sx={{ 
+                    fontSize: 25,
+                    pointerEvents: 'none'  // Add this
+                  }} 
+                />
+              </IconButton>
+            </Tooltips>
             {filterOpen && (
               <div className="z-50">
                 <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
@@ -1745,19 +1762,20 @@ export function Resource({ exportResourcesToExcel, topResources }) {
             )}
           </div>
           <div className="relative">
-            <IconButton
-              className="z-50"
-              onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
-              sx={{
-                color: '#64748b',
-                '&:hover': {
-                  color: 'black',
-                },
-              }}
-            >
-              <Sort sx={{ fontSize: 25 }} />
-            </IconButton>
-            
+            <Tooltips title={"Sort"} arrow>
+              <IconButton
+                className="z-50"
+                onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
+                sx={{
+                  color: '#64748b',
+                  '&:hover': {
+                    color: 'black',
+                  },
+                }}
+              >
+                <Sort sx={{ fontSize: 25 }} />
+              </IconButton>
+            </Tooltips>
             {sortOpen && (
               <div className="z-50">
                 <div className="absolute right-1 w-[7.85rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
@@ -1930,27 +1948,10 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
       </div>
       <div className="w-full h-full border-4 border-[#41b8d5] rounded-xl flex flex-col overflow-y-auto px-2 min-h-[50%]">
         <div className="flex w-full flex-row justify-end p-4 gap-4">
-          <IconButton
-            className="z-50"
-            onClick={exportWellnessToExcel}
-            sx={{
-              color: '#64748b',
-              '&:hover': {
-                color: 'black',
-              },
-            }}
-          >
-            <FileDownload 
-              sx={{ 
-                fontSize: 25,
-                pointerEvents: 'none'  // Add this
-              }} 
-            />
-          </IconButton>
-          <div className="relative">
+          <Tooltips title={"Download"} arrow>
             <IconButton
               className="z-50"
-              onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
+              onClick={exportWellnessToExcel}
               sx={{
                 color: '#64748b',
                 '&:hover': {
@@ -1958,14 +1959,34 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
                 },
               }}
             >
-              <FilterAlt 
+              <FileDownload 
                 sx={{ 
                   fontSize: 25,
                   pointerEvents: 'none'  // Add this
                 }} 
               />
             </IconButton>
-            
+          </Tooltips>
+          <div className="relative">
+            <Tooltips title={"Filter"} arrow>
+              <IconButton
+                className="z-50"
+                onClick={() => {setFilterOpen(prev => !prev); setSortOpen(false)}}
+                sx={{
+                  color: '#64748b',
+                  '&:hover': {
+                    color: 'black',
+                  },
+                }}
+              >
+                <FilterAlt 
+                  sx={{ 
+                    fontSize: 25,
+                    pointerEvents: 'none'  // Add this
+                  }} 
+                />
+              </IconButton>
+            </Tooltips>
             {filterOpen && (
               <div className="z-50">
                 <div className="absolute right-1 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
@@ -1981,19 +2002,20 @@ export function Wellness({ exportWellnessToExcel, topWellness }) {
             )}
           </div>
           <div className="relative">
-            <IconButton
-              className="z-50"
-              onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
-              sx={{
-                color: '#64748b',
-                '&:hover': {
-                  color: 'black',
-                },
-              }}
-            >
-              <Sort sx={{ fontSize: 25 }} />
-            </IconButton>
-            
+            <Tooltips title={"Sort"} arrow>
+              <IconButton
+                className="z-50"
+                onClick={() => {setSortOpen(prev => !prev); setFilterOpen(false)}}
+                sx={{
+                  color: '#64748b',
+                  '&:hover': {
+                    color: 'black',
+                  },
+                }}
+              >
+                <Sort sx={{ fontSize: 25 }} />
+              </IconButton>
+            </Tooltips>
             {sortOpen && (
               <div className="z-50">
                 <div className="absolute right-1 w-[7.85rem] bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">

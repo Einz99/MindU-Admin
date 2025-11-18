@@ -222,7 +222,7 @@ export default function Requests({ initial, updateBacklogs }) {
             borderRadius: "25px", // Optional: rounded corners
           },
         }}>
-        <DialogTitle className="bg-[#b7cde3] relative">
+        <DialogTitle className="bg-[#ebc0ab] relative">
           Schedule Appointment Request
           <DialogActions className="absolute -top-1 right-0">
             <IconButton onClick={() => setOpenScheduleModal(false)} className="rounded-full ">

@@ -460,7 +460,7 @@ export default function SchedulerActionModals({
           // View-only mode: show details with a Close button
           <>
             <DialogTitle className="bg-[#b7e3cc] relative">
-              <p className="font-bold">{isProposal ? "Event Details" : "Schedule Details"}</p>
+              <p className="font-bold">{isProposal ? "Event Details" : "Appointment Details"}</p>
               <DialogActions className="absolute -top-1 right-0">
                 <IconButton onClick={() => setOpen(false)} className="rounded-full ">
                   <Close sx={{ fontSize: 40, color: 'black' }}></Close>
@@ -656,7 +656,7 @@ export default function SchedulerActionModals({
             >
               <p className="font-bold">
                 {actionState === 0
-                ? "Cancelling Schedule"
+                ? "Cancelling Appointment"
                 : (actionState === 1 && isProposal) ? 
                   "Reproposing Event"  
                 :  (actionState === 2 && isProposal) ?
@@ -711,7 +711,7 @@ export default function SchedulerActionModals({
                   </>
                 ) : (
                   <div className="font-roboto"style={{ fontSize: "1.2rem", padding: "10px" }}>
-                    <p className="mb-4 text-gray-500">Are you sure you want to cancel this Name/Event Schedule</p>
+                    <p className="mb-4 text-gray-500">{`Are you sure you want to ${actionState === 0 ? "cancel" : actionState === 1 ? "reschedule" : "mark as complete"} this appointment?`}</p>
                     <p><strong>Name/Event:</strong> {selectedData.name}</p>
                     <p>
                       <strong>Date & Time:</strong>{" "}
@@ -817,7 +817,7 @@ export default function SchedulerActionModals({
                     : "Marking Complete...")
 
                     : (actionState === 0
-                    ? "Cancel Schedule"
+                    ? "Cancel Appointment"
                     : actionState === 1
                     ? "Reschedule"
                     : "Mark Complete")}

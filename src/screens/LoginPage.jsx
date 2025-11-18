@@ -612,6 +612,7 @@ export default function LoginScreen() {
         </DialogTitle>
         
         <DialogContent className="text-center text-base py-6 px-10 mt-2">
+          <img src={isSuccessful ? "/success.png" : "/failed.png"} alt="Chat" className="w-40 h-40 mx-auto"/>
           <p className="font-roboto font-medium text-xl">{alertMessage}</p>
         </DialogContent>
         <DialogActions>

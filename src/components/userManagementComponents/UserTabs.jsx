@@ -1,5 +1,5 @@
-import { Tabs, Tab, TextField, IconButton } from "@mui/material";
-import { Search, Delete, UploadFile, Add, FileDownload } from "@mui/icons-material";
+import { Tabs, Tab, TextField, IconButton, Tooltip } from "@mui/material";
+import { Search, Delete, UploadFile, Add, FileDownload, FilterAlt } from "@mui/icons-material";
 
 export default function UserTabs({ 
   tab, 
@@ -16,6 +16,10 @@ export default function UserTabs({
   searchTerm,
   students,
   staffs,
+  setFilterOpen,
+  filterOpen,
+  filterType,
+  handleFilter,
 }) {
   const isAdviser = staff?.position === "Adviser";
   const isStaff = staff?.position === "Guidance Staff";
@@ -219,23 +223,64 @@ export default function UserTabs({
               marginLeft: '8px',
             }}/>
           </button>
-          <IconButton
-            className="z-50"
-            onClick={handleExportToExcel}
-            sx={{
-              color: '#64748b',
-              '&:hover': {
-                color: 'black',
-              },
-            }}
-          >
-            <FileDownload 
-              sx={{ 
-                fontSize: '2rem',
-                pointerEvents: 'none'
-              }} 
-            />
-          </IconButton>
+          {(!isAdviser && tab === 0) && (
+            <div className="relative -ml-4 -mr-8">
+              <Tooltip title={"Filter"} arrow>
+                <IconButton
+                  className="z-50"
+                  onClick={() => {setFilterOpen(prev => !prev);}}
+                    sx={{
+                    color: '#64748b',
+                    '&:hover': {
+                      color: 'black',
+                    },
+                  }}
+                >
+                  <FilterAlt 
+                    sx={{ 
+                      fontSize: '2rem',
+                      pointerEvents: 'none'
+                    }} 
+                  />
+                </IconButton>
+              </Tooltip>
+              {filterOpen && (
+                <div className="z-50">
+                  <div className="absolute right-3 w-fit bg-[#b7cde3] rounded-s-xl shadow-lg border-4 border-[#1e3a8a] -mt-0.5 z-40">
+                    <ul className="text-right">
+                      <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-tl-xl ${filterType === 0 && "text-black"}`} onClick={() => handleFilter(0)}>All</li>
+                      <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer ${filterType === 1 && "text-black"}`} onClick={() => handleFilter(1)}>ABM</li>
+                      <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer ${filterType === 2 && "text-black"}`} onClick={() => handleFilter(2)}>HE</li>
+                      <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-bl-xl ${filterType === 3 && "text-black"}`} onClick={() => handleFilter(3)}>HUMSS</li>
+                      <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-bl-xl ${filterType === 4 && "text-black"}`} onClick={() => handleFilter(4)}>ICT</li>
+                      <li className={`px-4 py-0.5 text-[#64748b] hover:text-[#334155] cursor-pointer rounded-bl-xl ${filterType === 5 && "text-black"}`} onClick={() => handleFilter(5)}>STEM</li>
+                    </ul>
+                  </div>
+                  <div className="absolute right-4 top-[8px] w-4 h-10  border-x-8 border-b-8 border-b-[#1e3a8a] border-x-transparent z-40" />
+                  <div className="absolute right-4 top-[20px] w-4 h-8  border-x-8 border-b-8 border-b-[#b7cde3] border-x-transparent z-40" />
+                </div>
+              )}
+            </div>
+          )}
+          <Tooltip title={"Download"} arrow>
+            <IconButton
+              className="z-50"
+              onClick={handleExportToExcel}
+              sx={{
+                color: '#64748b',
+                '&:hover': {
+                  color: 'black',
+                },
+              }}
+            >
+              <FileDownload 
+                sx={{ 
+                  fontSize: '2rem',
+                  pointerEvents: 'none'
+                }} 
+              />
+            </IconButton>
+          </Tooltip>
         </div>
       </div>
     </div>

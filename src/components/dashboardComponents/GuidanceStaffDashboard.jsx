@@ -3,10 +3,10 @@ import axios from 'axios';
 import { API, RootAPI } from '../../api';
 import { UsageUtilization, CompSchedules, ActiveStudentsPieChart, AlertsOvertime, CalmiTriggerAlert, Resource, Wellness } from "./guidanceStaffDashboardComponent/Graphs";
 import io from "socket.io-client";
-import { FilterAlt, Close } from "@mui/icons-material";
-import { Dialog, DialogActions, DialogContent, DialogTitle, IconButton } from "@mui/material";
+import { FilterAlt } from "@mui/icons-material";
 
-export default function StaffDashboard() {
+
+export default function StaffDashboard({setIsSuccessful, setAlertMessage, setOpenError}) {
   const [backlog, setBacklogs] = useState([]);
   const [topResources, setTopResources] = useState([]);
   const [topWellness, setTopWellness] = useState([]);
@@ -23,10 +23,6 @@ export default function StaffDashboard() {
   const [sendFilterDate, setSendFilterDate] = useState('today');
   const [sendFilterSection, setSendFilterSection] = useState('all');
   const [sendFilterGrade, setSendfilterGrade] = useState('all');
-
-  const [isSuccessful, setIsSuccessful] = useState(false);
-  const [alertMessage, setAlertMessage] = useState('');
-  const [openError, setOpenError] = useState(false);
 
   const fetchAlerts = async () => {
     try {
@@ -427,37 +423,6 @@ export default function StaffDashboard() {
             <Wellness exportWellnessToExcel={exportWellnessToCSV} topWellness={topWellness}/>
           </div>
         </div>
-        <Dialog
-          open={openError}
-          onClose={() => {setOpenError(false);}}
-          fullWidth
-          sx={{
-            "& .MuiPaper-root": {
-              backgroundColor: "white",
-              color: "#000",
-              borderRadius: "25px",
-            },
-          }}
-          maxWidth="xs"
-        >
-          <DialogTitle className={`${!isSuccessful ? "bg-[#e3b7b7]" : "bg-[#b7e3cc]"} relative`}>
-            <p className="font-bold">{isSuccessful ? "Successful" : "Error"}</p>
-            <DialogActions className="absolute -top-1 right-0">
-              <IconButton onClick={() => {setOpenError(false);}} className="rounded-full">
-                <Close sx={{ fontSize: 40, color: "black" }} />
-              </IconButton>
-            </DialogActions>
-          </DialogTitle>
-          
-          <DialogContent className="text-center text-base py-6 px-10 mt-2">
-            <p className="font-roboto font-medium text-xl">{alertMessage}</p>
-          </DialogContent>
-          <DialogActions>
-            <button onClick={() => {setOpenError(false);}}>
-              <p className="text-base font-roboto font-bold text-[#64748b] p-2 px-6">OK</p>
-            </button>
-          </DialogActions>
-        </Dialog>
       </div>
     )
 }

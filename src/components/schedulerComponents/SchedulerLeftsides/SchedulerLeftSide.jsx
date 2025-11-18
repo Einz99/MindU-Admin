@@ -430,6 +430,7 @@ export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortTy
         </DialogTitle>
         
         <DialogContent>
+          <img src={isSuccessful ? "/success.png" : "/failed.png"} alt="Chat" className="w-40 h-40 mx-auto"/>
           <p className="font-roboto font-medium text-xl">{alertMessage}</p>
         </DialogContent>
         <DialogActions>

@@ -58,6 +58,11 @@ export default function Landingpage() {
   const [proposedSchedule, setProposedSchedule] = useState('');
   const [proposalId, setProposalId] = useState(0);
   const [proposalName, setProposalName] = useState('');
+  const [savingType, setSavingType] = useState(null);
+
+  const [isSuccessful, setIsSuccessful] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [openError, setOpenError] = useState(false);
 
   const staff = JSON.parse(localStorage.getItem("staff"));
   
@@ -109,32 +114,36 @@ export default function Landingpage() {
 
   const handleDenial = async () => { 
     setLoading(true);
+    setSavingType('denied');
     try {
       await axios.patch(`${API}/backlogs/update-status/${proposalId}`, {
         status: "Denied",
         comment: newMessage
       });
       handleDialogClose();
-      setLoading(false);
+      setIsSuccessful(true);
+      setAlertMessage("")
     } catch (error) {
       console.error(error.response?.data || error.message);
-      setLoading(false);
     }
+    setLoading(false);
+    setSavingType(null);
   };
 
   const handleApproval = async () => {
     setLoading(true);
+    setSavingType('approved');
     try {
       await axios.patch(`${API}/backlogs/update-status/${proposalId}`, {
         status: "Approved",
         comment: newMessage
       });
       handleDialogClose();
-      setLoading(false);
     } catch (error) {
       console.error(error.response?.data || error.message);
-      setLoading(false);
     }
+    setLoading(false);
+    setSavingType(null);
   };
 
   const handleDialogClose = () => {
@@ -143,17 +152,18 @@ export default function Landingpage() {
     setEditorData(null);
     setProposedSchedule('');
     setProposalId(0);
+    setSavingType(null);
   };
 
   const renderBasedOnRole = () => {
     if (staff.position === "Adviser") {
         return <AdviserFullDashboard backlogs={backlogs}/>;
     } else if (staff.position === "Guidance Staff") {
-      return <StaffDashboard filterBacklogs={filterBacklogs}/>;
+      return <StaffDashboard filterBacklogs={filterBacklogs}  setIsSuccessful={setIsSuccessful} setAlertMessage={setAlertMessage} setOpenError={setOpenError} />;
     } else if (staff.position === "Admin" || staff.position === "Guidance Counselor") {
       return (
         <>
-          <AdminStaffDashboard filterBacklogs={filterBacklogs} handleViewingRequest={handleViewingRequest} />
+          <AdminStaffDashboard filterBacklogs={filterBacklogs} handleViewingRequest={handleViewingRequest} setIsSuccessful={setIsSuccessful} setAlertMessage={setAlertMessage} setOpenError={setOpenError}/>
           <Dialog
             open={openProposal}
             onClose={() => {handleDialogClose();}}
@@ -168,7 +178,7 @@ export default function Landingpage() {
               },
             }}
           >
-            <DialogTitle className="bg-[#b7e3cc] relative">
+            <DialogTitle className="bg-[#ffde59] relative">
               Pending Event Proposal
               <DialogActions className="absolute -top-1 right-0">
                 <IconButton onClick={() => {handleDialogClose()}} className="rounded-full">
@@ -219,7 +229,7 @@ export default function Landingpage() {
                 onClick={handleDenial}
                 disabled={loading}
               >
-                {loading ? "Sending Back..." : "Decline"}
+                {savingType === 'denied' ? "Sending Back..." : "Decline"}
               </Button>
               <Button 
                 sx={{
@@ -232,7 +242,7 @@ export default function Landingpage() {
                 onClick={handleApproval}
                 disabled={loading}
               >
-                {loading ? "Sending Back..." : "Approve"}
+                {savingType === 'approved' ? "Sending Back..." : "Approve"}
               </Button>
             </DialogActions>
           </Dialog>
@@ -240,6 +250,17 @@ export default function Landingpage() {
       );
     } 
   }
+
+  useEffect(() => {
+    if (openError) return;
+
+    const timer = setTimeout(() => {
+      setAlertMessage('');
+      setIsSuccessful(false);
+    }, 1000); // 1 second
+
+    return () => clearTimeout(timer);
+  }, [openError]);
 
   return (
     <div className="flex bg-[#f8fafc] flex-1 overflow-hidden">
@@ -269,6 +290,39 @@ export default function Landingpage() {
           </div>
         </div>
       </main>
+
+      <Dialog
+          open={openError}
+          onClose={() => {setOpenError(false);}}
+          fullWidth
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: "white",
+              color: "#000",
+              borderRadius: "25px",
+            },
+          }}
+          maxWidth="xs"
+        >
+          <DialogTitle className={`${!isSuccessful ? "bg-[#e3b7b7]" : "bg-[#b7e3cc]"} relative`}>
+            <p className="font-bold">{isSuccessful ? "Successful" : "Error"}</p>
+            <DialogActions className="absolute -top-1 right-0">
+              <IconButton onClick={() => {setOpenError(false);}} className="rounded-full">
+                <Close sx={{ fontSize: 40, color: "black" }} />
+              </IconButton>
+            </DialogActions>
+          </DialogTitle>
+          
+          <DialogContent className="text-center text-base py-6 px-10 mt-2">
+            <img src={isSuccessful ? "/success.png" : "/failed.png"} alt="Chat" className="w-40 h-40 mx-auto"/>
+            <p className="font-roboto font-medium text-xl">{alertMessage}</p>
+          </DialogContent>
+          <DialogActions>
+            <button onClick={() => {setOpenError(false);}}>
+              <p className="text-base font-roboto font-bold text-[#64748b] p-2 px-6">OK</p>
+            </button>
+          </DialogActions>
+        </Dialog>
     </div>
   );
 }

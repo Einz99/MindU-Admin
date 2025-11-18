@@ -51,6 +51,14 @@ export default function DashboardLayout() {
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [page, setPage] = useState(1);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterType, setFilterType] = useState(0);
+
+  const handleFilter = (type) => {
+    setFilterOpen(prev => !prev);
+    setFilterType(type);
+    setPage(1);
+  }
 
   // Fetch data when component mounts or when tab changes
   useEffect(() => {
@@ -593,6 +601,10 @@ export default function DashboardLayout() {
                 searchTerm={searchTerm}
                 students={students}
                 staffs={staffs}
+                setFilterOpen={setFilterOpen}
+                filterOpen={filterOpen}
+                filterType={filterType}
+                handleFilter={handleFilter}
               />
               <UserTable
                 tab={tab}
@@ -608,6 +620,7 @@ export default function DashboardLayout() {
                 setOpenDeleteModal={setOpenDeleteModal}
                 page={page}
                 setPage={setPage}
+                filterType={filterType}
               />
             </div>
           </div>
@@ -669,6 +682,7 @@ export default function DashboardLayout() {
         
         <DialogContent className="text-center text-base py-6 px-10 mt-2">
           <p className="font-roboto font-medium text-xl" style={{ whiteSpace: 'pre-wrap' }}>
+            <img src={isSuccessful ? "/success.png" : "/failed.png"} alt="Chat" className="w-40 h-40 mx-auto"/>
             {alertMessage}
           </p>
         </DialogContent>

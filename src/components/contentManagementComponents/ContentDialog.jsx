@@ -538,7 +538,12 @@ export default function ContentDialog({
               </Button>
               <Button onClick={handleSaveAsDraft} disabled={loading}>
                 <p className={`text-white text-lg rounded-3xl px-8 py-1 ${loading ? "bg-[#74aff7]" : "bg-[#60a5fa]"}`}>
-                  {loading ? "Saving..." : "Save as Draft"}
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        Saving as Draft...
+                      </span>
+                    ) : "Save as Draft"}
                 </p>
               </Button>
             </div>
@@ -562,7 +567,7 @@ export default function ContentDialog({
             <Button
               onClick={() => {
                 if (!isFormValid()) {
-                  setAlertMessage("Missing Field.\nPlease make sure all fields is filled");
+                  setAlertMessage("Missing Field.\nAll fields are required.");
                   setIsSuccessful(false);
                   setOpenError(true);
                   return;
@@ -583,7 +588,7 @@ export default function ContentDialog({
               <Button
                 onClick={() => {
                   if (!isFormValid()) {
-                    setAlertMessage("Missing Field.\nPlease make sure all fields is filled");
+                    setAlertMessage("Missing Field.\nAll fields are required.");
                     setIsSuccessful(false);
                     setOpenError(true);
                     return;
@@ -593,13 +598,18 @@ export default function ContentDialog({
                   disabled={loading}
               > 
                 <p className={`text-white text-lg rounded-3xl px-8 py-1 ${loading ? "bg-[#74aff7]" : "bg-[#60a5fa]"}`}>
-                  {savingType === 'draft' ? "Saving as Draft..." : "Save as Draft"}
+                  {savingType === 'draft' ? (
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        Saving as Draft...
+                      </span>
+                    ) : "Save as Draft"}
                 </p>
               </Button>
               <Button 
                 onClick={() => {
                   if (!isFormValid()) {
-                    setAlertMessage("Missing Field.\nPlease make sure all fields is filled");
+                    setAlertMessage("Missing Field.\nAll fields are required.");
                     setIsSuccessful(false);
                     setOpenError(true);
                     return;
@@ -609,7 +619,12 @@ export default function ContentDialog({
                 disabled={loading}
               > 
                 <p className={`text-white text-lg rounded-3xl px-8 py-1 ${loading ? "bg-[#74aff7]" : "bg-[#60a5fa]"}`}>
-                  {savingType === 'post' ? "Posting..." : "Post"}
+                  {savingType === 'post' ? (
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      Posting...
+                    </span>
+                  ) : "Post"}
                 </p>
               </Button>
             </>
@@ -1118,7 +1133,12 @@ export default function ContentDialog({
                   disabled={loading}
                 > 
                   <p className={`text-white text-lg rounded-3xl px-8 py-1 ${loading ? "bg-[#74aff7]" : "bg-[#60a5fa]"}`}>
-                    {savingType === 'draft' ? "Saving as Draft..." : "Save as Draft"}
+                    {savingType === 'draft' ? (
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        Saving as Draft...
+                      </span>
+                    ) : "Save as Draft"}
                   </p>
                 </Button>
                 <Button onClick={() => {
@@ -1128,7 +1148,12 @@ export default function ContentDialog({
                   disabled={loading}
                 >
                   <p className={`text-white text-lg rounded-3xl px-8 py-1 ${loading ? "bg-[#74aff7]" : "bg-[#60a5fa]"}`}>
-                    {savingType === 'post' ? "Posting..." : "Post"}
+                    {savingType === 'post' ? (
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        Posting...
+                      </span>
+                    ) : "Post"}
                   </p>
                 </Button>
               </>

@@ -88,7 +88,7 @@ export default function Calendar({ initial }) {
       .forEach(entry => {
         const d = format(parseISO(String(entry.sched_date)), "yyyy-MM-dd");
         if (!map[d]) map[d] = { hasStudent: false, hasGeneral: false };
-        if (entry.student_id != null) map[d].hasStudent = true;
+        if (!entry.proposal) map[d].hasStudent = true;
         else map[d].hasGeneral = true;
       });
 
@@ -176,7 +176,7 @@ export default function Calendar({ initial }) {
             <div key={index} className="my-2">
               <p
                 className="font-roboto font-bold italic text-xl"
-                style={{ color: event.student_id ? "#ff9059" : "#60a5fa" }}
+                style={{ color: !event.proposal ? "#ff9059" : "#60a5fa" }}
               >
                 {event.name}
               </p>
