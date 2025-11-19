@@ -19,12 +19,12 @@ export default function LiveAgent() {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const socketRef = useRef(null);
-  const [profilePath, setProfilePath] = useState();
-  const [studentName, setStudentName] = useState('');
+  const [profilePaths, setProfilePaths] = useState({});
+  const [studentNames, setStudentNames] = useState({});
   const [alerts, setAlerts] = useState([]);
   const [isViewOnly, setIsViewOnly] = useState(true);
   const [openDisconnectModal, setOpenDisconnectModal] = useState(false);
-  const [agentInRoom, setAgentInRoom] = useState({});
+  const [ , setAgentInRoom] = useState({});
 
   const staffData = JSON.parse(localStorage.getItem("staff"));
   
@@ -47,6 +47,11 @@ export default function LiveAgent() {
           return { ...chat, messages: filteredMessages };
         });
         setChatData(filteredChatData);
+        
+        // Fetch profiles for all students
+        filteredChatData.forEach(chat => {
+          fetchStudentProfile(chat.id);
+        });
       } else {
         setChatData([]);
       }
@@ -70,6 +75,11 @@ export default function LiveAgent() {
         });
         console.log('[fetchArchivedChats] Filtered archived chats:', filteredArchived.length);
         setArchivedChats(filteredArchived);
+        
+        // Fetch profiles for all archived students
+        filteredArchived.forEach(chat => {
+          fetchStudentProfile(chat.id);
+        });
       } else {
         console.log('[fetchArchivedChats] No archived chats in response');
         setArchivedChats([]);
@@ -85,23 +95,39 @@ export default function LiveAgent() {
     }
   };
 
+  const fetchStudentProfile = async (studentId) => {
+    // Don't fetch if already cached
+    if (profilePaths[studentId] || studentNames[studentId]) return;
+    
+    try {
+      const response = await axios.get(`${API}/students/${studentId}`);
+      const fullName = `${response.data.firstName} ${response.data.lastName}`;
+      
+      setStudentNames(prev => ({
+        ...prev,
+        [studentId]: fullName
+      }));
+      
+      if (response.data && response.data.profilePic) {
+        setProfilePaths(prev => ({
+          ...prev,
+          [studentId]: response.data.profilePic
+        }));
+      }
+    } catch (error) {
+      console.error(`Error fetching profile for student ${studentId}:`, error);
+    }
+  };
+
   useEffect(() => {
     fetchChatData();
     fetchArchivedChats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    async function getProfile() {
+    async function getAlerts() {
       try {
-        const response = await axios.get(`${API}/students/${student_id}`);
-        setStudentName(`${response.data.firstName} ${response.data.lastName}`);
-        
-        if (response.data && response.data.profilePic) {
-          setProfilePath(`${response.data.profilePic}`);
-        } else {
-          console.error("Profile picture not found in response");
-        }
-        
         const alertResponse = await axios.get(`${API}/chatbot/alerts`)
         if (alertResponse.data) {
           setAlerts(alertResponse.data);
@@ -110,14 +136,12 @@ export default function LiveAgent() {
           setAlerts([]);
         }
       } catch (error) {
-        console.error("Error fetching student profile:", error);
+        console.error("Error fetching alerts:", error);
       }
     }
 
-    if (student_id) {
-      getProfile();
-    }
-  }, [student_id]);
+    getAlerts();
+  }, []);
 
   const checkAgentInRoom = (studentId) => {
     if (socketRef.current && studentId) {
@@ -419,7 +443,7 @@ useEffect(() => {
         if (isInAlerts) {
           message = `Hello, this is ${staffData.name} from the Guidance Office.\n\nI just received your message from Calmi, and I want you to know that I'm here for you.\n\nYou're not alone — we can talk about whatever's been bothering you at your own pace.\n\nHow are you feeling right now?`;
         } else {
-          const firstName = studentName.split(' ')[0];
+          const firstName = studentNames[student_id]?.split(' ')[0] || 'there';
           message = `Hi there, ${firstName}!`;
         }
       
@@ -658,7 +682,11 @@ useEffect(() => {
                     onClick={() => { setSelected(index); setStudentId(chat.id); }}
                   >
                     <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-4">
-                      <img src={chat.id === student_id && profilePath ? `${RootAPI}${profilePath}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
+                      <img 
+                        src={profilePaths[chat.id] ? `${RootAPI}${profilePaths[chat.id]}` : "/defaultProfile.png"} 
+                        alt="Profile" 
+                        className="w-10 h-10 rounded-full object-cover" 
+                      />
                     </div>
                     <div className="flex flex-col justify-between w-full relative">
                       <h3 className="text-lg font-semibold">{chat.name}</h3>
@@ -667,9 +695,6 @@ useEffect(() => {
                       </p>
                       {activeTab === 0 && chat.status === "pending" && (
                         <div className="absolute bottom-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
-                      )}
-                      {activeTab === 0 && agentInRoom[chat.id] && (
-                        <Visibility className="absolute bottom-0 right-0 text-blue-500" sx={{ fontSize: 16 }} />
                       )}
                       {activeTab === 1 && (
                         <ArchiveIcon className="absolute bottom-0 right-0 text-gray-500" sx={{ fontSize: 16 }} />
@@ -696,7 +721,7 @@ useEffect(() => {
                   <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg mb-2 flex items-center gap-2">
                     <Visibility />
                     <p className="font-semibold">
-                      {activeTab === 1 ? "Archive - View Only" : "View Only - Another agent is handling this chat"}
+                      {activeTab === 1 ? "Archive" : "View Only"}
                     </p>
                   </div>
                 )}
@@ -721,11 +746,15 @@ useEffect(() => {
                           }`}
                         >
                           {msg.sender !== 'agent' && !ifNotif(msg.text) && (
-                            <img src={profilePath ? `${RootAPI}${profilePath}` : "/defaultProfile.png"} alt="Profile" className="w-10 h-10 rounded-full" />
+                            <img 
+                              src={profilePaths[currentChat.id] ? `${RootAPI}${profilePaths[currentChat.id]}` : "/defaultProfile.png"} 
+                              alt="Profile" 
+                              className="w-10 h-10 rounded-full object-cover" 
+                            />
                           )}
                           <div className={`${msg.sender !== 'agent' && !ifNotif(msg.text) && "ml-3"}`}>
                             {msg.sender !== 'agent' && !ifNotif(msg.text) && (
-                              <p className="text-sm ml-1">{studentName}</p>
+                              <p className="text-sm ml-1">{studentNames[currentChat.id] || currentChat.name}</p>
                             )}
                             <div className={`py-2 px-4 rounded-lg max-w-xs ${
                               ifNotif(msg.text) 
