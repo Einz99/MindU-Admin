@@ -46,10 +46,16 @@ export default function SchedulerActionModals({
   setAlertMessage,
   setOpenError,
   setIsProposal,
-  isProposal
+  isProposal,
+  tab
 }) {
   const [students, setStudents] = useState({});
   const [editorData, setEditorData] = useState(null);
+  const [staffs, setStaffs] = useState({});
+
+  useState(() => {
+    console.log(selectedData);
+  }, [selectedData])
 
   useEffect(() => {
     async function getAllStudents() {
@@ -61,6 +67,19 @@ export default function SchedulerActionModals({
       }
     }
     getAllStudents();
+  }, [])
+
+  useEffect(() => {
+    async function getAllStaff() {
+      try {
+        const response = await axios.get(`${API}/staffs`)
+        setStaffs(response.data);
+        console.log(response.data);
+      } catch (error) {
+        console.error("Unable to get students");
+      }
+    }
+    getAllStaff();
   }, [])
 
   useEffect(() => {
@@ -503,7 +522,13 @@ export default function SchedulerActionModals({
                   </>
                 ) : (
                   <div className="font-roboto" style={{ fontSize: "1.2rem", padding: "10px" }}>
-                    <p><strong>Name/Event:</strong> {selectedData.name}</p>
+                    <p><strong>{tab === 0 ? "Name:" : "Event:"}</strong> {selectedData.name}</p>
+                    {selectedData.staff_id && 
+                      <p>
+                        <strong>Requested by:</strong>{' '}
+                        {staffs.find((staff) => staff.id === selectedData.staff_id)?.name || 'Unknown'}
+                      </p>
+                    }
                     <p>
                       <strong>Date & Time:</strong>{" "}
                       {selectedData.sched_date
@@ -712,7 +737,13 @@ export default function SchedulerActionModals({
                 ) : (
                   <div className="font-roboto"style={{ fontSize: "1.2rem", padding: "10px" }}>
                     <p className="mb-4 text-gray-500">{`Are you sure you want to ${actionState === 0 ? "cancel" : actionState === 1 ? "reschedule" : "mark as complete"} this appointment?`}</p>
-                    <p><strong>Name/Event:</strong> {selectedData.name}</p>
+                    <p><strong>{tab === 0 ? "Name:" : "Event:"}</strong> {selectedData.name}</p>
+                    {selectedData.staff_id && 
+                      <p>
+                        <strong>Requested by:</strong>{' '}
+                        {staffs.find((staff) => staff.id === selectedData.staff_id)?.name || 'Unknown'}
+                      </p>
+                    }
                     <p>
                       <strong>Date & Time:</strong>{" "}
                       {selectedData.sched_date
@@ -793,7 +824,8 @@ export default function SchedulerActionModals({
                       setOpenError(true);
                       return;
                     }
-                    if (isProposal && actionState === 1 && !blob) {
+                    // Only require blob when reproposing a non-scheduled event
+                    if (isProposal && actionState === 1 && selectedData.status !== 'Scheduled' && !blob) {
                       setIsSuccessful(false);
                       setAlertMessage("Please insert the proposal document.");
                       setOpenError(true);
@@ -887,7 +919,13 @@ export default function SchedulerActionModals({
             ) : (
               <div>
                 <p className="mb-2 text-gray-500">Are you sure you want to move this event to trash?</p>
-                <p><strong>Name/Event:</strong> {selectedData.name}</p>
+                <p><strong>{tab === 0 ? "Name:" : "Event:"}</strong> {selectedData.name}</p>
+                {selectedData.staff_id && 
+                  <p>
+                    <strong>Requested by:</strong>{' '}
+                    {staffs.find((staff) => staff.id === selectedData.staff_id)?.name || 'Unknown'}
+                  </p>
+                }
                 <p>
                   <strong>Date & Time:</strong> {selectedData.sched_date ? format(new Date(String(selectedData.sched_date)), "MM/dd/yyyy h:mm a") : "N/A"}
                 </p>

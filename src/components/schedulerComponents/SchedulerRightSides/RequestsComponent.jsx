@@ -193,7 +193,7 @@ export default function Requests({ initial, updateBacklogs }) {
               className="relative bg-[#ff9059] rounded-2xl py-1 pl-3"
             >
               <div className="bg-white rounded-2xl h-44 py-2 pl-5">
-                <h1 className="text-3xl font-roboto font-bold">REQUEST MEETING</h1>
+                <h1 className="text-3xl font-roboto font-bold">{item.staff_id ? "ADVISER REQUEST" : "STUDENT REQUEST"}</h1>
                 <h1 className="text-2xl font-roboto font-bold italic">{item.name}</h1>
                 <p className="text-lg line-clamp-3 overflow-hidden text-ellipsis">
                   {item.message}

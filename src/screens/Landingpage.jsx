@@ -98,7 +98,7 @@ export default function Landingpage() {
   const handleViewingRequest  = async (item) => {
     try {
       console.log(`${RootAPI}${item.proposal}`);
-      const response = await axios.get(`${RootAPI}${item.proposal}`, {
+      const response = await axios.get(`${RootAPI}/${item.proposal}`, {
         responseType: 'text',
       });
       setEditorData(response.data);

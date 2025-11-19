@@ -79,6 +79,7 @@ export default function Scheduler() {
       try {
         const response = await axios.get(`${API}/backlogs`);
         setBacklogs(response.data);
+        console.log(response.data);
       } catch (error) {
         console.error("Error fetching backlogs:", error.response?.data || error.message);
       }

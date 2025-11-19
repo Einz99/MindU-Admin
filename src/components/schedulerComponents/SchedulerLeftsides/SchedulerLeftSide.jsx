@@ -406,6 +406,7 @@ export default function SchedulerLeftSide({ initial = [], updateBacklogs, sortTy
         setOpenError={setOpenError}
         setIsProposal={setIsProposal}
         isProposal={isProposal}
+        tab={tab}
       />
 
       <Dialog
